@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus Mods Download Tools</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Nexus Download Tools</h1>
+      <span id="status-dot" class="dot" aria-hidden="true"></span>
+    </header>
+
+    <section id="site">
+      <label>Current site</label>
+      <span id="site-name">—</span>
+    </section>
+
+    <section id="state">
+      <label>Archive downloads</label>
+      <span id="archive-state">—</span>
+    </section>
+
+    <section class="meta">
+      <span>Downloads started: <b id="downloads-count">0</b></span>
+      <span>Archive files seen: <b id="archive-count">0</b></span>
+    </section>
+
+    <footer>
+      <button id="open-settings" type="button">Settings</button>
+    </footer>
+  </div>
+  <script src="popup/popup.js"></script>
+</body>
+</html>

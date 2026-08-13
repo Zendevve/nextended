@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Mods Download Tools",
+  "version": "0.1.0",
+  "description": "Restores and improves download controls for archived Nexus Mods files.",
+  "icons": {
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "permissions": ["storage", "downloads"],
+  "host_permissions": [
+    "https://www.nexusmods.com/*",
+    "https://*.nexusmods.com/*",
+    "https://*.nexus-cdn.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.nexusmods.com/*"],
+      "js": ["content/nexus-content.js"],
+      "css": ["styles/nexus.css"],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
+    }
+  ],
+  "action": {
+    "default_title": "Nexus Mods Download Tools",
+    "default_popup": "popup/popup.html"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      }
+    }
+  }
+}

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus Download Tools — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main>
+    <h1>Nexus Mods Download Tools</h1>
+
+    <section>
+      <h2>General</h2>
+      <label class="switch">
+        <input type="checkbox" name="enabled" />
+        <span class="slider"></span>
+        <span>Enable extension</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="handleArchivedFiles" />
+        <span class="slider"></span>
+        <span>Handle archived files</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Downloads</h2>
+      <label class="switch">
+        <input type="checkbox" name="manualDownloads" />
+        <span class="slider"></span>
+        <span>Manual downloads</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="modManagerDownloads" />
+        <span class="slider"></span>
+        <span>Mod Manager downloads</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="skipRequirements" />
+        <span class="slider"></span>
+        <span>Skip requirements</span>
+      </label>
+
+      <label class="switch disabled">
+        <input type="checkbox" name="automaticDownloads" disabled />
+        <span class="slider"></span>
+        <span>Automatic downloads (coming soon)</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Errors</h2>
+      <label class="switch">
+        <input type="checkbox" name="showErrorNotifications" />
+        <span class="slider"></span>
+        <span>Show error notifications</span>
+      </label>
+
+      <label>
+        Debug logging
+        <input type="number" name="debugLogging" data-bool="true" min="0" max="1" />
+      </label>
+    </section>
+
+    <section>
+      <h2>Advanced</h2>
+      <label>
+        Request timeout (ms)
+        <input type="number" name="requestTimeout" min="5000" max="120000" />
+      </label>
+
+      <label>
+        Cloudflare fallback
+        <select name="cloudflareFallback">
+          <option value="browser">Browser navigation</option>
+        </select>
+      </label>
+    </section>
+
+    <footer>
+      <button id="save-btn" type="button">Save</button>
+      <button id="reset-btn" type="button">Reset to defaults</button>
+    </footer>
+  </main>
+  <script src="options/options.js"></script>
+</body>
+</html>

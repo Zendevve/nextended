@@ -1,0 +1,21 @@
+# build output
+dist/
+
+# dependencies
+node_modules/
+
+# scratch / local
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+tests-out.txt
+build-out.txt
+build-final.txt
+ls.txt
+ls2.txt
+fmt.txt
+fmt2.txt
+fmt3.txt
+pf.txt
+lint.txt

@@ -1,0 +1,64 @@
+Nexus Mods Download Tools — COPYRIGHT NOTICE AND LIMITED PERSONAL USE TERMS
+
+Project: Nexus Mods Download Tools
+Description: A Manifest V3 browser extension that restores and improves download
+controls for archived Nexus Mods files.
+Copyright (c) 2026 Nexus Mods Download Tools contributors. All rights reserved.
+
+Source: https://github.com/nexus-download-tools/nexus-download-tools
+
+1. OWNERSHIP
+
+Nexus Mods Download Tools is proprietary software owned by the copyright holder,
+except for third-party components and Nexus/other asset references which remain the
+property of their respective owners.
+
+2. PERMITTED USE
+
+You may download, view, study, fork, and install this software solely for
+personal, non-commercial use in a Chromium-based browser (Chrome, Edge, Brave,
+Chrome-compatible) or Firefox, loaded as an unpacked extension for your own use.
+
+Any copying is permitted only as technically necessary for downloading, viewing,
+forking, installing, backing up, or using the software as distributed by the
+copyright holder.
+
+3. RESTRICTIONS
+
+Without prior written permission from the copyright holder, you may not:
+
+- Modify, edit, rename, reorganize, adapt, or create derivative works from
+  this software or any part of its source code.
+- Redistribute, mirror, re-upload, publish, or host this software or modified
+  versions of it on third-party platforms.
+- Sell, rent, sublicense, monetize, bundle, or include this software in addon
+  packs, extension collections, services, or commercial offerings.
+- Copy, extract, reuse, port, or incorporate any part of the source code,
+  architecture, logic, or original assets into another project.
+- Remove copyright notices, change attribution, or claim authorship of any
+  part of this software.
+- Use the extension's logic, selectors, or Nexus endpoint handling to download
+  files outside the scope of your own authenticated Nexus session.
+
+4. FORKS
+
+Forking is permitted only for personal viewing, study, backup, or installation
+purposes. Forks may not be modified, redistributed, published as derivative works,
+or used as the basis for another project without prior written permission.
+
+5. EMBEDDED LIBRARIES
+
+Development dependencies (esbuild, vitest, eslint, prettier, happy-dom) are
+included only for building and testing; their upstream licenses govern those
+components. They are not redistributed with the packaged extension, and no part of
+this restriction is intended to limit your rights under those licenses.
+
+6. NO WARRANTY
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL
+NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE
+OF THIS SOFTWARE.
+
+Any use outside the permissions granted above is prohibited unless explicitly
+authorized in writing by the copyright holder.

@@ -1,0 +1,56 @@
+.nxdt-button-group {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.nxdt-download-button {
+  display: inline-block;
+  min-width: 120px;
+  padding: 5px 10px;
+  border: 1px solid #0d6efd;
+  border-radius: 3px;
+  background: #0d6efd;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.nxdt-download-button.nxdt-manager {
+  background: #1a7f37;
+  border-color: #1a7f37;
+}
+
+.nxdt-download-button.nxdt-manual {
+  background: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.nxdt-download-button:hover {
+  filter: brightness(1.1);
+}
+
+.nxdt-download-button[data-nxdt-state='resolving'],
+.nxdt-download-button[data-nxdt-state='downloading'] {
+  cursor: wait;
+  pointer-events: none;
+}
+
+.nxdt-download-button.nxdt-error {
+  background: #b02a37;
+  border-color: #b02a37;
+}
+
+.nxdt-fallback-link {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #7fb3d5;
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: center;
+}
