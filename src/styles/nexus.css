@@ -56,11 +56,13 @@
 
 .nxdt-fallback-link {
   margin-left: 6px;
+  padding: 2px 6px;
   font-size: 11px;
   color: #7fb3d5;
   text-decoration: underline;
   cursor: pointer;
   align-self: center;
+  border-radius: 3px;
 }
 
 /* Collection Downloader UI Panel */
@@ -333,7 +335,7 @@
 
 .nxdt-tag-optional {
   background-color: #373e47 !important;
-  color: #8b949e !important;
+  color: #c9d1d9 !important;
   font-size: 10px !important;
   font-family: 'Montserrat', sans-serif !important;
   padding: 3px 8px !important;
