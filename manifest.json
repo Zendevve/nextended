@@ -13,7 +13,8 @@
   "host_permissions": [
     "https://www.nexusmods.com/*",
     "https://*.nexusmods.com/*",
-    "https://*.nexus-cdn.com/*"
+    "https://*.nexus-cdn.com/*",
+    "https://api-router.nexusmods.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js",

@@ -1,75 +1,78 @@
-import { isNexusModPage, isArchivePage, findArchivedFiles } from './archive-detector.js';
-import { ButtonManager } from './download-buttons.js';
+import { extractCollectionDetails } from './collection-detector.js';
+import { CollectionManager } from './collection-ui.js';
 import { createPageObserver } from './page-observer.js';
+import {
+  autoStartDownload,
+  setupSlowDownloadIntercept,
+  interceptRequirements,
+  archivedFileHandler,
+  forceModManagerHandler,
+} from './no-wait.js';
 import { getSettings } from '../storage/settings.js';
-import { MessageFactory, MESSAGE_TYPES } from '../shared/messages.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
 import { createLogger } from '../shared/logger.js';
 import { STORAGE_KEY_SETTINGS } from '../shared/constants.js';
 
 const log = createLogger('content');
 
-let buttonManager = null;
+const NEXUS_HOST_REGEX = /^https:\/\/(?:www\.)?nexusmods\.com\//i;
+
+let collectionManager = null;
+let currentCollectionRoute = null;
 let observer = null;
 let currentSettings = null;
 
-function sendMessage(message) {
-  return new Promise((resolve) => {
-    try {
-      chrome.runtime.sendMessage(message, (response) => {
-        if (chrome.runtime.lastError) {
-          resolve({ success: false, error: chrome.runtime.lastError.message });
-        } else {
-          resolve(response || {});
-        }
-      });
-    } catch (e) {
-      resolve({ success: false, error: String(e?.message) });
-    }
-  });
-}
-
-function buildOnResolve() {
-  return async (file, mode) => {
-    const response = await sendMessage(
-      MessageFactory.resolveDownload(file.fileId, file.gameId, mode, file.gameSlug)
-    );
-    if (response && response.success && response.result) {
-      return response.result;
-    }
-    const errPayload = (response && response.payload) || response || {};
-    const message = errPayload.message || errPayload.error || 'Download failed';
-    const code = errPayload.code || (response && response.code) || 'UNKNOWN';
-    const err = new Error(message);
-    err.code = code;
-    throw err;
-  };
-}
-
-function processArchivePage() {
+function processCollectionPage() {
   if (!currentSettings) return;
-  if (!currentSettings.enabled || !currentSettings.handleArchivedFiles) return;
+  if (!currentSettings.enabled || currentSettings.handleCollections === false) return;
 
-  const loc = window.location;
-  if (!isNexusModPage(loc) || !isArchivePage(loc)) return;
+  const details = extractCollectionDetails(window.location.pathname);
+  if (!details) return;
 
-  if (!buttonManager) {
-    buttonManager = new ButtonManager({ onResolve: buildOnResolve() });
+  const routeKey = `${details.gameDomain}/${details.collectionSlug}/${details.revisionNumber || 'latest'}`;
+  if (currentCollectionRoute === routeKey && document.querySelector('[data-nxdt-collection]')) {
+    return;
   }
 
-  const files = findArchivedFiles(document, loc);
-  buttonManager.setFilesContext(files);
-  const injected = buttonManager.injectMany(files);
-  log.info('Processing archive page', { files: files.length, injected });
-  return files;
+  const targetContainer =
+    document.querySelector('#mainContent > div > div.relative > div.next-container') ||
+    document.querySelector('#mainContent') ||
+    document.querySelector('.collection-header') ||
+    document.querySelector('.collection-view') ||
+    document.querySelector('main') ||
+    document.querySelector('#content') ||
+    document.body;
+
+  currentCollectionRoute = routeKey;
+  if (collectionManager && collectionManager.element) {
+    collectionManager.element.remove();
+  }
+
+  collectionManager = new CollectionManager(
+    details.gameDomain,
+    details.collectionSlug,
+    details.revisionNumber
+  );
+  targetContainer.appendChild(collectionManager.element);
+  collectionManager.init();
+  log.info('Initialized collection panel', details);
+}
+
+function processNoWaitFeatures() {
+  if (!currentSettings || currentSettings.enabled === false) return;
+  autoStartDownload(currentSettings);
+  setupSlowDownloadIntercept(currentSettings);
+  archivedFileHandler(currentSettings);
+  forceModManagerHandler(currentSettings);
 }
 
 async function init() {
-  if (!isNexusModPage(window.location)) return;
+  if (!NEXUS_HOST_REGEX.test(window.location.href)) return;
 
   try {
     currentSettings = await getSettings();
   } catch {
-    currentSettings = { enabled: true, handleArchivedFiles: true };
+    currentSettings = { enabled: true, handleCollections: true, autoStartDownload: true, skipRequirements: true };
   }
 
   if (chrome && chrome.runtime && chrome.runtime.onMessage) {
@@ -86,10 +89,13 @@ async function init() {
     });
   }
 
-  processArchivePage();
+  interceptRequirements(currentSettings);
+  processCollectionPage();
+  processNoWaitFeatures();
 
   observer = createPageObserver(() => {
-    processArchivePage();
+    processCollectionPage();
+    processNoWaitFeatures();
   });
   if (document.body) {
     observer.observe();
@@ -105,14 +111,10 @@ async function init() {
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
-      const newSettings = {
+      currentSettings = {
         ...currentSettings,
         ...changes[STORAGE_KEY_SETTINGS].newValue,
       };
-      currentSettings = newSettings;
-      if (buttonManager && typeof buttonManager.setVisible === 'function') {
-        buttonManager.setVisible(newSettings.enabled && newSettings.handleArchivedFiles);
-      }
     }
   });
 }

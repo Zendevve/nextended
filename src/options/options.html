@@ -19,50 +19,50 @@
       </label>
 
       <label class="switch">
-        <input type="checkbox" name="handleArchivedFiles" />
+        <input type="checkbox" name="handleCollections" />
         <span class="slider"></span>
-        <span>Handle archived files</span>
+        <span>Handle Collection Downloads</span>
       </label>
     </section>
 
     <section>
-      <h2>Downloads</h2>
+      <h2>Automation (No-Wait++)</h2>
       <label class="switch">
-        <input type="checkbox" name="manualDownloads" />
+        <input type="checkbox" name="autoStartDownload" />
         <span class="slider"></span>
-        <span>Manual downloads</span>
-      </label>
-
-      <label class="switch">
-        <input type="checkbox" name="modManagerDownloads" />
-        <span class="slider"></span>
-        <span>Mod Manager downloads</span>
+        <span>Auto-Start Download (Skip 5s Countdown)</span>
       </label>
 
       <label class="switch">
         <input type="checkbox" name="skipRequirements" />
         <span class="slider"></span>
-        <span>Skip requirements</span>
+        <span>Skip Requirements Warning / Popup</span>
       </label>
 
-      <label class="switch disabled">
-        <input type="checkbox" name="automaticDownloads" disabled />
+      <label class="switch">
+        <input type="checkbox" name="forceModManagerDownload" />
         <span class="slider"></span>
-        <span>Automatic downloads (coming soon)</span>
+        <span>Inject Mod Manager Buttons on Manual-Only Files</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="handleArchivedFiles" />
+        <span class="slider"></span>
+        <span>Inject Buttons for Archived Files</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="autoCloseTab" />
+        <span class="slider"></span>
+        <span>Auto-Close Download Tab After Start</span>
       </label>
     </section>
 
     <section>
-      <h2>Errors</h2>
-      <label class="switch">
-        <input type="checkbox" name="showErrorNotifications" />
-        <span class="slider"></span>
-        <span>Show error notifications</span>
-      </label>
-
+      <h2>Collection Downloader</h2>
       <label>
-        Debug logging
-        <input type="number" name="debugLogging" data-bool="true" min="0" max="1" />
+        Pause between downloads (seconds)
+        <input type="number" name="collectionPauseBetweenDownload" min="0" max="60" />
       </label>
     </section>
 
@@ -71,13 +71,6 @@
       <label>
         Request timeout (ms)
         <input type="number" name="requestTimeout" min="5000" max="120000" />
-      </label>
-
-      <label>
-        Cloudflare fallback
-        <select name="cloudflareFallback">
-          <option value="browser">Browser navigation</option>
-        </select>
       </label>
     </section>
 

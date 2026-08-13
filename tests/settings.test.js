@@ -45,7 +45,7 @@ describe('settings', () => {
   it('returns defaults when nothing stored', async () => {
     const s = await getSettings();
     expect(s.enabled).toBe(DEFAULT_SETTINGS.enabled);
-    expect(s.handleArchivedFiles).toBe(true);
+    expect(s.handleCollections).toBe(true);
   });
 
   it('persists and merges settings', async () => {
@@ -65,15 +65,12 @@ describe('settings', () => {
 
   it('returns empty stats default', async () => {
     const stats = await getStats();
-    expect(stats.downloadsStarted).toBe(0);
-    expect(stats.archiveFilesDetected).toBe(0);
+    expect(stats.collectionsDownloaded).toBe(0);
   });
 
   it('increments stats', async () => {
-    await incrementStat('downloadsStarted');
-    await incrementStat('archiveFilesDetected', 3);
+    await incrementStat('collectionsDownloaded');
     const stats = await getStats();
-    expect(stats.downloadsStarted).toBe(1);
-    expect(stats.archiveFilesDetected).toBe(3);
+    expect(stats.collectionsDownloaded).toBe(1);
   });
 });

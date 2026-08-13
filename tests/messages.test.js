@@ -9,25 +9,15 @@ describe('messages', () => {
     expect(msg.payload).toEqual({ a: 1 });
   });
 
-  it('builds resolve download payload with slug', () => {
-    const msg = MessageFactory.resolveDownload(
-      '123',
-      '1704',
-      'manual',
-      'skyrimspecialedition'
-    );
-    expect(msg.type).toBe(MESSAGE_TYPES.RESOLVE_DOWNLOAD);
-    expect(msg.payload).toEqual({
-      fileId: '123',
-      gameId: '1704',
-      mode: 'manual',
-      slug: 'skyrimspecialedition',
-    });
+  it('builds ping message', () => {
+    const msg = MessageFactory.ping();
+    expect(msg.type).toBe(MESSAGE_TYPES.PING);
+    expect(msg.payload).toEqual({});
   });
 
-  it('builds download error payload', () => {
-    const msg = MessageFactory.downloadError('123', 'CLOUDFLARE', 'blocked');
-    expect(msg.payload.code).toBe('CLOUDFLARE');
-    expect(msg.payload.message).toBe('blocked');
+  it('builds settings changed message', () => {
+    const msg = MessageFactory.settingsChanged({ enabled: false });
+    expect(msg.type).toBe(MESSAGE_TYPES.SETTINGS_CHANGED);
+    expect(msg.payload.settings).toEqual({ enabled: false });
   });
 });

@@ -1,20 +1,22 @@
 export const DEFAULT_SETTINGS = {
   enabled: true,
+  handleCollections: true,
+  collectionDownloadMethod: 0,
+  collectionDownloadSpeed: 1.5,
+  collectionPauseBetweenDownload: 5,
+  autoStartDownload: true,
+  autoCloseTab: false,
+  skipRequirements: true,
+  forceModManagerDownload: true,
   handleArchivedFiles: true,
-  manualDownloads: true,
-  modManagerDownloads: true,
-  skipRequirements: false,
-  automaticDownloads: false,
+  closeTabDelay: 2000,
   debugLogging: false,
   requestTimeout: 30000,
-  cloudflareFallback: 'browser',
-  showErrorNotifications: true,
 };
 
 export const DEFAULT_STATS = {
-  downloadsStarted: 0,
-  downloadErrors: 0,
-  archiveFilesDetected: 0,
+  collectionsDownloaded: 0,
+  autoDownloadsCompleted: 0,
 };
 
 export const STORAGE_VERSION = 1;

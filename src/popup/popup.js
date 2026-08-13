@@ -21,26 +21,39 @@ async function refresh() {
 
   const settings = settingsRes.result?.settings || settingsRes.settings || {};
   const site = document.getElementById('site-name');
-  const archive = document.getElementById('archive-state');
+  const collectionState = document.getElementById('collection-state');
+  const nowaitState = document.getElementById('nowait-state');
   const dot = document.getElementById('status-dot');
 
   site.textContent =
     typeof chrome !== 'undefined' && chrome.runtime?.id ? 'Nexus Mods' : '—';
 
   const enabled = settings.enabled !== false;
-  const handleArchive = settings.handleArchivedFiles !== false;
-  archive.textContent = enabled && handleArchive ? 'On' : 'Off';
-  dot.classList.toggle('inactive', !enabled);
+  const handleCollections = settings.handleCollections !== false;
+  const autoStart = settings.autoStartDownload !== false;
 
-  document.getElementById('downloads-count').textContent =
-    statsRes.downloadsStarted || '0';
-  document.getElementById('archive-count').textContent =
-    statsRes.archiveFilesDetected || '0';
+  if (collectionState) {
+    collectionState.textContent = enabled && handleCollections ? 'On' : 'Off';
+  }
+  if (nowaitState) {
+    nowaitState.textContent = enabled && autoStart ? 'On' : 'Off';
+  }
+  if (dot) {
+    dot.classList.toggle('inactive', !enabled);
+  }
+
+  const collectionsCount = document.getElementById('collections-count');
+  if (collectionsCount) {
+    collectionsCount.textContent = statsRes.collectionsDownloaded || '0';
+  }
 }
 
-document.getElementById('open-settings').addEventListener('click', () => {
-  chrome.runtime.openOptionsPage && chrome.runtime.openOptionsPage();
-});
+const openSettingsBtn = document.getElementById('open-settings');
+if (openSettingsBtn) {
+  openSettingsBtn.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage && chrome.runtime.openOptionsPage();
+  });
+}
 
 if (chrome && chrome.runtime && chrome.runtime.onMessage) {
   chrome.runtime.onMessage.addListener((message) => {
