@@ -1,5 +1,5 @@
 import { MessageFactory, MESSAGE_TYPES } from '../shared/messages.js';
-import { STORAGE_KEY_SETTINGS, STORAGE_KEY_STATS } from '../shared/constants.js';
+import { STORAGE_KEY_SETTINGS } from '../shared/constants.js';
 
 function sendMessage(message) {
   return new Promise((resolve) => {
@@ -10,14 +10,14 @@ function sendMessage(message) {
 }
 
 async function refresh() {
-  const [settingsRes, statsRes] = await Promise.all([
+  const [pingRes, settingsRes] = await Promise.all([
+    sendMessage(MessageFactory.ping()),
     sendMessage(MessageFactory.getSettings()),
-    new Promise((resolve) => {
-      chrome.storage.local.get([STORAGE_KEY_STATS], (res) =>
-        resolve(res[STORAGE_KEY_STATS] || {})
-      );
-    }),
   ]);
+
+  const result = pingRes.result || {};
+  const alive = result.alive === true;
+  const stats = result.stats || {};
 
   const settings = settingsRes.result?.settings || settingsRes.settings || {};
   const site = document.getElementById('site-name');
@@ -39,12 +39,12 @@ async function refresh() {
     nowaitState.textContent = enabled && autoStart ? 'On' : 'Off';
   }
   if (dot) {
-    dot.classList.toggle('inactive', !enabled);
+    dot.classList.toggle('inactive', !enabled || !alive);
   }
 
   const collectionsCount = document.getElementById('collections-count');
   if (collectionsCount) {
-    collectionsCount.textContent = statsRes.collectionsDownloaded || '0';
+    collectionsCount.textContent = stats.collectionsDownloaded || '0';
   }
 }
 
@@ -70,4 +70,3 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 refresh();
-setInterval(refresh, 5000);

@@ -5,8 +5,6 @@ import {
   isNexusHost,
   isCdnHost,
   buildGenerateDownloadUrl,
-  buildFilePageUrl,
-  isArchivedQuery,
   extractSlugFromPathname,
   toIntSafe,
   isIntString,
@@ -73,18 +71,5 @@ describe('url-utils', () => {
     const url = new URL(u);
     expect(url.searchParams.get('file_id')).toBe('123456');
     expect(url.searchParams.get('game_id')).toBe('1704');
-  });
-
-  it('builds file page URL', () => {
-    const u = buildFilePageUrl('skyrimspecialedition', '42', '123456');
-    const url = new URL(u);
-    expect(url.pathname).toBe('/skyrimspecialedition/mods/42');
-    expect(url.searchParams.get('tab')).toBe('files');
-    expect(url.searchParams.get('file_id')).toBe('123456');
-  });
-
-  it('detects archived query', () => {
-    expect(isArchivedQuery(new URLSearchParams('category=archived'))).toBe(true);
-    expect(isArchivedQuery(new URLSearchParams('category=active'))).toBe(false);
   });
 });

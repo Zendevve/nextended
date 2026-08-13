@@ -56,6 +56,11 @@
         <span class="slider"></span>
         <span>Auto-Close Download Tab After Start</span>
       </label>
+
+      <label>
+        Tab close delay (ms)
+        <input type="number" name="closeTabDelay" min="0" max="60000" />
+      </label>
     </section>
 
     <section>
@@ -64,10 +69,31 @@
         Pause between downloads (seconds)
         <input type="number" name="collectionPauseBetweenDownload" min="0" max="60" />
       </label>
+
+      <label>
+        Download speed (MB/s)
+        <input type="number" name="collectionDownloadSpeed" step="0.1" min="0" max="100" />
+      </label>
+
+      <span class="group-label">Collection download method</span>
+      <label>
+        <input type="radio" name="collectionDownloadMethod" value="0" />
+        Send to Vortex / MO2
+      </label>
+      <label>
+        <input type="radio" name="collectionDownloadMethod" value="1" />
+        Browser Direct Download
+      </label>
     </section>
 
     <section>
       <h2>Advanced</h2>
+      <label class="switch">
+        <input type="checkbox" name="debugLogging" />
+        <span class="slider"></span>
+        <span>Enable debug logging</span>
+      </label>
+
       <label>
         Request timeout (ms)
         <input type="number" name="requestTimeout" min="5000" max="120000" />

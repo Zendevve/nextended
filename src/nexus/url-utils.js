@@ -93,17 +93,3 @@ export function buildGenerateDownloadUrl(slug, fileId, gameId) {
   return `${base}/Core/Downloads/GenerateDownloadUrl?${params.toString()}`;
 }
 
-export function buildFilePageUrl(slug, modId, fileId) {
-  if (!slug || !modId) return null;
-  const url = new URL(
-    `https://www.nexusmods.com/${encodeURIComponent(slug)}/mods/${encodeURIComponent(modId)}`
-  );
-  url.searchParams.set('tab', 'files');
-  if (fileId) url.searchParams.set('file_id', String(fileId));
-  return url.toString();
-}
-
-export function isArchivedQuery(searchParams) {
-  if (!searchParams) return false;
-  return searchParams.get('category') === 'archived';
-}

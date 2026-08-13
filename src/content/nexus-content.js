@@ -1,17 +1,16 @@
 import { extractCollectionDetails } from './collection-detector.js';
 import { CollectionManager } from './collection-ui.js';
 import { createPageObserver } from './page-observer.js';
-import {
-  autoStartDownload,
-  setupSlowDownloadIntercept,
-  interceptRequirements,
-  archivedFileHandler,
-  forceModManagerHandler,
-} from './no-wait.js';
+import { applyNoWaitFeatures, resetNoWaitState } from './no-wait.js';
 import { getSettings } from '../storage/settings.js';
-import { MESSAGE_TYPES } from '../shared/constants.js';
 import { createLogger } from '../shared/logger.js';
 import { STORAGE_KEY_SETTINGS } from '../shared/constants.js';
+import {
+  MAIN_CONTENT_SELECTORS,
+  COLLECTION_PANEL_SELECTOR,
+  MODAL_OVERLAY_SELECTOR,
+  queryFirst,
+} from './selectors.js';
 
 const log = createLogger('content');
 
@@ -30,24 +29,25 @@ function processCollectionPage() {
   if (!details) return;
 
   const routeKey = `${details.gameDomain}/${details.collectionSlug}/${details.revisionNumber || 'latest'}`;
-  if (currentCollectionRoute === routeKey && document.querySelector('[data-nxdt-collection]')) {
+  if (currentCollectionRoute === routeKey && document.querySelector(COLLECTION_PANEL_SELECTOR)) {
     return;
   }
 
-  const targetContainer =
-    document.querySelector('#mainContent > div > div.relative > div.next-container') ||
-    document.querySelector('#mainContent') ||
-    document.querySelector('.collection-header') ||
-    document.querySelector('.collection-view') ||
-    document.querySelector('main') ||
-    document.querySelector('#content') ||
-    document.body;
+  const routeChanged = currentCollectionRoute !== routeKey;
+  const targetContainer = queryFirst(document, MAIN_CONTENT_SELECTORS, document.body);
 
-  currentCollectionRoute = routeKey;
-  if (collectionManager && collectionManager.element) {
-    collectionManager.element.remove();
+  // Stop the old manager and drop its DOM before building the new panel.
+  if (collectionManager) {
+    if (typeof collectionManager.abort === 'function') collectionManager.abort();
+    if (collectionManager.element) collectionManager.element.remove();
+  }
+  if (routeChanged) {
+    // Route-change cleanup: stale modals and no-wait state belong to the old page.
+    document.querySelectorAll(MODAL_OVERLAY_SELECTOR).forEach((el) => el.remove());
+    resetNoWaitState();
   }
 
+  currentCollectionRoute = routeKey;
   collectionManager = new CollectionManager(
     details.gameDomain,
     details.collectionSlug,
@@ -60,10 +60,7 @@ function processCollectionPage() {
 
 function processNoWaitFeatures() {
   if (!currentSettings || currentSettings.enabled === false) return;
-  autoStartDownload(currentSettings);
-  setupSlowDownloadIntercept(currentSettings);
-  archivedFileHandler(currentSettings);
-  forceModManagerHandler(currentSettings);
+  applyNoWaitFeatures(currentSettings);
 }
 
 async function init() {
@@ -75,23 +72,8 @@ async function init() {
     currentSettings = { enabled: true, handleCollections: true, autoStartDownload: true, skipRequirements: true };
   }
 
-  if (chrome && chrome.runtime && chrome.runtime.onMessage) {
-    chrome.runtime.onMessage.addListener((message) => {
-      if (
-        message &&
-        message.type === MESSAGE_TYPES.SETTINGS_CHANGED &&
-        message.payload &&
-        message.payload.settings
-      ) {
-        currentSettings = message.payload.settings;
-        log.debug('Settings updated', { enabled: currentSettings.enabled });
-      }
-    });
-  }
-
-  interceptRequirements(currentSettings);
+  applyNoWaitFeatures(currentSettings);
   processCollectionPage();
-  processNoWaitFeatures();
 
   observer = createPageObserver(() => {
     processCollectionPage();
@@ -115,6 +97,8 @@ async function init() {
         ...currentSettings,
         ...changes[STORAGE_KEY_SETTINGS].newValue,
       };
+      applyNoWaitFeatures(currentSettings);
+      processCollectionPage();
     }
   });
 }

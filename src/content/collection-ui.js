@@ -24,7 +24,7 @@ function triggerDownloadViaIframe(url) {
   // Clean up after the protocol handler or download has had time to fire
   setTimeout(() => {
     try { iframe.remove(); } catch { /* already removed */ }
-  }, 30000);
+  }, 10000);
 }
 
 function sendMessage(type, payload = {}) {
@@ -35,7 +35,9 @@ function sendMessage(type, payload = {}) {
           return reject(new Error(chrome.runtime.lastError.message));
         }
         if (res && res.success === false) {
-          return reject(new Error(res.error || 'Request failed'));
+          const err = new Error(res.error || 'Request failed');
+          err.code = res.code;
+          return reject(err);
         }
         resolve(res && res.result !== undefined ? res.result : res);
       });
@@ -53,6 +55,11 @@ export class CollectionManager {
     this.downloadMethod = DOWNLOAD_METHOD_VORTEX;
     this.downloadSpeed = 1.5;
     this.pauseBetweenDownload = 5;
+    this.isRunning = false;
+    this.aborted = false;
+    this.pauseTimer = null;
+    this.pauseResolve = null;
+    this.runToken = 0;
     this.mods = { all: [], mandatory: [], optional: [] };
     this.element = document.createElement('div');
     this.element.className = 'nxdt-collection-panel bg-surface-low w-full space-y-3 rounded-lg p-4 mt-4';
@@ -89,11 +96,11 @@ export class CollectionManager {
       });
       revisionData = res?.collectionRevision;
     } catch (e) {
-      this.element.innerHTML = `
-        <div class="w-full text-red-500 font-semibold text-sm p-3 bg-surface-mid rounded">
-          Failed to load collection data: ${e?.message || 'Network error'}
-        </div>
-      `;
+      this.element.innerHTML = '';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'w-full text-red-500 font-semibold text-sm p-3 bg-surface-mid rounded';
+      errorDiv.textContent = `Failed to load collection data: ${e?.message || 'Network error'}`;
+      this.element.appendChild(errorDiv);
       return;
     }
 
@@ -128,11 +135,11 @@ export class CollectionManager {
     this.element.appendChild(this.console.element);
   }
 
-  async fetchDownloadUrl(mod) {
+  async fetchDownloadUrl(mod, downloadMethod = this.downloadMethod) {
     const domain = mod.file?.mod?.game?.domainName || this.gameDomain;
     const fileId = mod.file?.fileId || mod.fileId;
     const gameId = mod.file?.mod?.game?.id || '0';
-    const isNMM = this.downloadMethod === DOWNLOAD_METHOD_VORTEX;
+    const isNMM = downloadMethod === DOWNLOAD_METHOD_VORTEX;
 
     if (!fileId) {
       return { downloadUrl: '', error: 'Missing fileId' };
@@ -144,6 +151,7 @@ export class CollectionManager {
         gameId: String(gameId),
         gameDomain: domain,
         isNMM,
+        modId: mod.file?.mod?.modId,
       });
 
       if (res?.url) {
@@ -166,14 +174,12 @@ export class CollectionManager {
 
   async updateHistory(type, fileId) {
     try {
-      const history = await this.getHistory();
-      history[this.gameDomain] = history[this.gameDomain] || {};
-      history[this.gameDomain][this.collectionSlug] = history[this.gameDomain][this.collectionSlug] || {};
-      history[this.gameDomain][this.collectionSlug][type] = history[this.gameDomain][this.collectionSlug][type] || [];
-      if (!history[this.gameDomain][this.collectionSlug][type].includes(fileId)) {
-        history[this.gameDomain][this.collectionSlug][type].push(fileId);
-      }
-      await sendMessage(MESSAGE_TYPES.SET_COLLECTION_HISTORY, { history });
+      await sendMessage(MESSAGE_TYPES.SET_COLLECTION_HISTORY, {
+        gameDomain: this.gameDomain,
+        collectionSlug: this.collectionSlug,
+        type,
+        fileIds: [fileId],
+      });
     } catch (e) {
       log.warn('Failed to update history', { error: e?.message });
     }
@@ -181,105 +187,135 @@ export class CollectionManager {
 
   async downloadMods(modsList, type = 'all') {
     if (!modsList || !modsList.length) return;
-
-    this.startDownload(modsList.length);
-    const history = await this.getHistory();
-    const downloadedHistory = history?.[this.gameDomain]?.[this.collectionSlug]?.[type] || [];
-
-    if (downloadedHistory.length > 0) {
-      const confirmSkip = window.confirm(
-        `You already downloaded ${downloadedHistory.length} of ${modsList.length} mods from this collection.\n` +
-          `Skip previously downloaded mods?\nCancel will re-download all files.`
-      );
-      if (!confirmSkip) {
-        history[this.gameDomain][this.collectionSlug][type] = [];
-        await sendMessage(MESSAGE_TYPES.SET_COLLECTION_HISTORY, { history });
-      }
+    if (this.isRunning) {
+      log.warn('Download already in progress, ignoring request.');
+      return;
     }
 
-    const failedDownloads = [];
+    this.isRunning = true;
+    this.aborted = false;
+    const runToken = ++this.runToken;
+    const downloadMethod = this.downloadMethod;
 
-    for (let index = 0; index < modsList.length; index++) {
-      const mod = modsList[index];
-      const modNumber = `${index + 1}/${modsList.length}`;
-      const modName = mod.file?.name || mod.file?.mod?.name || 'Unknown Mod';
-      const fileId = String(mod.fileId);
+    try {
+      this.startDownload(modsList.length);
+      const history = await this.getHistory();
+      const downloadedHistory = history?.[this.gameDomain]?.[this.collectionSlug]?.[type] || [];
 
-      if (this.progressBar.status === CollectionProgressBar.STATUS_STOPPED) {
-        this.console.log('Download queue stopped by user.', 'INFO');
-        break;
+      if (downloadedHistory.length > 0) {
+        const confirmSkip = window.confirm(
+          `You already downloaded ${downloadedHistory.length} of ${modsList.length} mods from this collection.\n` +
+            `Skip previously downloaded mods?\nCancel will re-download all files.`
+        );
+        if (!confirmSkip) {
+          await sendMessage(MESSAGE_TYPES.SET_COLLECTION_HISTORY, {
+            gameDomain: this.gameDomain,
+            collectionSlug: this.collectionSlug,
+            type,
+            fileIds: [],
+            replace: true,
+          });
+        }
       }
 
-      if (downloadedHistory.includes(fileId)) {
-        this.console.log(`[${modNumber}] Already downloaded: ${modName}`);
-        this.progressBar.incrementProgress();
-        continue;
-      }
+      const failedDownloads = [];
 
-      if (this.progressBar.skipTo) {
-        if (this.progressBar.skipToIndex - 1 > index) {
-          this.console.log(`[${modNumber}] Skipping: ${modName}`);
+      for (let index = 0; index < modsList.length; index++) {
+        const mod = modsList[index];
+        const modNumber = `${index + 1}/${modsList.length}`;
+        const modName = mod.file?.name || mod.file?.mod?.name || 'Unknown Mod';
+        const fileId = String(mod.fileId);
+
+        if (this.aborted || runToken !== this.runToken) break;
+
+        if (downloadedHistory.includes(fileId)) {
+          this.console.log(`[${modNumber}] Already downloaded: ${modName}`);
           this.progressBar.incrementProgress();
           continue;
         }
-        this.progressBar.skipTo = false;
-      }
 
-      const { downloadUrl, error } = await this.fetchDownloadUrl(mod);
-      if (!downloadUrl) {
-        this.console.log(`[${modNumber}] Error resolving ${modName}: ${error}`, 'ERROR');
-        failedDownloads.push(mod);
-      } else {
-        if (downloadUrl.startsWith('nxm://')) {
+        const { downloadUrl, error } = await this.fetchDownloadUrl(mod, downloadMethod);
+        if (this.aborted || runToken !== this.runToken) break;
+
+        if (!downloadUrl) {
+          this.console.log(`[${modNumber}] Error resolving ${modName}: ${error}`, 'ERROR');
+          failedDownloads.push(mod);
+        } else if (downloadUrl.startsWith('nxm://')) {
           this.console.log(`[${modNumber}] Sent to Mod Manager: ${modName} (${convertSize(mod.file?.size)})`);
           triggerDownloadViaIframe(downloadUrl);
+          await this.updateHistory(type, fileId);
+          if (this.aborted || runToken !== this.runToken) break;
+          this.progressBar.incrementProgress();
         } else {
           this.console.log(`[${modNumber}] Downloading: ${modName} (${convertSize(mod.file?.size)})`);
-          const res = await sendMessage(MESSAGE_TYPES.START_DOWNLOAD, { url: downloadUrl });
-          if (!res?.success) {
-            triggerDownloadViaIframe(downloadUrl);
+          let started = false;
+          try {
+            const res = await sendMessage(MESSAGE_TYPES.START_DOWNLOAD, { url: downloadUrl });
+            if (res === undefined || res.success === false) {
+              throw new Error(res?.error || 'Download failed to start');
+            }
+            started = true;
+          } catch (e) {
+            this.console.log(`[${modNumber}] Download failed: ${modName}: ${e?.message}`, 'ERROR');
+            failedDownloads.push(mod);
           }
+          if (this.aborted || runToken !== this.runToken) break;
+          if (!started) continue;
+          await this.updateHistory(type, fileId);
+          if (this.aborted || runToken !== this.runToken) break;
+          this.progressBar.incrementProgress();
         }
-        await this.updateHistory(type, fileId);
-        this.progressBar.incrementProgress();
+
+        // Pause calculation between downloads
+        if (index < modsList.length - 1) {
+          const fileSizeKB = mod.file?.size || 1024;
+          const calcPause =
+            this.pauseBetweenDownload === 0
+              ? 0
+              : Math.round(fileSizeKB / 1024 / this.downloadSpeed) + this.pauseBetweenDownload;
+
+          let remaining = calcPause;
+          await new Promise((resolve) => {
+            this.pauseResolve = resolve;
+            const timer = setInterval(() => {
+              if (
+                this.aborted ||
+                runToken !== this.runToken ||
+                this.progressBar.skipPause ||
+                this.progressBar.status === CollectionProgressBar.STATUS_STOPPED
+              ) {
+                this.progressBar.skipPause = false;
+                clearInterval(timer);
+                this.pauseTimer = null;
+                this.pauseResolve = null;
+                return resolve();
+              }
+              if (this.progressBar.status === CollectionProgressBar.STATUS_PAUSED) {
+                return;
+              }
+              remaining--;
+              if (remaining <= 0) {
+                clearInterval(timer);
+                this.pauseTimer = null;
+                this.pauseResolve = null;
+                return resolve();
+              }
+            }, 1000);
+            this.pauseTimer = timer;
+          });
+          if (this.aborted || runToken !== this.runToken) break;
+        }
       }
 
-      // Pause calculation between downloads
-      if (index < modsList.length - 1) {
-        const fileSizeKB = mod.file?.size || 1024;
-        const calcPause =
-          this.pauseBetweenDownload === 0
-            ? 0
-            : Math.round(fileSizeKB / 1024 / this.downloadSpeed) + this.pauseBetweenDownload;
-
-        let remaining = calcPause;
-        await new Promise((resolve) => {
-          const timer = setInterval(() => {
-            if (
-              this.progressBar.skipPause ||
-              this.progressBar.status === CollectionProgressBar.STATUS_STOPPED
-            ) {
-              this.progressBar.skipPause = false;
-              clearInterval(timer);
-              return resolve();
-            }
-            if (this.progressBar.status === CollectionProgressBar.STATUS_PAUSED) {
-              return;
-            }
-            remaining--;
-            if (remaining <= 0) {
-              clearInterval(timer);
-              return resolve();
-            }
-          }, 1000);
-        });
+      if (failedDownloads.length > 0) {
+        this.console.log(`Failed to resolve ${failedDownloads.length} mod downloads.`, 'ERROR');
+      }
+    } finally {
+      if (runToken === this.runToken) {
+        this.endDownload();
+        this.isRunning = false;
       }
     }
-
-    if (failedDownloads.length > 0) {
-      this.console.log(`Failed to resolve ${failedDownloads.length} mod downloads.`, 'ERROR');
-    }
-    this.endDownload();
   }
 
   startDownload(count) {
@@ -288,14 +324,42 @@ export class CollectionManager {
     this.progressBar.setStatus(CollectionProgressBar.STATUS_DOWNLOADING);
     this.downloadButton.element.style.display = 'none';
     this.progressBar.element.style.display = 'block';
+    this.downloadButton.setRadiosDisabled(true);
     this.console.log('Collection download started.', 'INFO');
   }
 
   endDownload() {
-    this.progressBar.setStatus(CollectionProgressBar.STATUS_FINISHED);
+    if (this.progressBar.status !== CollectionProgressBar.STATUS_STOPPED) {
+      this.progressBar.setStatus(CollectionProgressBar.STATUS_FINISHED);
+      this.console.log('Collection download completed.', 'INFO');
+    }
     this.progressBar.element.style.display = 'none';
     this.downloadButton.element.style.display = 'flex';
-    this.console.log('Collection download completed.', 'INFO');
+    this.downloadButton.setRadiosDisabled(false);
+    if (!this.aborted) {
+      // Fire-and-forget: stats are best-effort, never fail the run over them.
+      sendMessage(MESSAGE_TYPES.COLLECTION_FINISHED).catch(() => {});
+    }
+  }
+
+  abort() {
+    this.runToken++;
+    this.aborted = true;
+    if (this.pauseTimer) {
+      clearInterval(this.pauseTimer);
+      this.pauseTimer = null;
+    }
+    if (this.pauseResolve) {
+      const resolvePause = this.pauseResolve;
+      this.pauseResolve = null;
+      resolvePause();
+    }
+    this.progressBar.setStatus(CollectionProgressBar.STATUS_STOPPED);
+    this.progressBar.element.style.display = 'none';
+    this.downloadButton.element.style.display = 'flex';
+    this.downloadButton.setRadiosDisabled(false);
+    this.console.log('Download queue stopped by user.', 'INFO');
+    this.isRunning = false;
   }
 }
 
@@ -365,9 +429,15 @@ class CollectionDownloadButton {
       modal.render();
     });
   }
+
+  setRadiosDisabled(disabled) {
+    this.element.querySelectorAll('input[name="nxdtMethod"]').forEach((rb) => {
+      rb.disabled = disabled;
+    });
+  }
 }
 
-class CollectionProgressBar {
+export class CollectionProgressBar {
   static STATUS_DOWNLOADING = 0;
   static STATUS_PAUSED = 1;
   static STATUS_FINISHED = 2;
@@ -378,8 +448,6 @@ class CollectionProgressBar {
     this.modsCount = 0;
     this.progress = 0;
     this.skipPause = false;
-    this.skipTo = false;
-    this.skipToIndex = 0;
     this.status = CollectionProgressBar.STATUS_DOWNLOADING;
     this.element = document.createElement('div');
     this.element.className = 'nxdt-progress-container w-full space-y-2';
@@ -439,7 +507,7 @@ class CollectionProgressBar {
     });
 
     this.element.querySelector('#nxdtStop').addEventListener('click', () => {
-      this.setStatus(CollectionProgressBar.STATUS_STOPPED);
+      this.manager.abort();
     });
 
     this.element.querySelector('#nxdtSkipPause').addEventListener('click', () => {
@@ -505,11 +573,12 @@ class CollectionLogConsole {
   }
 }
 
-class CollectionSelectModal {
+export class CollectionSelectModal {
   constructor(manager) {
     this.manager = manager;
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
+    this.element.setAttribute('data-nxdt-modal', 'true');
   }
 
   render() {
@@ -536,12 +605,20 @@ class CollectionSelectModal {
     const searchInput = this.element.querySelector('#nxdtSearch');
     const countBadge = this.element.querySelector('#nxdtSelCount');
 
+    // Tracks selection across list rebuilds (search filtering re-creates rows).
+    const checkedIds = new Set();
+
     const updateCount = () => {
-      const checked = listContainer.querySelectorAll('input[type="checkbox"]:checked').length;
-      countBadge.textContent = `${checked} selected`;
+      countBadge.textContent = `${checkedIds.size} selected`;
     };
 
     const renderList = (filter = '') => {
+      // Persist the current DOM selection before rows are destroyed.
+      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        if (cb.checked) checkedIds.add(cb.getAttribute('data-file-id'));
+        else checkedIds.delete(cb.getAttribute('data-file-id'));
+      });
+
       listContainer.innerHTML = '';
       const filterLower = filter.toLowerCase();
       this.manager.mods.all.forEach((mod) => {
@@ -550,19 +627,48 @@ class CollectionSelectModal {
 
         const row = document.createElement('label');
         row.className = 'nxdt-modal-row';
-        row.innerHTML = `
-          <div class="nxdt-modal-row-left">
-            <input type="checkbox" data-file-id="${mod.fileId}" />
-            <span class="nxdt-modal-row-title">${name}</span>
-          </div>
-          <div class="nxdt-modal-row-right">
-            <span>${convertSize(mod.file?.size)}</span>
-            <span class="${mod.optional ? 'nxdt-tag-optional' : 'nxdt-tag-mandatory'}">${mod.optional ? 'Optional' : 'Mandatory'}</span>
-          </div>
-        `;
-        row.querySelector('input').addEventListener('change', updateCount);
+
+        const left = document.createElement('div');
+        left.className = 'nxdt-modal-row-left';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.setAttribute('data-file-id', String(mod.fileId));
+        checkbox.checked = checkedIds.has(String(mod.fileId));
+
+        const title = document.createElement('span');
+        title.className = 'nxdt-modal-row-title';
+        title.textContent = name;
+
+        left.appendChild(checkbox);
+        left.appendChild(title);
+
+        const right = document.createElement('div');
+        right.className = 'nxdt-modal-row-right';
+
+        const size = document.createElement('span');
+        size.textContent = convertSize(mod.file?.size);
+
+        const tag = document.createElement('span');
+        tag.className = mod.optional ? 'nxdt-tag-optional' : 'nxdt-tag-mandatory';
+        tag.textContent = mod.optional ? 'Optional' : 'Mandatory';
+
+        right.appendChild(size);
+        right.appendChild(tag);
+
+        row.appendChild(left);
+        row.appendChild(right);
+
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) checkedIds.add(checkbox.getAttribute('data-file-id'));
+          else checkedIds.delete(checkbox.getAttribute('data-file-id'));
+          updateCount();
+        });
+
         listContainer.appendChild(row);
       });
+
+      updateCount();
     };
 
     renderList();
@@ -570,34 +676,37 @@ class CollectionSelectModal {
     searchInput.addEventListener('input', (e) => renderList(e.target.value));
 
     this.element.querySelector('#nxdtSelAll').addEventListener('click', () => {
-      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = true));
+      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = true;
+        checkedIds.add(cb.getAttribute('data-file-id'));
+      });
       updateCount();
     });
 
     this.element.querySelector('#nxdtDeselAll').addEventListener('click', () => {
-      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
+      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        cb.checked = false;
+        checkedIds.delete(cb.getAttribute('data-file-id'));
+      });
       updateCount();
     });
 
     this.element.querySelector('#nxdtCloseSel').addEventListener('click', () => this.element.remove());
 
     this.element.querySelector('#nxdtStartSel').addEventListener('click', () => {
-      const selectedIds = new Set();
-      listContainer.querySelectorAll('input[type="checkbox"]:checked').forEach((cb) => {
-        selectedIds.add(cb.getAttribute('data-file-id'));
-      });
-      const selectedMods = this.manager.mods.all.filter((m) => selectedIds.has(String(m.fileId)));
+      const selectedMods = this.manager.mods.all.filter((m) => checkedIds.has(String(m.fileId)));
       this.element.remove();
       this.manager.downloadMods(selectedMods, 'selected');
     });
   }
 }
 
-class CollectionUpdateModal {
+export class CollectionUpdateModal {
   constructor(manager) {
     this.manager = manager;
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
+    this.element.setAttribute('data-nxdt-modal', 'true');
   }
 
   async render() {
@@ -668,18 +777,52 @@ class CollectionUpdateModal {
         const added = modsB.filter((m) => !idsA.has(String(m.fileId)));
         const removed = modsA.filter((m) => !idsB.has(String(m.fileId)));
 
-        diffOutput.innerHTML = `
-          <div class="space-y-2">
-            <div class="text-green-400 font-semibold">Added in Rev ${revB} (${added.length}):</div>
-            <ul class="list-disc list-inside space-y-0.5 text-gray-300">
-              ${added.map((m) => `<li>${m.file?.name || m.file?.mod?.name}</li>`).join('') || '<li>None</li>'}
-            </ul>
-            <div class="text-red-400 font-semibold mt-2">Removed in Rev ${revB} (${removed.length}):</div>
-            <ul class="list-disc list-inside space-y-0.5 text-gray-300">
-              ${removed.map((m) => `<li>${m.file?.name || m.file?.mod?.name}</li>`).join('') || '<li>None</li>'}
-            </ul>
-          </div>
-        `;
+        const nameOf = (m) => m.file?.name || m.file?.mod?.name;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'space-y-2';
+
+        const addHeader = document.createElement('div');
+        addHeader.className = 'text-green-400 font-semibold';
+        addHeader.textContent = `Added in Rev ${revB} (${added.length}):`;
+        const addList = document.createElement('ul');
+        addList.className = 'list-disc list-inside space-y-0.5 text-gray-300';
+        if (added.length === 0) {
+          const li = document.createElement('li');
+          li.textContent = 'None';
+          addList.appendChild(li);
+        } else {
+          added.forEach((m) => {
+            const li = document.createElement('li');
+            li.textContent = nameOf(m);
+            addList.appendChild(li);
+          });
+        }
+
+        const remHeader = document.createElement('div');
+        remHeader.className = 'text-red-400 font-semibold mt-2';
+        remHeader.textContent = `Removed in Rev ${revB} (${removed.length}):`;
+        const remList = document.createElement('ul');
+        remList.className = 'list-disc list-inside space-y-0.5 text-gray-300';
+        if (removed.length === 0) {
+          const li = document.createElement('li');
+          li.textContent = 'None';
+          remList.appendChild(li);
+        } else {
+          removed.forEach((m) => {
+            const li = document.createElement('li');
+            li.textContent = nameOf(m);
+            remList.appendChild(li);
+          });
+        }
+
+        wrap.appendChild(addHeader);
+        wrap.appendChild(addList);
+        wrap.appendChild(remHeader);
+        wrap.appendChild(remList);
+
+        diffOutput.textContent = '';
+        diffOutput.appendChild(wrap);
       };
 
       selFrom.addEventListener('change', compare);

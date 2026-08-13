@@ -1,11 +1,5 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
-import {
-  getSettings,
-  setSettings,
-  updateSettings,
-  incrementStat,
-  getStats,
-} from '../storage/settings.js';
+import { getSettings, getStats } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
 
 const log = createLogger('router');
@@ -40,5 +34,3 @@ registerHandler(MESSAGE_TYPES.GET_SETTINGS, async () => {
 registerHandler(MESSAGE_TYPES.PING, async () => {
   return { alive: true, stats: await getStats() };
 });
-
-export { setSettings, updateSettings, incrementStat, getSettings };

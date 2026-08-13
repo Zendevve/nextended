@@ -4,13 +4,18 @@ A Chromium Manifest V3 browser extension that restores usable download controls 
 **archived Nexus Mods files** — without requiring Tampermonkey/Greasemonkey.
 
 When you visit a Nexus Mods page with an archived file listing, the extension injects
-**Mod Manager Download** and **Manual Download** buttons for each archived file and resolves
-the download through the user's existing Nexus session.
+**Mod Manager Download** and **Manual Download** buttons for each archived file, and
+resolves downloads through the user's existing Nexus session. It also adds a collection
+downloader panel, a 5-second-countdown bypass, requirements-warning skip, and
+auto-close options.
 
 - **No credentials** are requested, stored, or transmitted.
 - **No backend** — all work happens in the browser extension.
-- **No Cloudflare/DRM bypassing** — the extension falls back to normal browser navigation.
+- **No Cloudflare/DRM bypassing** — Cloudflare challenges are detected and the
+  extension falls back to normal browser navigation.
 - Permissions are narrowly scoped to Nexus domains.
+- **Every resolved download URL is allow-list validated** and every message sender
+  is verified before any privileged action.
 
 ## Install (development / unpacked)
 
@@ -29,17 +34,19 @@ the download through the user's existing Nexus session.
 
 - Visit `https://www.nexusmods.com/{game}/mods/{mod}?tab=files&category=archived`.
 - Each archived file gets `Mod Manager Download` and `Manual Download` buttons.
-- Click to resolve and start the download through your Nexus session.
-- Open the popup (extension icon) for status; click **Settings** for configuration.
+- Open the popup (extension icon) for status and download stats; click
+  **Settings** for configuration (all 13 settings, including the no-wait
+  automation toggles and collection downloader options).
 
 ## Development
 
 ```bash
 npm install          # install dev dependencies
-npm run build        # bundle to dist/chrome
-npm run dev          # watch + rebuild on change (no HTTP server)
+npm run build        # bundle to dist/chrome (minified)
+npm run dev          # watch + rebuild + re-copy statics on change
 npm run test         # run unit tests
 npm run lint         # lint src, scripts, tests
+npm run check        # lint + test + build
 npm run format       # format with Prettier
 ```
 
@@ -47,40 +54,43 @@ npm run format       # format with Prettier
 
 ```
 Content script          Service worker          Nexus
-(in page / DOM)  ←message→  (privileged)  ↔  api.nexusmods.com / CDN
+(in page / DOM)  ←message→  (privileged)  ↔  www.nexusmods.com / api-router.nexusmods.com
 ```
 
 - `src/content/` — page detection, DOM inspection, button injection, MutationObserver.
-- `src/background/` — message routing, download orchestration, state.
-- `src/nexus/` — Nexus client (HTTP), download resolver, URL/file/game parsers, requirements detection.
+- `src/background/` — sender validation, message routing, download resolution, stats.
+- `src/nexus/` — GraphQL client, download URL validation (allow-list).
 - `src/storage/` — `chrome.storage`-based settings + statistics.
 - `src/popup/` and `src/options/` — UI.
 - `src/shared/` — constants, message factory, structured logger, typed errors.
 
 **Content scripts manipulate Nexus pages; they never perform privileged network operations.**
-**The service worker owns privileged requests and URL validation.**
+**The service worker owns privileged requests, sender validation, and URL validation.**
 
 ### Download resolution
 
-1. Content script extracts `fileId`, `gameId`, `gameSlug` and the user's chosen `mode`.
-2. Sends `RESOLVE_DOWNLOAD` to the service worker.
+1. Content script extracts `fileId` (and `gameId`/`slug`/`modId` where relevant)
+   and the user's chosen `mode`.
+2. Sends `RESOLVE_ARCHIVED_DOWNLOAD` (archived files) or
+   `RESOLVE_COLLECTION_DOWNLOAD` (collection downloads) to the service worker.
 3. Worker calls the Nexus endpoint
-   `https://www.nexusmods.com/{slug}/Core/Downloads/GenerateDownloadUrl?file_id=...`.
-4. Response is classified: CDN URL, NXM manager link, requirements flow, Cloudflare
-   challenge, auth error, or file-not-found.
-5. The final URL is validated against an allow-list of Nexus/Nexus-CDN hosts before the
-   browser starts the download or follows the manager link.
+   (`.../Core/Downloads/GenerateDownloadUrl?file_id=...` or the
+   `Core/Libs/Common/Managers/Downloads` POST endpoint) with a timeout.
+4. Response is classified: CDN URL, NXM manager link, Cloudflare challenge,
+   auth error, or file-not-found.
+5. The final URL is validated against an allow-list of Nexus/Nexus-CDN hosts
+   before the browser starts the download or follows the manager link.
 
 See `ARCHITECTURE.md` for the full write-up.
 
 ## Permissions
 
-| Permission                  | Why                                     |
-| --------------------------- | --------------------------------------- |
-| `storage`                   | Persist settings & stats.               |
-| `downloads`                 | Start browser-managed downloads.        |
-| `https://*.nexusmods.com/*` | Resolve download URLs via your session. |
-| `https://*.nexus-cdn.com/*` | Allow-listed CDN destinations.          |
+| Permission                        | Why                                        |
+| --------------------------------- | ------------------------------------------ |
+| `storage`                         | Persist settings & stats.                  |
+| `downloads`                       | Start browser-managed downloads.           |
+| `https://*.nexusmods.com/*`       | Resolve download URLs via your session (covers `www.nexusmods.com` and `api-router.nexusmods.com`). |
+| `https://*.nexus-cdn.com/*`       | Allow-listed CDN destinations for downloads. |
 
 `<all_urls>`, `tabs`, `cookies`, `webRequestBlocking`, and `nativeMessaging` are **not** requested.
 

@@ -57,6 +57,12 @@ label select {
   border-radius: 4px;
 }
 
+.group-label {
+  display: block;
+  padding: 6px 0 2px 0;
+  color: #9aa0a6;
+}
+
 .switch {
   position: relative;
   display: inline-flex;

@@ -4,9 +4,14 @@ window.__TEST_ENV__ = true;
 
 globalThis.chrome = globalThis.chrome || {
   runtime: {
+    id: 'test-extension-id',
     onMessage: { addListener: () => () => {} },
     onInstalled: { addListener: () => () => {} },
-    sendMessage: () => Promise.resolve(),
+    sendMessage: (message, cb) => {
+      const response = { success: true, result: {} };
+      if (typeof cb === 'function') cb(response);
+      return Promise.resolve(response);
+    },
   },
   storage: {
     local: {

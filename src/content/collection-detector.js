@@ -16,13 +16,3 @@ export function extractCollectionDetails(pathname = window.location.pathname) {
   }
   return null;
 }
-
-export function isCollectionPage(url = window.location.href) {
-  try {
-    const parsed = new URL(url);
-    if (!/nexusmods\.com$/i.test(parsed.hostname)) return false;
-    return Boolean(extractCollectionDetails(parsed.pathname));
-  } catch {
-    return false;
-  }
-}
