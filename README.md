@@ -53,6 +53,15 @@ npm run check        # lint + test + build
 npm run format       # format with Prettier
 ```
 
+## Documentation
+
+The docs are organized by Diátaxis purpose, all written for developers:
+
+- [Tutorial — Getting started](docs/tutorial/getting-started.md): build, load, and trace a download end-to-end.
+- [How-to guides](docs/how-to/add-a-setting.md): add a setting, add a message type, debug and verify, distribute.
+- [Reference](docs/reference/architecture.md): architecture, message protocol, settings, errors, permissions, security model.
+- [Explanation](docs/explanation/why-the-service-worker-owns-everything.md): why the service worker owns privileged operations, how the download queue works, Cloudflare and rate limits, the popup UX flow.
+
 ## Architecture
 
 ```
@@ -84,7 +93,9 @@ Content script          Service worker          Nexus
 5. The final URL is validated against an allow-list of Nexus/Nexus-CDN hosts
    before the browser starts the download or follows the manager link.
 
-See `ARCHITECTURE.md` for the full write-up.
+See the [Reference — architecture](docs/reference/architecture.md) and
+[Explanation — service worker](docs/explanation/why-the-service-worker-owns-everything.md)
+for the full write-up.
 
 ## Permissions
 
