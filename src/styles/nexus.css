@@ -29,6 +29,334 @@
   color: #e6edf3 !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.3) !important;
   box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+/* Panel status messages */
+.nxdt-loading-btn {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 12px 16px !important;
+  background-color: #373e47 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  color: #e6edf3 !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-panel-error,
+.nxdt-panel-warn {
+  width: 100% !important;
+  padding: 12px 14px !important;
+  background-color: #2d333b !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-panel-error {
+  color: #f47067 !important;
+  border: 1px solid rgba(244, 112, 103, 0.4) !important;
+}
+
+.nxdt-panel-warn {
+  color: #d29922 !important;
+  border: 1px solid rgba(210, 153, 34, 0.4) !important;
+}
+
+/* Download controls */
+.nxdt-download-controls {
+  display: flex;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+/* Download method segmented control */
+.nxdt-segmented {
+  display: flex !important;
+  gap: 3px !important;
+  padding: 3px !important;
+  background-color: #1b1e21 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-seg-btn {
+  flex: 1 1 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px 10px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  color: #8b949e !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.nxdt-seg-btn:hover {
+  color: #e6edf3 !important;
+}
+
+.nxdt-seg-btn input[type="radio"] {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: 0 !important;
+}
+
+.nxdt-seg-btn:has(input:checked) {
+  background-color: #da8e35 !important;
+  color: #ffffff !important;
+}
+
+.nxdt-seg-btn:has(input:focus-visible) {
+  outline: 2px solid #da8e35 !important;
+  outline-offset: 2px !important;
+}
+
+/* Hero download-all button */
+.nxdt-btn-hero {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  padding: 10px 16px !important;
+  background-color: #da8e35 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+
+.nxdt-btn-hero:hover {
+  background-color: #c47d28 !important;
+}
+
+.nxdt-btn-hero:active {
+  transform: scale(0.99) !important;
+}
+
+.nxdt-btn-hero-badge {
+  background-color: rgba(0, 0, 0, 0.25) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
+  letter-spacing: 0.2px !important;
+  white-space: nowrap !important;
+}
+
+/* Secondary action row */
+.nxdt-secondary-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.nxdt-btn-secondary {
+  background-color: #373e47 !important;
+  color: #e6edf3 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 6px !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+
+.nxdt-btn-secondary:hover {
+  background-color: #444c56 !important;
+}
+
+.nxdt-btn-secondary:active {
+  transform: scale(0.97) !important;
+}
+
+/* Progress bar */
+.nxdt-progress-container {
+  display: block;
+  width: 100% !important;
+}
+
+.nxdt-progress-track {
+  position: relative !important;
+  width: 100% !important;
+  height: 32px !important;
+  background-color: #2d333b !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-progress-fill {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  height: 100% !important;
+  background-color: #da8e35 !important;
+  transition: width 0.3s ease !important;
+}
+
+.nxdt-progress-meta {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 0 14px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #e6edf3 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-progress-actions {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+  font-size: 12px !important;
+}
+
+.nxdt-progress-actions-group {
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.nxdt-progress-btn {
+  background-color: #373e47 !important;
+  color: #e6edf3 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  transition: background 0.15s ease !important;
+}
+
+.nxdt-progress-btn:hover {
+  background-color: #444c56 !important;
+}
+
+.nxdt-progress-btn-danger {
+  background-color: #a51d2d !important;
+  border-color: #a51d2d !important;
+}
+
+.nxdt-progress-btn-danger:hover {
+  background-color: #c12736 !important;
+  border-color: #c12736 !important;
+}
+
+/* Log console */
+.nxdt-console-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  width: 100% !important;
+  font-size: 12px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+.nxdt-log-toggle {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  color: #8b949e !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.nxdt-log-toggle:hover {
+  color: #e6edf3 !important;
+}
+
+.nxdt-log-box {
+  background-color: #1b1e21 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 6px !important;
+  padding: 8px !important;
+  height: 112px !important;
+  overflow-y: auto !important;
+  display: block;
+  color: #c9d1d9 !important;
+  box-sizing: border-box !important;
+}
+
+.nxdt-log-box > div + div {
+  margin-top: 2px !important;
+}
+
+.nxdt-log-box::-webkit-scrollbar {
+  width: 6px !important;
+}
+.nxdt-log-box::-webkit-scrollbar-track {
+  background: #1b1e21 !important;
+  border-radius: 3px !important;
+}
+.nxdt-log-box::-webkit-scrollbar-thumb {
+  background: #444c56 !important;
+  border-radius: 3px !important;
+}
+.nxdt-log-box::-webkit-scrollbar-thumb:hover {
+  background: #da8e35 !important;
+}
+
+.nxdt-log-entry-error {
+  color: #f47067 !important;
+}
+
+.nxdt-log-entry-info {
+  color: #58a6ff !important;
+}
+
+/* Cross-slice focus treatment (FOCUS_COLLECTION_PANEL) */
+.nxdt-panel-focus {
+  outline: 2px solid #da8e35 !important;
+  outline-offset: 4px !important;
+  border-radius: 8px !important;
+  transition: outline-color 0.3s ease !important;
 }
 
 /* Modal Overlay & Box */

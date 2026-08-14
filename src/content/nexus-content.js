@@ -4,7 +4,7 @@ import { createPageObserver } from './page-observer.js';
 import { applyNoWaitFeatures, resetNoWaitState } from './no-wait.js';
 import { getSettings } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
-import { STORAGE_KEY_SETTINGS } from '../shared/constants.js';
+import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../shared/constants.js';
 import {
   MAIN_CONTENT_SELECTORS,
   COLLECTION_PANEL_SELECTOR,
@@ -15,6 +15,23 @@ import {
 const log = createLogger('content');
 
 const NEXUS_HOST_REGEX = /^https:\/\/(?:www\.)?nexusmods\.com\//i;
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message && message.type === MESSAGE_TYPES.FOCUS_COLLECTION_PANEL) {
+    const panel = document.querySelector(COLLECTION_PANEL_SELECTOR);
+    if (panel) {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      panel.classList.add('nxdt-panel-focus');
+      setTimeout(() => {
+        panel.classList.remove('nxdt-panel-focus');
+      }, 1600);
+      sendResponse({ ok: true });
+    } else {
+      sendResponse({ ok: false });
+    }
+  }
+  return false;
+});
 
 let collectionManager = null;
 let currentCollectionRoute = null;

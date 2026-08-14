@@ -13,20 +13,29 @@
       <span id="status-dot" class="dot" aria-hidden="true"></span>
     </header>
 
-    <section id="site">
-      <label>Current site</label>
-      <span id="site-name">—</span>
-    </section>
+    <button type="button" id="site-row" class="row">
+      <span class="row-label">Current site</span>
+      <span class="row-meta">
+        <span class="row-value" id="site-name">—</span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </span>
+    </button>
 
-    <section id="state">
-      <label>Collection Downloader</label>
-      <span id="collection-state">—</span>
-    </section>
+    <button type="button" id="collection-row" class="row">
+      <span class="row-label">Collection Downloader</span>
+      <span class="row-meta">
+        <span class="row-value" id="collection-state">—</span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </span>
+    </button>
 
-    <section id="nowait-state-sec">
-      <label>Countdown Skip</label>
-      <span id="nowait-state">—</span>
-    </section>
+    <button type="button" id="nowait-row" class="row">
+      <span class="row-label">Countdown Skip</span>
+      <span class="row-meta">
+        <span class="row-value" id="nowait-state">—</span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </span>
+    </button>
 
     <section class="meta">
       <span>Collections downloaded: <b id="collections-count">0</b></span>
@@ -36,6 +45,6 @@
       <button id="open-settings" type="button">Settings</button>
     </footer>
   </div>
-  <script src="popup/popup.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>

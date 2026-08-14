@@ -46,6 +46,7 @@ describe('settings', () => {
     const s = await getSettings();
     expect(s.enabled).toBe(DEFAULT_SETTINGS.enabled);
     expect(s.handleCollections).toBe(true);
+    expect(s.collectionPauseBetweenDownload).toBe(1.5);
   });
 
   it('persists and merges settings', async () => {

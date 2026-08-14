@@ -1,61 +1,199 @@
-import { MessageFactory, MESSAGE_TYPES } from '../shared/messages.js';
-import { STORAGE_KEY_SETTINGS } from '../shared/constants.js';
+import { STORAGE_KEY_SETTINGS, MESSAGE_TYPES } from '../shared/constants.js';
+
+const NEXUS_HOST_RE = /(?:^|\.)nexusmods\.com$/i;
+const COLLECTION_PATH_RE = /^\/games\/[^/]+\/collections\/[^/]+(?:\/revisions\/\d+)?\/?$/i;
+const MOD_PATH_RE = /^\/[^/]+\/mods\/\d+/i;
+
+const SITE_LABELS = {
+  collection: 'Collection page',
+  mod: 'Mod page',
+  nexus: 'On Nexus Mods',
+  'not-nexus': 'Not on Nexus',
+};
+
+let currentSettings = {};
+let activeTab = null;
+
+function classifyUrl(url) {
+  if (typeof url !== 'string' || !url) return null;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (!NEXUS_HOST_RE.test(parsed.hostname)) return 'not-nexus';
+  if (COLLECTION_PATH_RE.test(parsed.pathname)) return 'collection';
+  if (MOD_PATH_RE.test(parsed.pathname)) return 'mod';
+  return 'nexus';
+}
+
+function isNexusTab(category) {
+  return category === 'collection' || category === 'mod' || category === 'nexus';
+}
 
 function sendMessage(message) {
   return new Promise((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      resolve({});
+      return;
+    }
     chrome.runtime.sendMessage(message, (response) => {
       resolve(response || {});
     });
   });
 }
 
-async function refresh() {
-  const [pingRes, settingsRes] = await Promise.all([
-    sendMessage(MessageFactory.ping()),
-    sendMessage(MessageFactory.getSettings()),
-  ]);
+function getActiveTab() {
+  return new Promise((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.tabs?.query) {
+      resolve(null);
+      return;
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      void chrome.runtime?.lastError;
+      resolve(tabs && tabs.length ? tabs[0] : null);
+    });
+  });
+}
 
-  const result = pingRes.result || {};
-  const alive = result.alive === true;
-  const stats = result.stats || {};
+function renderDot(alive, settings) {
+  const el = document.getElementById('status-dot');
+  if (!el) return;
+  const enabled = settings.enabled !== false;
+  el.classList.toggle('inactive', !alive || !enabled);
+}
 
-  const settings = settingsRes.result?.settings || settingsRes.settings || {};
-  const site = document.getElementById('site-name');
-  const collectionState = document.getElementById('collection-state');
-  const nowaitState = document.getElementById('nowait-state');
-  const dot = document.getElementById('status-dot');
+function renderSite(tab) {
+  const el = document.getElementById('site-name');
+  if (!el) return;
+  const category = tab && tab.url ? classifyUrl(tab.url) : null;
+  el.textContent = category ? SITE_LABELS[category] : SITE_LABELS['not-nexus'];
+}
 
-  site.textContent =
-    typeof chrome !== 'undefined' && chrome.runtime?.id ? 'Nexus Mods' : '—';
-
+function renderCollectionState(settings) {
+  const el = document.getElementById('collection-state');
+  if (!el) return;
   const enabled = settings.enabled !== false;
   const handleCollections = settings.handleCollections !== false;
+  el.textContent = enabled && handleCollections ? 'On' : 'Off';
+}
+
+function renderNowaitState(settings) {
+  const el = document.getElementById('nowait-state');
+  if (!el) return;
+  const enabled = settings.enabled !== false;
   const autoStart = settings.autoStartDownload !== false;
+  el.textContent = enabled && autoStart ? 'On' : 'Off';
+}
 
-  if (collectionState) {
-    collectionState.textContent = enabled && handleCollections ? 'On' : 'Off';
-  }
-  if (nowaitState) {
-    nowaitState.textContent = enabled && autoStart ? 'On' : 'Off';
-  }
-  if (dot) {
-    dot.classList.toggle('inactive', !enabled || !alive);
-  }
+function renderStats(stats) {
+  const el = document.getElementById('collections-count');
+  if (!el) return;
+  el.textContent = (stats && stats.collectionsDownloaded) || '0';
+}
 
-  const collectionsCount = document.getElementById('collections-count');
-  if (collectionsCount) {
-    collectionsCount.textContent = stats.collectionsDownloaded || '0';
+export async function refresh() {
+  const [pingRes, settingsRes] = await Promise.all([
+    sendMessage({ type: MESSAGE_TYPES.PING }),
+    sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS }),
+  ]);
+
+  const ping = pingRes.result || pingRes || {};
+  const alive = ping.alive === true;
+  const stats = ping.stats || {};
+
+  const settings = settingsRes.result?.settings || settingsRes.settings || {};
+  currentSettings = { ...settings };
+
+  renderDot(alive, settings);
+  renderCollectionState(settings);
+  renderNowaitState(settings);
+  renderStats(stats);
+
+  activeTab = await getActiveTab();
+  renderSite(activeTab);
+}
+
+async function toggleNowait() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
+  let stored = {};
+  try {
+    const raw = await chrome.storage.local.get(STORAGE_KEY_SETTINGS);
+    stored = (raw && raw[STORAGE_KEY_SETTINGS]) || {};
+  } catch {
+    stored = {};
+  }
+  const base =
+    typeof stored.autoStartDownload === 'boolean'
+      ? stored.autoStartDownload
+      : currentSettings.autoStartDownload !== false;
+  const next = { ...stored, autoStartDownload: !base };
+  try {
+    await chrome.storage.local.set({ [STORAGE_KEY_SETTINGS]: next });
+  } catch {
+    /* storage errors surface via onChanged in real use */
+  }
+  currentSettings = { ...currentSettings, ...next };
+  renderNowaitState(currentSettings);
+}
+
+function onSiteRowClick() {
+  const category = activeTab && activeTab.url ? classifyUrl(activeTab.url) : null;
+  if (activeTab && activeTab.id != null && isNexusTab(category)) {
+    if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
+  } else if (chrome.tabs?.create) {
+    chrome.tabs.create({ url: 'https://www.nexusmods.com/' });
+  }
+  window.close?.();
+}
+
+function onCollectionRowClick() {
+  const category = activeTab && activeTab.url ? classifyUrl(activeTab.url) : null;
+  if (activeTab && activeTab.id != null && category === 'collection') {
+    if (!chrome.tabs?.sendMessage) {
+      if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
+      window.close?.();
+      return;
+    }
+    chrome.tabs.sendMessage(
+      activeTab.id,
+      { type: MESSAGE_TYPES.FOCUS_COLLECTION_PANEL },
+      (response) => {
+        // Reading lastError is required to keep the runtime quiet when no
+        // content script is listening.
+        void chrome.runtime?.lastError;
+        if (response && response.ok === true) {
+          window.close?.();
+        } else {
+          if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
+          window.close?.();
+        }
+      }
+    );
+  } else {
+    if (chrome.tabs?.create) chrome.tabs.create({ url: 'https://www.nexusmods.com/collections/' });
+    window.close?.();
   }
 }
+
+const siteRow = document.getElementById('site-row');
+if (siteRow) siteRow.addEventListener('click', onSiteRowClick);
+
+const collectionRow = document.getElementById('collection-row');
+if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick);
+
+const nowaitRow = document.getElementById('nowait-row');
+if (nowaitRow) nowaitRow.addEventListener('click', () => toggleNowait());
 
 const openSettingsBtn = document.getElementById('open-settings');
 if (openSettingsBtn) {
   openSettingsBtn.addEventListener('click', () => {
-    chrome.runtime.openOptionsPage && chrome.runtime.openOptionsPage();
+    if (chrome.runtime?.openOptionsPage) chrome.runtime.openOptionsPage();
   });
 }
 
-if (chrome && chrome.runtime && chrome.runtime.onMessage) {
+if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
   chrome.runtime.onMessage.addListener((message) => {
     if (message && message.type === MESSAGE_TYPES.SETTINGS_CHANGED) {
       refresh();
@@ -63,10 +201,12 @@ if (chrome && chrome.runtime && chrome.runtime.onMessage) {
   });
 }
 
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
-    refresh();
-  }
-});
+if (typeof chrome !== 'undefined' && chrome.storage?.onChanged?.addListener) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes && changes[STORAGE_KEY_SETTINGS]) {
+      refresh();
+    }
+  });
+}
 
 refresh();

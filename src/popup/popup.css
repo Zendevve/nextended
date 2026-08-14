@@ -6,7 +6,7 @@ body {
   font-size: 13px;
   background: #1a1c1f;
   color: #e0e0e0;
-  width: 300px;
+  width: 320px;
 }
 
 body {
@@ -25,6 +25,12 @@ header {
   font-size: 15px;
 }
 
+header h1 {
+  margin: 0;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .dot {
   display: inline-block;
   width: 10px;
@@ -36,22 +42,58 @@ header {
   background: #9e9e9e;
 }
 
-section {
+.row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid #2a2e33;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #33383f;
+  border-radius: 6px;
+  background: #2d3238;
+  color: #e0e0e0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.row:hover {
+  background: #3a4049;
+}
+.row:focus-visible {
+  outline: 2px solid #da8e35;
+  outline-offset: 2px;
+}
+.row:active {
+  background: #2a2f35;
 }
 
-section label {
+.row-label {
   color: #9aa0a6;
+}
+
+.row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.row-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: #9aa0a6;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .meta span {
   color: #9aa0a6;
   display: block;
-  padding: 2px 0;
+  padding: 4px 2px;
 }
 
 button {

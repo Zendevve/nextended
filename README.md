@@ -34,9 +34,12 @@ auto-close options.
 
 - Visit `https://www.nexusmods.com/{game}/mods/{mod}?tab=files&category=archived`.
 - Each archived file gets `Mod Manager Download` and `Manual Download` buttons.
-- Open the popup (extension icon) for status and download stats; click
-  **Settings** for configuration (all 13 settings, including the no-wait
-  automation toggles and collection downloader options).
+- On a collection page, the **Collection Downloader** panel downloads all or
+  mandatory mods, lets you pick specific mods, and shows revision diffs.
+- Open the popup (extension icon) for live status and quick actions: it shows
+  the current tab's page, jumps to the collection downloader panel, toggles
+  Countdown Skip, and opens **Settings** (all 13 settings, including the
+  no-wait automation toggles and collection downloader options).
 
 ## Development
 

@@ -62,7 +62,7 @@ export class CollectionManager {
     this.runToken = 0;
     this.mods = { all: [], mandatory: [], optional: [] };
     this.element = document.createElement('div');
-    this.element.className = 'nxdt-collection-panel bg-surface-low w-full space-y-3 rounded-lg p-4 mt-4';
+    this.element.className = 'nxdt-collection-panel';
     this.element.setAttribute('data-nxdt-collection', 'true');
     this.progressBar = new CollectionProgressBar(this);
     this.console = new CollectionLogConsole();
@@ -71,7 +71,7 @@ export class CollectionManager {
 
   async init() {
     this.element.innerHTML = `
-      <div class="nxdt-loading-btn w-full font-montserrat font-semibold text-sm leading-none uppercase flex justify-center items-center px-4 py-3 bg-primary-moderate text-font-primary rounded">
+      <div class="nxdt-loading-btn">
         Fetching Collection Mods...
       </div>
     `;
@@ -81,7 +81,7 @@ export class CollectionManager {
       if (res?.settings) {
         this.downloadMethod = res.settings.collectionDownloadMethod ?? DOWNLOAD_METHOD_VORTEX;
         this.downloadSpeed = res.settings.collectionDownloadSpeed ?? 1.5;
-        this.pauseBetweenDownload = res.settings.collectionPauseBetweenDownload ?? 5;
+        this.pauseBetweenDownload = res.settings.collectionPauseBetweenDownload ?? 1.5;
       }
     } catch (e) {
       log.warn('Failed to load settings', { error: e?.message });
@@ -98,7 +98,7 @@ export class CollectionManager {
     } catch (e) {
       this.element.innerHTML = '';
       const errorDiv = document.createElement('div');
-      errorDiv.className = 'w-full text-red-500 font-semibold text-sm p-3 bg-surface-mid rounded';
+      errorDiv.className = 'nxdt-panel-error';
       errorDiv.textContent = `Failed to load collection data: ${e?.message || 'Network error'}`;
       this.element.appendChild(errorDiv);
       return;
@@ -106,7 +106,7 @@ export class CollectionManager {
 
     if (!revisionData || !revisionData.modFiles) {
       this.element.innerHTML = `
-        <div class="w-full text-amber-500 font-semibold text-sm p-3 bg-surface-mid rounded">
+        <div class="nxdt-panel-warn">
           No mod files found in this collection revision.
         </div>
       `;
@@ -202,22 +202,6 @@ export class CollectionManager {
       const history = await this.getHistory();
       const downloadedHistory = history?.[this.gameDomain]?.[this.collectionSlug]?.[type] || [];
 
-      if (downloadedHistory.length > 0) {
-        const confirmSkip = window.confirm(
-          `You already downloaded ${downloadedHistory.length} of ${modsList.length} mods from this collection.\n` +
-            `Skip previously downloaded mods?\nCancel will re-download all files.`
-        );
-        if (!confirmSkip) {
-          await sendMessage(MESSAGE_TYPES.SET_COLLECTION_HISTORY, {
-            gameDomain: this.gameDomain,
-            collectionSlug: this.collectionSlug,
-            type,
-            fileIds: [],
-            replace: true,
-          });
-        }
-      }
-
       const failedDownloads = [];
 
       for (let index = 0; index < modsList.length; index++) {
@@ -229,7 +213,7 @@ export class CollectionManager {
         if (this.aborted || runToken !== this.runToken) break;
 
         if (downloadedHistory.includes(fileId)) {
-          this.console.log(`[${modNumber}] Already downloaded: ${modName}`);
+          this.console.log(`[${modNumber}] Skipped (already downloaded): ${modName}`);
           this.progressBar.incrementProgress();
           continue;
         }
@@ -367,38 +351,34 @@ class CollectionDownloadButton {
   constructor(manager) {
     this.manager = manager;
     this.element = document.createElement('div');
-    this.element.className = 'nxdt-download-controls flex flex-col gap-3 w-full';
+    this.element.className = 'nxdt-download-controls';
   }
 
   render() {
     const isVortex = this.manager.downloadMethod === DOWNLOAD_METHOD_VORTEX;
+    const totalCount = this.manager.mods.all.length;
+    const mandatoryCount = this.manager.mods.mandatory.length;
     this.element.innerHTML = `
-      <div class="flex flex-col sm:flex-row gap-3 justify-between items-center">
-        <div class="flex gap-4 items-center text-sm font-montserrat text-white">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_VORTEX}" ${isVortex ? 'checked' : ''} />
-            <span>Send mods to Vortex / MO2</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_BROWSER}" ${!isVortex ? 'checked' : ''} />
-            <span>Browser Direct Download</span>
-          </label>
-        </div>
+      <div class="nxdt-segmented" role="radiogroup" aria-label="Download method">
+        <label class="nxdt-seg-btn">
+          <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_VORTEX}" ${isVortex ? 'checked' : ''} />
+          <span>Send to Vortex / MO2</span>
+        </label>
+        <label class="nxdt-seg-btn">
+          <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_BROWSER}" ${!isVortex ? 'checked' : ''} />
+          <span>Browser Direct Download</span>
+        </label>
       </div>
-      <div class="flex gap-2 w-full">
-        <button id="nxdtDownloadAll" class="flex-1 font-montserrat font-semibold text-sm uppercase px-4 py-2 bg-primary-moderate hover:bg-primary-subdued text-white rounded flex justify-between items-center cursor-pointer">
-          <span>Download All Mods</span>
-          <span class="bg-surface-low px-2 py-0.5 rounded text-xs">${this.manager.mods.all.length} mods</span>
+      <button id="nxdtDownloadAll" class="nxdt-btn-hero" title="Download All Mods">
+        <span>Download All Mods</span>
+        <span class="nxdt-btn-hero-badge">${totalCount} mods</span>
+      </button>
+      <div class="nxdt-secondary-row">
+        <button id="nxdtDownloadMandatory" class="nxdt-btn-secondary" title="Download Mandatory Mods Only">
+          Mandatory (${mandatoryCount})
         </button>
-        <button id="nxdtDownloadMandatory" class="font-montserrat font-semibold text-sm uppercase px-3 py-2 bg-surface-mid hover:bg-surface-high border border-neutral-moderate text-white rounded cursor-pointer" title="Download Mandatory Mods Only">
-          Mandatory (${this.manager.mods.mandatory.length})
-        </button>
-        <button id="nxdtSelectMods" class="font-montserrat font-semibold text-sm uppercase px-3 py-2 bg-surface-mid hover:bg-surface-high border border-neutral-moderate text-white rounded cursor-pointer">
-          Select Mods
-        </button>
-        <button id="nxdtUpdateCollection" class="font-montserrat font-semibold text-sm uppercase px-3 py-2 bg-surface-mid hover:bg-surface-high border border-neutral-moderate text-white rounded cursor-pointer">
-          Update Diff
-        </button>
+        <button id="nxdtSelectMods" class="nxdt-btn-secondary">Select Mods</button>
+        <button id="nxdtUpdateCollection" class="nxdt-btn-secondary">Update Diff</button>
       </div>
     `;
 
@@ -450,7 +430,7 @@ export class CollectionProgressBar {
     this.skipPause = false;
     this.status = CollectionProgressBar.STATUS_DOWNLOADING;
     this.element = document.createElement('div');
-    this.element.className = 'nxdt-progress-container w-full space-y-2';
+    this.element.className = 'nxdt-progress-container';
     this.element.style.display = 'none';
     this.render();
   }
@@ -477,21 +457,21 @@ export class CollectionProgressBar {
 
   render() {
     this.element.innerHTML = `
-      <div class="relative w-full h-8 bg-surface-mid rounded overflow-hidden flex items-center">
-        <div id="nxdtProgressFill" class="absolute top-0 left-0 h-full bg-primary-moderate transition-all duration-300" style="width: 0%"></div>
-        <div class="relative z-10 w-full flex justify-between px-4 text-xs font-montserrat font-semibold text-white uppercase">
+      <div class="nxdt-progress-track">
+        <div id="nxdtProgressFill" class="nxdt-progress-fill" style="width: 0%"></div>
+        <div class="nxdt-progress-meta">
           <span id="nxdtPercent">0%</span>
           <span id="nxdtStatusText">Downloading...</span>
           <span id="nxdtCount">0/0</span>
         </div>
       </div>
-      <div class="flex gap-2 justify-between items-center text-xs text-white">
-        <div class="flex gap-2">
-          <button id="nxdtPlayPause" class="px-3 py-1 bg-surface-high rounded cursor-pointer">Pause</button>
-          <button id="nxdtStop" class="px-3 py-1 bg-red-600 rounded cursor-pointer">Stop</button>
+      <div class="nxdt-progress-actions">
+        <div class="nxdt-progress-actions-group">
+          <button id="nxdtPlayPause" class="nxdt-progress-btn">Pause</button>
+          <button id="nxdtStop" class="nxdt-progress-btn nxdt-progress-btn-danger">Stop</button>
         </div>
-        <div class="flex gap-2">
-          <button id="nxdtSkipPause" class="px-3 py-1 bg-surface-high rounded cursor-pointer">Skip Pause</button>
+        <div class="nxdt-progress-actions-group">
+          <button id="nxdtSkipPause" class="nxdt-progress-btn">Skip Wait</button>
         </div>
       </div>
     `;
@@ -537,13 +517,13 @@ export class CollectionProgressBar {
 class CollectionLogConsole {
   constructor() {
     this.element = document.createElement('div');
-    this.element.className = 'nxdt-console-container w-full space-y-1 text-xs font-mono';
+    this.element.className = 'nxdt-console-container';
     this.element.innerHTML = `
-      <div class="flex justify-between items-center text-neutral-moderate cursor-pointer" id="nxdtToggleLogs">
+      <div class="nxdt-log-toggle" id="nxdtToggleLogs">
         <span>Activity Log</span>
         <span id="nxdtLogState">Hide</span>
       </div>
-      <div id="nxdtLogOutput" class="bg-surface-low border border-stroke-subdued rounded p-2 h-28 overflow-y-auto space-y-0.5 text-gray-300"></div>
+      <div id="nxdtLogOutput" class="nxdt-log-box"></div>
     `;
 
     this.output = this.element.querySelector('#nxdtLogOutput');
@@ -564,8 +544,8 @@ class CollectionLogConsole {
   log(message, type = 'NORMAL') {
     const entry = document.createElement('div');
     const time = new Date().toLocaleTimeString();
-    if (type === 'ERROR') entry.className = 'text-red-400';
-    else if (type === 'INFO') entry.className = 'text-sky-400';
+    if (type === 'ERROR') entry.className = 'nxdt-log-entry-error';
+    else if (type === 'INFO') entry.className = 'nxdt-log-entry-info';
 
     entry.textContent = `[${time}] ${message}`;
     this.output.appendChild(entry);

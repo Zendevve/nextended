@@ -5,7 +5,7 @@ import {
   CollectionSelectModal,
   CollectionUpdateModal,
 } from '../src/content/collection-ui.js';
-import { MESSAGE_TYPES } from '../src/shared/constants.js';
+import { MESSAGE_TYPES, DOWNLOAD_METHOD_VORTEX, DOWNLOAD_METHOD_BROWSER } from '../src/shared/constants.js';
 
 const ok = (result) => ({ success: true, result });
 const fail = (error, code) => ({ success: false, error, code });
@@ -171,30 +171,109 @@ describe('CollectionManager download queue', () => {
     ).toHaveLength(0);
   });
 
-  it('clears history with replace:true when the user cancels the skip dialog', async () => {
+  it('auto-skips already-downloaded mods without re-resolving them', async () => {
     const send = mockSendMessage((msg) => defaultResponses[msg.type] ?? ok({}));
     const manager = createManager('skyrimspecialedition', 'cool-collection');
-    window.confirm = vi.fn(() => false);
+    window.confirm = vi.fn(() => true);
     manager.getHistory = async () => ({
-      skyrimspecialedition: { 'cool-collection': { all: ['999'] } },
+      skyrimspecialedition: { 'cool-collection': { all: ['100'] } },
     });
 
-    await manager.downloadMods([makeMod(100, 'Mod A')], 'all');
+    await manager.downloadMods([makeMod(100, 'Mod A'), makeMod(200, 'Mod B')], 'all');
 
-    const clearCall = send.mock.calls.find(
-      ([m]) =>
-        m.type === MESSAGE_TYPES.SET_COLLECTION_HISTORY &&
-        Array.isArray(m.payload?.fileIds) &&
-        m.payload.fileIds.length === 0
+    // the already-downloaded file was never re-resolved; the other one was
+    const resolveCalls = send.mock.calls.filter(
+      ([m]) => m.type === MESSAGE_TYPES.RESOLVE_COLLECTION_DOWNLOAD
     );
-    expect(clearCall).toBeTruthy();
-    expect(clearCall[0].payload).toEqual({
-      gameDomain: 'skyrimspecialedition',
-      collectionSlug: 'cool-collection',
-      type: 'all',
-      fileIds: [],
-      replace: true,
-    });
+    expect(resolveCalls).toHaveLength(1);
+    expect(resolveCalls[0][0].payload.fileId).toBe('200');
+
+    // no confirm() prompt and no history clear were issued
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(
+      send.mock.calls.filter(
+        ([m]) =>
+          m.type === MESSAGE_TYPES.SET_COLLECTION_HISTORY &&
+          Array.isArray(m.payload?.fileIds) &&
+          m.payload.fileIds.length === 0
+      )
+    ).toHaveLength(0);
+
+    // the skip still counted toward the completed progress
+    expect(manager.progressBar.progress).toBe(2);
+    expect(manager.progressBar.modsCount).toBe(2);
+    expect(manager.progressBar.status).toBe(CollectionProgressBar.STATUS_FINISHED);
+
+    expect(manager.console.output.textContent).toContain(
+      '[1/2] Skipped (already downloaded): Mod A'
+    );
+  });
+
+  it('renders the overhauled panel layout (segmented control, hero, secondary row)', () => {
+    const manager = createManager();
+    manager.mods = {
+      all: [makeMod(1, 'A'), makeMod(2, 'B'), makeMod(3, 'C')],
+      mandatory: [makeMod(1, 'A')],
+      optional: [],
+    };
+    manager.downloadButton.render();
+
+    const el = manager.downloadButton.element;
+
+    // hero button is full-width with the new class and shows the mod count
+    const allBtn = el.querySelector('#nxdtDownloadAll');
+    expect(allBtn).not.toBeNull();
+    expect(allBtn.classList.contains('nxdt-btn-hero')).toBe(true);
+    expect(allBtn.textContent).toContain('3 mods');
+
+    // secondary row holds exactly the three expected actions, in order
+    const secondaryRow = el.querySelector('.nxdt-secondary-row');
+    expect(secondaryRow).not.toBeNull();
+    const secondaryButtons = secondaryRow.querySelectorAll('button');
+    expect(secondaryButtons).toHaveLength(3);
+    expect(Array.from(secondaryButtons).map((b) => b.id)).toEqual([
+      'nxdtDownloadMandatory',
+      'nxdtSelectMods',
+      'nxdtUpdateCollection',
+    ]);
+
+    // segmented control keeps real radios and the mutex disable logic
+    const radios = el.querySelectorAll('input[name="nxdtMethod"]');
+    expect(radios).toHaveLength(2);
+    expect(radios[0].value).toBe(String(DOWNLOAD_METHOD_VORTEX));
+    expect(radios[1].value).toBe(String(DOWNLOAD_METHOD_BROWSER));
+    expect(radios[0].checked).toBe(true);
+
+    manager.downloadButton.setRadiosDisabled(true);
+    radios.forEach((rb) => expect(rb.disabled).toBe(true));
+    manager.downloadButton.setRadiosDisabled(false);
+    radios.forEach((rb) => expect(rb.disabled).toBe(false));
+  });
+
+  it('completes a 99-mod run: COLLECTION_FINISHED once, progress 99/99', async () => {
+    vi.useFakeTimers();
+    const send = mockSendMessage((msg) => defaultResponses[msg.type] ?? ok({}));
+
+    const mods = Array.from({ length: 99 }, (_, i) => makeMod(1000 + i, `Mod ${i + 1}`));
+    const manager = createManager();
+    const run = manager.downloadMods(mods, 'all');
+
+    // let the queue reach its first inter-download pause (timers drive it from here)
+    await flushUntil(() => manager.pauseTimer !== null);
+
+    // advance the fake clock until the run finishes
+    for (let i = 0; i < 2000 && manager.isRunning; i++) {
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+    await run;
+
+    expect(
+      send.mock.calls.filter(([m]) => m.type === MESSAGE_TYPES.COLLECTION_FINISHED)
+    ).toHaveLength(1);
+    expect(manager.progressBar.progress).toBe(99);
+    expect(manager.progressBar.modsCount).toBe(99);
+    expect(manager.progressBar.status).toBe(CollectionProgressBar.STATUS_FINISHED);
+    expect(manager.isRunning).toBe(false);
   });
 
   it('sends COLLECTION_FINISHED after a successful full run', async () => {

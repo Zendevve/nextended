@@ -3,7 +3,7 @@ export const DEFAULT_SETTINGS = {
   handleCollections: true,
   collectionDownloadMethod: 0,
   collectionDownloadSpeed: 1.5,
-  collectionPauseBetweenDownload: 5,
+  collectionPauseBetweenDownload: 1.5,
   autoStartDownload: true,
   autoCloseTab: false,
   skipRequirements: true,
