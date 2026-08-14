@@ -4,9 +4,9 @@ import { join, resolve, sep } from 'path';
 
 const ROOT = resolve(process.cwd());
 const SRC = join(ROOT, 'src');
-const DIST = join(ROOT, 'dist', 'chrome');
 const ASSETS = join(ROOT, 'assets');
-const MANIFEST = join(ROOT, 'manifest.json');
+const MANIFEST_CHROME = join(ROOT, 'manifest.json');
+const MANIFEST_FIREFOX = join(ROOT, 'manifest.firefox.json');
 
 const targets = [
   { entry: 'background/service-worker.js' },
@@ -23,10 +23,10 @@ const copies = [
   ['options/options.css', 'options/options.css'],
 ];
 
-// Source paths whose changes must re-trigger copyStatic in watch mode.
 const staticSources = new Set([
   ...copies.map(([srcRel]) => join(SRC, srcRel)),
-  MANIFEST,
+  MANIFEST_CHROME,
+  MANIFEST_FIREFOX,
 ]);
 
 let copyTimer = null;
@@ -48,24 +48,27 @@ function copyRecursive(srcPath, destPath) {
   }
 }
 
-function copyStatic() {
+function copyStatic(browser = 'chrome') {
+  const dist = join(ROOT, 'dist', browser);
   for (const [srcRel, outRel] of copies) {
     const from = join(SRC, srcRel);
-    const to = join(DIST, outRel);
+    const to = join(dist, outRel);
     ensureDir(resolve(to, '..'));
     copyFileSync(from, to);
   }
-  ensureDir(join(DIST, 'assets'));
-  copyRecursive(ASSETS, join(DIST, 'assets'));
-  ensureDir(resolve(join(DIST, 'manifest.json'), '..'));
-  copyFileSync(MANIFEST, join(DIST, 'manifest.json'));
-  console.log('[build] static assets copied');
+  ensureDir(join(dist, 'assets'));
+  copyRecursive(ASSETS, join(dist, 'assets'));
+
+  const manifestSource = browser === 'firefox' ? MANIFEST_FIREFOX : MANIFEST_CHROME;
+  ensureDir(resolve(join(dist, 'manifest.json'), '..'));
+  copyFileSync(manifestSource, join(dist, 'manifest.json'));
+  console.log(`[build] static assets copied for ${browser}`);
 }
 
 const banner = '/* Nexus Mods Download Tools */\n';
 
-function buildOpts() {
-  const watchMode = process.argv.includes('--watch');
+function buildOpts(browser = 'chrome', watchMode = false) {
+  const dist = join(ROOT, 'dist', browser);
   return {
     entryPoints: targets.map((t) => join(SRC, t.entry)),
     bundle: true,
@@ -75,7 +78,7 @@ function buildOpts() {
     sourcemap: watchMode,
     banner: { js: banner },
     outbase: SRC,
-    outdir: DIST,
+    outdir: dist,
     logLevel: 'info',
   };
 }
@@ -84,28 +87,25 @@ function isStaticPath(p) {
   return staticSources.has(p) || p === ASSETS || p.startsWith(ASSETS + sep);
 }
 
-function scheduleCopyStatic() {
+function scheduleCopyStatic(browser = 'chrome') {
   if (copyTimer) clearTimeout(copyTimer);
   copyTimer = setTimeout(() => {
     copyTimer = null;
-    copyStatic();
+    copyStatic(browser);
   }, 100);
 }
 
-function watchStatic() {
+function watchStatic(browser = 'chrome') {
   const onChange = (base) => (_event, filename) => {
     const abs = filename ? resolve(base, filename) : base;
-    if (isStaticPath(abs)) scheduleCopyStatic();
+    if (isStaticPath(abs)) scheduleCopyStatic(browser);
   };
-  // src/ holds styles/, popup/, options/ — recursive catches html/css edits.
   staticWatchers.push(watch(SRC, { recursive: true }, onChange(SRC)));
-  // assets/ lives at the repo root, outside src/.
   staticWatchers.push(watch(ASSETS, { recursive: true }, onChange(ASSETS)));
-  // manifest.json: watch the repo root (non-recursive) and filter.
   staticWatchers.push(
     watch(ROOT, (_event, filename) => {
       const abs = filename ? resolve(ROOT, filename) : null;
-      if (abs === MANIFEST) scheduleCopyStatic();
+      if (abs === MANIFEST_CHROME || abs === MANIFEST_FIREFOX) scheduleCopyStatic(browser);
     })
   );
   for (const watcher of staticWatchers) {
@@ -113,22 +113,31 @@ function watchStatic() {
   }
 }
 
-async function runBuild(watchMode) {
-  if (!watchMode) {
-    await esbuild.build(buildOpts());
-    copyStatic();
-    console.log('[build] dist/chrome ready');
-    return null;
+async function runBuild() {
+  const args = process.argv.slice(2);
+  const watchMode = args.includes('--watch');
+  const targetBrowsers = args.includes('--firefox')
+    ? ['firefox']
+    : args.includes('--chrome')
+      ? ['chrome']
+      : ['chrome', 'firefox'];
+
+  for (const browser of targetBrowsers) {
+    if (!watchMode) {
+      await esbuild.build(buildOpts(browser, false));
+      copyStatic(browser);
+      console.log(`[build] dist/${browser} ready`);
+    } else {
+      const ctx = await esbuild.context(buildOpts(browser, true));
+      await ctx.watch();
+      copyStatic(browser);
+      console.log(`[build] watching src -> dist/${browser}`);
+      watchStatic(browser);
+    }
   }
-  const ctx = await esbuild.context(buildOpts());
-  await ctx.watch();
-  copyStatic();
-  console.log('[build] watching src -> dist/chrome');
-  watchStatic();
-  return ctx;
 }
 
-runBuild(process.argv.includes('--watch')).catch((e) => {
+runBuild().catch((e) => {
   console.error(e);
   process.exit(1);
 });

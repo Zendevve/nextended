@@ -88,6 +88,7 @@ describe('popup', () => {
 
     const rows = [
       ['site-name', 'Current site'],
+      ['queue-state', 'Background Queue'],
       ['collection-state', 'Collection Downloader'],
       ['nowait-state', 'Countdown Skip'],
     ];
@@ -98,7 +99,7 @@ describe('popup', () => {
       expect(button.type).toBe('button');
       expect(button.textContent).toContain(label);
     }
-    expect(document.querySelectorAll('.chevron').length).toBe(3);
+    expect(document.querySelectorAll('.chevron').length).toBe(4);
     expect(document.querySelector('h1').textContent).toBe('Nexus Download Tools');
     expect(document.getElementById('status-dot')).not.toBeNull();
   });

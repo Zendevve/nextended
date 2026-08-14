@@ -1,7 +1,11 @@
 import { extractCollectionDetails } from './collection-detector.js';
 import { CollectionManager } from './collection-ui.js';
 import { createPageObserver } from './page-observer.js';
-import { applyNoWaitFeatures, resetNoWaitState } from './no-wait.js';
+import { applyNoWaitFeatures, resetNoWaitState, triggerDownload } from './no-wait.js';
+import { FloatingDrawer } from './floating-drawer.js';
+import { RequirementsBundler } from './requirements-bundler.js';
+import { SearchCardActions } from './search-card-actions.js';
+import { ArchiveInspector } from './archive-inspector.js';
 import { getSettings } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
 import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../shared/constants.js';
@@ -16,6 +20,11 @@ const log = createLogger('content');
 
 const NEXUS_HOST_REGEX = /^https:\/\/(?:www\.)?nexusmods\.com\//i;
 
+const floatingDrawer = new FloatingDrawer();
+const requirementsBundler = new RequirementsBundler();
+const searchCardActions = new SearchCardActions();
+const archiveInspector = new ArchiveInspector();
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message && message.type === MESSAGE_TYPES.FOCUS_COLLECTION_PANEL) {
     const panel = document.querySelector(COLLECTION_PANEL_SELECTOR);
@@ -29,6 +38,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     } else {
       sendResponse({ ok: false });
     }
+  } else if (message && message.type === 'NXDT_TRIGGER_NXM' && message.url) {
+    triggerDownload(message.url);
+    sendResponse({ ok: true });
+  } else if (message && message.type === MESSAGE_TYPES.TOGGLE_DRAWER) {
+    floatingDrawer.toggle();
+    sendResponse({ ok: true });
   }
   return false;
 });
@@ -53,13 +68,11 @@ function processCollectionPage() {
   const routeChanged = currentCollectionRoute !== routeKey;
   const targetContainer = queryFirst(document, MAIN_CONTENT_SELECTORS, document.body);
 
-  // Stop the old manager and drop its DOM before building the new panel.
   if (collectionManager) {
     if (typeof collectionManager.abort === 'function') collectionManager.abort();
     if (collectionManager.element) collectionManager.element.remove();
   }
   if (routeChanged) {
-    // Route-change cleanup: stale modals and no-wait state belong to the old page.
     document.querySelectorAll(MODAL_OVERLAY_SELECTOR).forEach((el) => el.remove());
     resetNoWaitState();
   }
@@ -75,9 +88,19 @@ function processCollectionPage() {
   log.info('Initialized collection panel', details);
 }
 
-function processNoWaitFeatures() {
+function processInPageFeatures() {
   if (!currentSettings || currentSettings.enabled === false) return;
   applyNoWaitFeatures(currentSettings);
+
+  if (currentSettings.enableRequirementsBundler) {
+    requirementsBundler.injectBundleButton();
+  }
+  if (currentSettings.enableSearchCardButtons) {
+    searchCardActions.processCards();
+  }
+  if (currentSettings.enableArchiveInspector) {
+    archiveInspector.processFiles();
+  }
 }
 
 async function init() {
@@ -86,16 +109,26 @@ async function init() {
   try {
     currentSettings = await getSettings();
   } catch {
-    currentSettings = { enabled: true, handleCollections: true, autoStartDownload: true, skipRequirements: true };
+    currentSettings = {
+      enabled: true,
+      handleCollections: true,
+      autoStartDownload: true,
+      skipRequirements: true,
+      enableRequirementsBundler: true,
+      enableSearchCardButtons: true,
+      enableArchiveInspector: true,
+    };
   }
 
-  applyNoWaitFeatures(currentSettings);
+  floatingDrawer.init();
+  processInPageFeatures();
   processCollectionPage();
 
   observer = createPageObserver(() => {
     processCollectionPage();
-    processNoWaitFeatures();
+    processInPageFeatures();
   });
+
   if (document.body) {
     observer.observe();
   } else if (document.documentElement) {
@@ -114,7 +147,7 @@ async function init() {
         ...currentSettings,
         ...changes[STORAGE_KEY_SETTINGS].newValue,
       };
-      applyNoWaitFeatures(currentSettings);
+      processInPageFeatures();
       processCollectionPage();
     }
   });

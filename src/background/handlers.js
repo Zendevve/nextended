@@ -1,9 +1,14 @@
-import { MESSAGE_TYPES, STORAGE_KEY_COLLECTION_HISTORY } from '../shared/constants.js';
-import { getSettings, incrementStat } from '../storage/settings.js';
+import {
+  MESSAGE_TYPES,
+  STORAGE_KEY_COLLECTION_HISTORY,
+} from '../shared/constants.js';
+import { getSettings, setSettings, incrementStat } from '../storage/settings.js';
 import { ERROR_CODES, NexusDownloadError } from '../shared/errors.js';
 import { createLogger } from '../shared/logger.js';
 import { parseUrlSafe, isSafeDownloadUrl, buildGenerateDownloadUrl } from '../nexus/url-utils.js';
 import { registerHandler } from './message-router.js';
+import { PRESETS } from '../options/presets.js';
+import { downloadMo2MetaFile } from './mo2-meta-generator.js';
 
 const log = createLogger('handlers');
 
@@ -33,8 +38,6 @@ async function extractValidatedUrl(response) {
   if (response.status === 404) {
     throw new NexusDownloadError(ERROR_CODES.FILE_NOT_FOUND, 'File not found');
   }
-  // Cloudflare sniff catches 403 challenge pages and 200 challenge pages;
-  // a plain 404/403 with a cf- string in the body is still that status.
   if (/cloudflare|cf-/i.test(text)) {
     throw new NexusDownloadError(ERROR_CODES.CLOUDFLARE, 'Blocked by Cloudflare');
   }
@@ -109,6 +112,12 @@ export async function fetchCollectionMods(payload, deps = {}) {
   const client = deps.getCollectionClient();
   const data = await client.fetchMods(payload.gameDomain, payload.collectionSlug, payload.revision);
   return { collectionRevision: data };
+}
+
+export async function fetchModRequirements(payload, deps = {}) {
+  const client = deps.getCollectionClient();
+  const modData = await client.fetchModRequirements(payload.gameDomain, payload.modId);
+  return { mod: modData };
 }
 
 let historyCache = null;
@@ -203,7 +212,7 @@ export function resetHistoryCache() {
   historyWriteChain = Promise.resolve();
 }
 
-export async function startDownload(payload) {
+export async function startDownload(payload, deps = {}) {
   if (!payload?.url) {
     return { success: false, error: 'Missing download URL', code: ERROR_CODES.INVALID_INPUT };
   }
@@ -226,6 +235,24 @@ export async function startDownload(payload) {
       } catch {
         /* stats are best-effort */
       }
+
+      if (payload.item && deps.fileOrganizer) {
+        deps.fileOrganizer.registerDownload(downloadId, payload.item);
+      }
+
+      const settings = await getSettings();
+      if (settings.generateMo2Meta && payload.item) {
+        try {
+          await downloadMo2MetaFile(
+            payload.item,
+            payload.item.fileName || 'mod_download',
+            chrome.downloads
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+
       log.info('chrome.downloads started', {
         dlId: downloadId,
         host: parsed?.hostname || null,
@@ -308,7 +335,94 @@ export async function collectionFinished() {
   return { ok: true };
 }
 
+export async function applyPresetHandler(payload) {
+  const { presetName } = payload || {};
+  const preset = PRESETS[presetName];
+  if (!preset) {
+    return { success: false, error: `Unknown preset: ${presetName}`, code: ERROR_CODES.INVALID_INPUT };
+  }
+  const current = await getSettings();
+  const updated = await setSettings({ ...current, ...preset.settings });
+  return { success: true, settings: updated, preset: preset.name };
+}
+
+export async function verifyCollectionDownloads(payload) {
+  const { gameDomain, collectionSlug, modFiles = [] } = payload || {};
+  const history = await loadHistoryCache();
+  const gameHistory = (gameDomain && collectionSlug && history[gameDomain]?.[collectionSlug]) || {};
+  const historyIds = new Set([
+    ...(gameHistory.all || []),
+    ...(gameHistory.mandatory || []),
+    ...(gameHistory.optional || []),
+  ]);
+
+  let browserDownloads = [];
+  if (typeof chrome !== 'undefined' && chrome.downloads && typeof chrome.downloads.search === 'function') {
+    try {
+      browserDownloads = await new Promise((resolve) => {
+        chrome.downloads.search({}, (items) => {
+          void chrome.runtime?.lastError;
+          resolve(items || []);
+        });
+      });
+    } catch {
+      browserDownloads = [];
+    }
+  }
+
+  const results = modFiles.map((mod) => {
+    const fileId = String(mod.fileId || mod.file?.fileId || '');
+    const fileName = mod.fileName || mod.file?.name || '';
+    const modName = mod.modName || mod.file?.mod?.name || 'Unknown Mod';
+
+    const inHistory = historyIds.has(fileId);
+
+    const matchingDl = browserDownloads.find((dl) => {
+      if (!dl) return false;
+      const dlFilename = dl.filename ? dl.filename.toLowerCase() : '';
+      const targetName = fileName.toLowerCase();
+      if (targetName && (dlFilename.endsWith(targetName) || dlFilename.includes(targetName))) {
+        return true;
+      }
+      if (fileId && dl.url && (dl.url.includes(`file_id=${fileId}`) || dl.url.includes(`fid=${fileId}`))) {
+        return true;
+      }
+      return false;
+    });
+
+    const isComplete = (matchingDl && matchingDl.state === 'complete') || inHistory;
+    const isInterrupted = matchingDl && matchingDl.state === 'interrupted';
+    const isInProgress = matchingDl && matchingDl.state === 'in_progress';
+
+    return {
+      fileId,
+      fileName,
+      modName,
+      modId: mod.modId || mod.file?.mod?.modId || '',
+      fileSize: mod.fileSize || mod.file?.size || 0,
+      isOptional: !!mod.optional,
+      confirmed: isComplete,
+      state: isComplete ? 'complete' : isInProgress ? 'in_progress' : isInterrupted ? 'interrupted' : 'missing',
+      downloadPath: matchingDl?.filename || null,
+      fileSizeDownloaded: matchingDl?.bytesReceived || matchingDl?.fileSize || null,
+    };
+  });
+
+  const total = results.length;
+  const confirmed = results.filter((r) => r.confirmed).length;
+  const missing = results.filter((r) => !r.confirmed).length;
+
+  return {
+    total,
+    confirmed,
+    missing,
+    percentage: total > 0 ? Math.round((confirmed / total) * 100) : 0,
+    results,
+  };
+}
+
 export function registerHandlers(deps = {}) {
+  registerHandler(MESSAGE_TYPES.GET_SETTINGS, () => getSettings().then((settings) => ({ settings })));
   registerHandler(MESSAGE_TYPES.SETTINGS_CHANGED, () => settingsChanged(deps));
   registerHandler(MESSAGE_TYPES.FETCH_COLLECTION_REVISIONS, (payload) =>
     fetchCollectionRevisions(payload, deps)
@@ -316,9 +430,12 @@ export function registerHandlers(deps = {}) {
   registerHandler(MESSAGE_TYPES.FETCH_COLLECTION_MODS, (payload) =>
     fetchCollectionMods(payload, deps)
   );
+  registerHandler(MESSAGE_TYPES.FETCH_MOD_REQUIREMENTS, (payload) =>
+    fetchModRequirements(payload, deps)
+  );
   registerHandler(MESSAGE_TYPES.GET_COLLECTION_HISTORY, () => getCollectionHistory());
   registerHandler(MESSAGE_TYPES.SET_COLLECTION_HISTORY, (payload) => setCollectionHistory(payload));
-  registerHandler(MESSAGE_TYPES.START_DOWNLOAD, (payload) => startDownload(payload));
+  registerHandler(MESSAGE_TYPES.START_DOWNLOAD, (payload) => startDownload(payload, deps));
   registerHandler(MESSAGE_TYPES.RESOLVE_COLLECTION_DOWNLOAD, (payload) =>
     resolveCollectionDownload(payload, deps)
   );
@@ -326,4 +443,36 @@ export function registerHandlers(deps = {}) {
     resolveArchivedDownload(payload, deps)
   );
   registerHandler(MESSAGE_TYPES.COLLECTION_FINISHED, () => collectionFinished());
+  registerHandler(MESSAGE_TYPES.APPLY_PRESET, (payload) => applyPresetHandler(payload));
+  registerHandler(MESSAGE_TYPES.VERIFY_COLLECTION_DOWNLOADS, (payload) =>
+    verifyCollectionDownloads(payload)
+  );
+
+  // Queue Manager Handlers
+  registerHandler(MESSAGE_TYPES.ENQUEUE_ITEMS, async (payload) => {
+    if (!deps.queueManager) return { success: false, error: 'Queue manager unavailable' };
+    return deps.queueManager.enqueueItems(payload?.items, payload?.options);
+  });
+  registerHandler(MESSAGE_TYPES.QUEUE_PAUSE, async () => {
+    deps.queueManager?.pause();
+    return { ok: true };
+  });
+  registerHandler(MESSAGE_TYPES.QUEUE_RESUME, async () => {
+    deps.queueManager?.resume();
+    return { ok: true };
+  });
+  registerHandler(MESSAGE_TYPES.QUEUE_CLEAR, async () => {
+    deps.queueManager?.clear();
+    return { ok: true };
+  });
+  registerHandler(MESSAGE_TYPES.QUEUE_SKIP_ITEM, async (payload) => {
+    deps.queueManager?.skipItem(payload?.itemId);
+    return { ok: true };
+  });
+  registerHandler(MESSAGE_TYPES.QUEUE_RETRY_FAILED, async () => {
+    return deps.queueManager?.retryFailed() || { retriedCount: 0 };
+  });
+  registerHandler(MESSAGE_TYPES.GET_QUEUE_STATE, async () => {
+    return deps.queueManager?.getState() || { status: 'idle', items: [] };
+  });
 }

@@ -380,6 +380,10 @@ class CollectionDownloadButton {
         <button id="nxdtSelectMods" class="nxdt-btn-secondary">Select Mods</button>
         <button id="nxdtUpdateCollection" class="nxdt-btn-secondary">Update Diff</button>
       </div>
+      <div class="nxdt-queue-row" style="margin-top: 6px; display:flex; gap:6px;">
+        <button id="nxdtQueueBackground" class="nxdt-btn-secondary" style="flex:1; border-color:#da8e35;color:#da8e35;font-weight:600;" title="Add all collection mods to background persistent queue">⚡ Queue All to Background</button>
+        <button id="nxdtVerifyDownloads" class="nxdt-btn-secondary" style="border-color:#58a6ff;color:#58a6ff;font-weight:600;" title="Scan downloads and check for missing files">🔍 Verify</button>
+      </div>
     `;
 
     const radioButtons = this.element.querySelectorAll('input[name="nxdtMethod"]');
@@ -407,6 +411,41 @@ class CollectionDownloadButton {
       const modal = new CollectionUpdateModal(this.manager);
       document.body.appendChild(modal.element);
       modal.render();
+    });
+
+    this.element.querySelector('#nxdtVerifyDownloads')?.addEventListener('click', () => {
+      const modal = new CollectionVerificationModal(this.manager);
+      document.body.appendChild(modal.element);
+      modal.render();
+    });
+
+    this.element.querySelector('#nxdtQueueBackground')?.addEventListener('click', async () => {
+      const queueBtn = this.element.querySelector('#nxdtQueueBackground');
+      const isVortex = this.manager.downloadMethod === DOWNLOAD_METHOD_VORTEX;
+      const items = this.manager.mods.all.map((m) => ({
+        fileId: m.fileId || m.file?.fileId,
+        modId: m.file?.mod?.modId || '0',
+        gameDomain: m.file?.mod?.game?.domainName || this.manager.gameDomain,
+        modName: m.file?.mod?.name || m.file?.name || 'Collection Mod',
+        fileName: m.file?.name || `${m.fileId}.zip`,
+        fileSize: m.file?.size || 0,
+        fileVersion: m.file?.version || '',
+        isNMM: isVortex,
+        isOptional: !!m.optional,
+        sourceUrl: window.location.href,
+      }));
+
+      try {
+        await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items });
+        if (queueBtn) {
+          queueBtn.textContent = '✓ Queued to Background!';
+          setTimeout(() => {
+            queueBtn.textContent = '⚡ Queue to Background';
+          }, 2000);
+        }
+      } catch (err) {
+        log.warn('Failed to enqueue collection', { error: err?.message });
+      }
     });
   }
 
@@ -812,3 +851,206 @@ export class CollectionUpdateModal {
     }
   }
 }
+
+export class CollectionVerificationModal {
+  constructor(manager) {
+    this.manager = manager;
+    this.element = document.createElement('div');
+    this.element.className = 'nxdt-modal-overlay';
+    this.element.setAttribute('data-nxdt-modal', 'true');
+    this.verificationData = null;
+    this.activeFilter = 'all';
+  }
+
+  async render() {
+    this.element.innerHTML = `
+      <div class="nxdt-modal-box" style="max-width: 600px;">
+        <div class="nxdt-modal-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">🔍</span>
+            <h3>Download Verification & Integrity Scanner</h3>
+          </div>
+          <button id="nxdtCloseVerifHeader" class="nxdt-btn-icon">✕</button>
+        </div>
+        <div id="nxdtVerifBody" style="padding: 16px 20px;">
+          <div style="text-align:center;padding:30px;color:#8b949e;">
+            <span class="nxdt-dock-spinner" style="display:inline-block;margin-bottom:12px;"></span>
+            <div>Scanning browser downloads & collection history...</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.element.querySelector('#nxdtCloseVerifHeader')?.addEventListener('click', () => this.element.remove());
+
+    try {
+      const modFiles = this.manager.mods.all.map((m) => ({
+        fileId: m.fileId || m.file?.fileId,
+        fileName: m.file?.name || `${m.fileId}.zip`,
+        modName: m.file?.mod?.name || m.file?.name || 'Collection Mod',
+        fileSize: m.file?.size || 0,
+        modId: m.file?.mod?.modId || '0',
+        optional: !!m.optional,
+      }));
+
+      const res = await sendMessage(MESSAGE_TYPES.VERIFY_COLLECTION_DOWNLOADS, {
+        gameDomain: this.manager.gameDomain,
+        collectionSlug: this.manager.collectionSlug,
+        modFiles,
+      });
+
+      this.verificationData = res || { total: 0, confirmed: 0, missing: 0, percentage: 0, results: [] };
+      this.renderReport();
+    } catch (e) {
+      const body = this.element.querySelector('#nxdtVerifBody');
+      if (body) {
+        body.innerHTML = `<div class="nxdt-panel-error">Verification scan failed: ${e?.message || 'Unknown error'}</div>`;
+      }
+    }
+  }
+
+  renderReport() {
+    const { total, confirmed, missing, percentage, results = [] } = this.verificationData;
+    const body = this.element.querySelector('#nxdtVerifBody');
+    if (!body) return;
+
+    body.innerHTML = `
+      <div style="margin-bottom: 16px; background: rgba(30, 34, 40, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <span style="font-size:14px; font-weight:700; color:#f0f6fc;">
+            ${confirmed === total ? '🎉 Collection 100% Downloaded!' : 'Verification Scan Complete'}
+          </span>
+          <span style="font-size:13px; font-weight:700; color:#da8e35;">${percentage}% Complete</span>
+        </div>
+        <div class="nxdt-progress-bar-track" style="height: 10px; margin-bottom: 12px;">
+          <div class="nxdt-progress-bar-fill" style="width: ${percentage}%;"></div>
+        </div>
+        <div style="display:flex; gap: 16px; font-size:12px; color:#8b949e;">
+          <span>Total Mods: <b style="color:#e6edf3;">${total}</b></span>
+          <span>Confirmed: <b style="color:#3fb950;">${confirmed}</b></span>
+          <span>Missing: <b style="color:${missing > 0 ? '#f85149' : '#3fb950'};">${missing}</b></span>
+        </div>
+      </div>
+
+      <div class="nxdt-modal-search-bar" style="margin-bottom: 12px; display:flex; gap:8px;">
+        <input type="search" id="nxdtVerifSearch" placeholder="Filter files..." style="flex:1;" />
+        <button id="nxdtFilterAll" class="nxdt-btn-sm ${this.activeFilter === 'all' ? 'nxdt-btn-active' : ''}">All (${total})</button>
+        <button id="nxdtFilterMissing" class="nxdt-btn-sm ${this.activeFilter === 'missing' ? 'nxdt-btn-active' : ''}">Missing (${missing})</button>
+        <button id="nxdtFilterConfirmed" class="nxdt-btn-sm ${this.activeFilter === 'confirmed' ? 'nxdt-btn-active' : ''}">Confirmed (${confirmed})</button>
+      </div>
+
+      <div id="nxdtVerifList" class="nxdt-modal-list" style="max-height: 260px; overflow-y:auto;"></div>
+
+      <div class="nxdt-modal-footer" style="margin-top: 14px;">
+        <button id="nxdtCloseVerif" class="nxdt-btn-sm">Close</button>
+        ${
+          missing > 0
+            ? `<button id="nxdtDownloadMissing" class="nxdt-btn-primary" style="background:#da8e35;color:#fff;">⚡ Download Missing Only (${missing})</button>`
+            : `<button id="nxdtCloseVerif2" class="nxdt-btn-primary" style="background:#3fb950;color:#fff;">✓ Everything Downloaded</button>`
+        }
+      </div>
+    `;
+
+    const listContainer = body.querySelector('#nxdtVerifList');
+    const searchInput = body.querySelector('#nxdtVerifSearch');
+
+    const renderList = (filterText = '') => {
+      listContainer.innerHTML = '';
+      const textLower = filterText.toLowerCase();
+
+      const filtered = results.filter((item) => {
+        if (this.activeFilter === 'missing' && item.confirmed) return false;
+        if (this.activeFilter === 'confirmed' && !item.confirmed) return false;
+        if (
+          textLower &&
+          !item.modName.toLowerCase().includes(textLower) &&
+          !item.fileName.toLowerCase().includes(textLower)
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:#8b949e;font-size:12px;">No matching items found.</div>`;
+        return;
+      }
+
+      filtered.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'nxdt-modal-row';
+        row.style.cursor = 'default';
+
+        const left = document.createElement('div');
+        left.className = 'nxdt-modal-row-left';
+        left.innerHTML = `
+          <span style="font-size:14px;">${item.confirmed ? '✅' : '❌'}</span>
+          <div>
+            <div class="nxdt-modal-row-title">${item.modName}</div>
+            <div style="font-size:11px;color:#8b949e;">${item.fileName} • ${convertSize(item.fileSize)}</div>
+          </div>
+        `;
+
+        const right = document.createElement('div');
+        right.className = 'nxdt-modal-row-right';
+        right.innerHTML = `
+          <span class="nxdt-pill-tag ${item.isOptional ? 'nxdt-tag-optional' : 'nxdt-tag-mandatory'}">
+            ${item.isOptional ? 'Optional' : 'Mandatory'}
+          </span>
+          <span style="font-size:11px;font-weight:600;color:${item.confirmed ? '#3fb950' : '#f85149'};">
+            ${item.confirmed ? 'Downloaded' : 'Missing'}
+          </span>
+        `;
+
+        row.appendChild(left);
+        row.appendChild(right);
+        listContainer.appendChild(row);
+      });
+    };
+
+    renderList();
+
+    searchInput?.addEventListener('input', (e) => renderList(e.target.value));
+
+    body.querySelector('#nxdtFilterAll')?.addEventListener('click', () => {
+      this.activeFilter = 'all';
+      this.renderReport();
+    });
+    body.querySelector('#nxdtFilterMissing')?.addEventListener('click', () => {
+      this.activeFilter = 'missing';
+      this.renderReport();
+    });
+    body.querySelector('#nxdtFilterConfirmed')?.addEventListener('click', () => {
+      this.activeFilter = 'confirmed';
+      this.renderReport();
+    });
+
+    body.querySelector('#nxdtCloseVerif')?.addEventListener('click', () => this.element.remove());
+    body.querySelector('#nxdtCloseVerif2')?.addEventListener('click', () => this.element.remove());
+
+    body.querySelector('#nxdtDownloadMissing')?.addEventListener('click', async () => {
+      const missingItems = results.filter((r) => !r.confirmed);
+      const isVortex = this.manager.downloadMethod === DOWNLOAD_METHOD_VORTEX;
+      const itemsToQueue = missingItems.map((m) => ({
+        fileId: m.fileId,
+        modId: m.modId || '0',
+        gameDomain: this.manager.gameDomain,
+        modName: m.modName,
+        fileName: m.fileName || `${m.fileId}.zip`,
+        fileSize: m.fileSize || 0,
+        isNMM: isVortex,
+        isOptional: !!m.isOptional,
+        sourceUrl: window.location.href,
+      }));
+
+      try {
+        await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items: itemsToQueue });
+        alert(`Successfully queued ${itemsToQueue.length} missing mod(s) to the background queue!`);
+        this.element.remove();
+      } catch (err) {
+        log.warn('Failed to enqueue missing mods', { error: err?.message });
+      }
+    });
+  }
+}
+

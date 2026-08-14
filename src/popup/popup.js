@@ -1,4 +1,4 @@
-import { STORAGE_KEY_SETTINGS, MESSAGE_TYPES } from '../shared/constants.js';
+import { STORAGE_KEY_SETTINGS, STORAGE_KEY_QUEUE, MESSAGE_TYPES, QUEUE_STATUS } from '../shared/constants.js';
 
 const NEXUS_HOST_RE = /(?:^|\.)nexusmods\.com$/i;
 const COLLECTION_PATH_RE = /^\/games\/[^/]+\/collections\/[^/]+(?:\/revisions\/\d+)?\/?$/i;
@@ -87,16 +87,43 @@ function renderNowaitState(settings) {
   el.textContent = enabled && autoStart ? 'On' : 'Off';
 }
 
-function renderStats(stats) {
-  const el = document.getElementById('collections-count');
+function renderQueueState(queueState) {
+  const el = document.getElementById('queue-state');
   if (!el) return;
-  el.textContent = (stats && stats.collectionsDownloaded) || '0';
+  const status = queueState?.status || QUEUE_STATUS.IDLE;
+  const counts = queueState?.counts || {};
+  const total = counts.total || queueState?.items?.length || 0;
+  const completed = counts.completed || 0;
+
+  if (status === QUEUE_STATUS.RUNNING) {
+    el.textContent = `Active (${completed}/${total})`;
+  } else if (status === QUEUE_STATUS.PAUSED) {
+    el.textContent = `Paused (${completed}/${total})`;
+  } else if (status === QUEUE_STATUS.COMPLETED) {
+    el.textContent = `Done (${completed})`;
+  } else if (status === QUEUE_STATUS.FAILED) {
+    el.textContent = 'Needs Attention';
+  } else {
+    el.textContent = total > 0 ? `${total} items` : 'Idle';
+  }
+}
+
+function renderStats(stats) {
+  const collectionsEl = document.getElementById('collections-count');
+  if (collectionsEl) {
+    collectionsEl.textContent = (stats && stats.collectionsDownloaded) || '0';
+  }
+  const queueItemsEl = document.getElementById('queue-items-count');
+  if (queueItemsEl) {
+    queueItemsEl.textContent = (stats && stats.queueItemsDownloaded) || '0';
+  }
 }
 
 export async function refresh() {
-  const [pingRes, settingsRes] = await Promise.all([
+  const [pingRes, settingsRes, queueRes] = await Promise.all([
     sendMessage({ type: MESSAGE_TYPES.PING }),
     sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS }),
+    sendMessage({ type: MESSAGE_TYPES.GET_QUEUE_STATE }),
   ]);
 
   const ping = pingRes.result || pingRes || {};
@@ -106,9 +133,12 @@ export async function refresh() {
   const settings = settingsRes.result?.settings || settingsRes.settings || {};
   currentSettings = { ...settings };
 
+  const queueState = queueRes.result || queueRes || {};
+
   renderDot(alive, settings);
   renderCollectionState(settings);
   renderNowaitState(settings);
+  renderQueueState(queueState);
   renderStats(stats);
 
   activeTab = await getActiveTab();
@@ -148,6 +178,17 @@ function onSiteRowClick() {
   window.close?.();
 }
 
+function onQueueRowClick() {
+  if (activeTab && activeTab.id != null) {
+    chrome.tabs?.sendMessage?.(activeTab.id, { type: MESSAGE_TYPES.TOGGLE_DRAWER }, () => {
+      void chrome.runtime?.lastError;
+      window.close?.();
+    });
+  } else {
+    window.close?.();
+  }
+}
+
 function onCollectionRowClick() {
   const category = activeTab && activeTab.url ? classifyUrl(activeTab.url) : null;
   if (activeTab && activeTab.id != null && category === 'collection') {
@@ -160,8 +201,6 @@ function onCollectionRowClick() {
       activeTab.id,
       { type: MESSAGE_TYPES.FOCUS_COLLECTION_PANEL },
       (response) => {
-        // Reading lastError is required to keep the runtime quiet when no
-        // content script is listening.
         void chrome.runtime?.lastError;
         if (response && response.ok === true) {
           window.close?.();
@@ -179,6 +218,9 @@ function onCollectionRowClick() {
 
 const siteRow = document.getElementById('site-row');
 if (siteRow) siteRow.addEventListener('click', onSiteRowClick);
+
+const queueRow = document.getElementById('queue-row');
+if (queueRow) queueRow.addEventListener('click', onQueueRowClick);
 
 const collectionRow = document.getElementById('collection-row');
 if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick);
@@ -203,7 +245,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
 
 if (typeof chrome !== 'undefined' && chrome.storage?.onChanged?.addListener) {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes && changes[STORAGE_KEY_SETTINGS]) {
+    if (area === 'local' && changes && (changes[STORAGE_KEY_SETTINGS] || changes[STORAGE_KEY_QUEUE])) {
       refresh();
     }
   });

@@ -1,13 +1,17 @@
 {
   "name": "nexus-download-tools",
   "version": "0.1.0",
-  "description": "Restores and improves download controls for archived Nexus Mods files.",
+  "description": "Restores and improves download controls for archived Nexus Mods files, collections, and mod requirements.",
   "private": true,
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:chrome": "node scripts/build.mjs --chrome",
+    "build:firefox": "node scripts/build.mjs --firefox",
     "dev": "node scripts/build.mjs --watch",
+    "dev:chrome": "node scripts/build.mjs --chrome --watch",
+    "dev:firefox": "node scripts/build.mjs --firefox --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src scripts tests",

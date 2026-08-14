@@ -107,6 +107,27 @@ export class CollectionClient {
     return revisionData;
   }
 
+  async fetchModRequirements(gameDomain, modId) {
+    if (!this.fetchImpl) {
+      throw new NexusDownloadError(
+        ERROR_CODES.NETWORK_ERROR,
+        'Fetch API unavailable in this context'
+      );
+    }
+    const query = `query ModDetails ($domainName: String, $modId: Int!) {
+      mod (domainName: $domainName, modId: $modId) {
+        name
+        summary
+        version
+        adult
+        game { domainName, id }
+      }
+    }`;
+    const variables = { domainName: gameDomain, modId: Number(modId) };
+    const data = await this._postGraphql(query, variables, 'ModDetails').catch(() => null);
+    return data?.mod || null;
+  }
+
   async _postGraphql(query, variables, operationName) {
     const { signal, cancel } = this._controller();
     try {

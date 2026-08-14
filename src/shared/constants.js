@@ -3,6 +3,8 @@ export const LOG_PREFIX = '[NXDT]';
 export const STORAGE_KEY_SETTINGS = 'settings';
 export const STORAGE_KEY_STATS = 'stats';
 export const STORAGE_KEY_COLLECTION_HISTORY = 'collection_history';
+export const STORAGE_KEY_QUEUE = 'download_queue';
+export const STORAGE_KEY_DRAWER_STATE = 'drawer_state';
 
 export const NEXUS_HOSTS = ['nexusmods.com'];
 export const CDN_HOSTS = ['nexus-cdn.com'];
@@ -11,6 +13,24 @@ export const URL_SCHEME_HTTPS = 'https:';
 
 export const DOWNLOAD_METHOD_VORTEX = 0;
 export const DOWNLOAD_METHOD_BROWSER = 1;
+
+export const QUEUE_STATUS = {
+  IDLE: 'idle',
+  RUNNING: 'running',
+  PAUSED: 'paused',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+};
+
+export const ITEM_STATUS = {
+  PENDING: 'pending',
+  RESOLVING: 'resolving',
+  DOWNLOADING: 'downloading',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  SKIPPED: 'skipped',
+  EXTERNAL: 'external',
+};
 
 export const MESSAGE_TYPES = {
   PING: 'NXDT_PING',
@@ -25,6 +45,30 @@ export const MESSAGE_TYPES = {
   RESOLVE_COLLECTION_DOWNLOAD: 'NXDT_RESOLVE_COLLECTION_DOWNLOAD',
   RESOLVE_ARCHIVED_DOWNLOAD: 'NXDT_RESOLVE_ARCHIVED_DOWNLOAD',
   COLLECTION_FINISHED: 'NXDT_COLLECTION_FINISHED',
+
+  // Persistent Queue Engine
+  ENQUEUE_ITEMS: 'NXDT_ENQUEUE_ITEMS',
+  QUEUE_PAUSE: 'NXDT_QUEUE_PAUSE',
+  QUEUE_RESUME: 'NXDT_QUEUE_RESUME',
+  QUEUE_CLEAR: 'NXDT_QUEUE_CLEAR',
+  QUEUE_SKIP_ITEM: 'NXDT_QUEUE_SKIP_ITEM',
+  QUEUE_RETRY_FAILED: 'NXDT_QUEUE_RETRY_FAILED',
+  GET_QUEUE_STATE: 'NXDT_GET_QUEUE_STATE',
+  TOGGLE_DRAWER: 'NXDT_TOGGLE_DRAWER',
+
+  // Advanced In-Page & Metadata Features
+  FETCH_MOD_REQUIREMENTS: 'NXDT_FETCH_MOD_REQUIREMENTS',
+  FETCH_ARCHIVE_TREE: 'NXDT_FETCH_ARCHIVE_TREE',
+  APPLY_PRESET: 'NXDT_APPLY_PRESET',
+  VERIFY_COLLECTION_DOWNLOADS: 'NXDT_VERIFY_COLLECTION_DOWNLOADS',
+};
+
+export const PRESET_PROFILES = {
+  SOLO_MODDER: 'solo_modder',
+  COLLECTION_HOARDER: 'collection_hoarder',
+  FREE_TIER: 'free_tier',
+  MO2_POWER_USER: 'mo2_power_user',
+  CUSTOM: 'custom',
 };
 
 export const LOG_LEVELS = {

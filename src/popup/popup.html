@@ -21,6 +21,14 @@
       </span>
     </button>
 
+    <button type="button" id="queue-row" class="row">
+      <span class="row-label">Background Queue</span>
+      <span class="row-meta">
+        <span class="row-value" id="queue-state">—</span>
+        <span class="chevron" aria-hidden="true">›</span>
+      </span>
+    </button>
+
     <button type="button" id="collection-row" class="row">
       <span class="row-label">Collection Downloader</span>
       <span class="row-meta">
@@ -38,7 +46,8 @@
     </button>
 
     <section class="meta">
-      <span>Collections downloaded: <b id="collections-count">0</b></span>
+      <div class="stat-line">Collections downloaded: <b id="collections-count">0</b></div>
+      <div class="stat-line">Queue items finished: <b id="queue-items-count">0</b></div>
     </section>
 
     <footer>

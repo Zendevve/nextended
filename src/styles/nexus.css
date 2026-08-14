@@ -633,3 +633,298 @@
   border-top: 1px solid #444c56 !important;
   flex-shrink: 0 !important;
 }
+
+/* ==========================================================================
+   Global Floating Queue Dock & Drawer (Dark Glass Aesthetic)
+   ========================================================================== */
+
+.nxdt-floating-root {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  z-index: 999999 !important;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.nxdt-hidden {
+  display: none !important;
+}
+
+/* Floating Dock Pill */
+.nxdt-dock-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 18px !important;
+  background: rgba(26, 28, 31, 0.92) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(218, 142, 53, 0.4) !important;
+  border-radius: 30px !important;
+  color: #f0f6fc !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 12px rgba(218, 142, 53, 0.2) !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease !important;
+  user-select: none !important;
+}
+
+.nxdt-dock-pill:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  border-color: #da8e35 !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), 0 0 18px rgba(218, 142, 53, 0.35) !important;
+}
+
+.nxdt-dock-dot {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.nxdt-status-running { background: #3fb950 !important; box-shadow: 0 0 8px #3fb950 !important; }
+.nxdt-status-paused { background: #d29922 !important; }
+.nxdt-status-completed { background: #58a6ff !important; }
+.nxdt-status-failed { background: #f85149 !important; }
+.nxdt-status-idle { background: #8b949e !important; }
+
+/* Slide-out Drawer Panel */
+.nxdt-drawer-panel {
+  width: 420px !important;
+  max-width: calc(100vw - 40px) !important;
+  height: 540px !important;
+  max-height: calc(100vh - 80px) !important;
+  background: rgba(26, 28, 31, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(218, 142, 53, 0.15) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  animation: nxdtFadeSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes nxdtFadeSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nxdt-drawer-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 14px 18px !important;
+  background: rgba(36, 40, 46, 0.7) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.nxdt-header-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.nxdt-header-title h3 {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #f0f6fc !important;
+}
+
+.nxdt-header-badge {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  color: #fff !important;
+}
+
+.nxdt-drawer-progress {
+  padding: 12px 18px !important;
+  background: rgba(18, 20, 23, 0.6) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.nxdt-progress-labels {
+  display: flex !important;
+  justify-content: space-between !important;
+  font-size: 12px !important;
+  color: #8b949e !important;
+  margin-bottom: 8px !important;
+}
+
+.nxdt-progress-bar-track {
+  width: 100% !important;
+  height: 8px !important;
+  background: #2d333b !important;
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+.nxdt-progress-bar-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #da8e35, #f59e0b) !important;
+  transition: width 0.3s ease !important;
+}
+
+.nxdt-drawer-toolbar {
+  display: flex !important;
+  gap: 8px !important;
+  padding: 10px 18px !important;
+  background: rgba(30, 34, 40, 0.5) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.nxdt-drawer-items {
+  flex: 1 1 0 !important;
+  overflow-y: auto !important;
+  padding: 12px 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.nxdt-queue-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 12px !important;
+  background: rgba(45, 51, 59, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 6px !important;
+  gap: 12px !important;
+}
+
+.nxdt-item-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #e6edf3 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 240px !important;
+}
+
+.nxdt-item-sub {
+  display: flex !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  color: #8b949e !important;
+  margin-top: 2px !important;
+}
+
+.nxdt-item-error {
+  font-size: 11px !important;
+  color: #f85149 !important;
+  margin-top: 4px !important;
+}
+
+.nxdt-item-link {
+  font-size: 11px !important;
+  color: #58a6ff !important;
+  text-decoration: underline !important;
+  margin-top: 4px !important;
+}
+
+.nxdt-pill-tag {
+  background: #373e47 !important;
+  color: #c9d1d9 !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+}
+
+.nxdt-pill-offsite {
+  background: #da8e35 !important;
+  color: #fff !important;
+}
+
+.nxdt-btn-skip {
+  background: none !important;
+  border: 1px solid #444c56 !important;
+  color: #8b949e !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+  cursor: pointer !important;
+}
+
+.nxdt-btn-skip:hover {
+  color: #f85149 !important;
+  border-color: #f85149 !important;
+}
+
+/* Search Card Quick Actions */
+.nxdt-card-actions {
+  display: inline-flex !important;
+  gap: 6px !important;
+  margin-top: 6px !important;
+}
+
+.nxdt-card-btn {
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  border: none !important;
+}
+
+.nxdt-card-btn-nxm {
+  background: #da8e35 !important;
+  color: #fff !important;
+}
+
+.nxdt-card-btn-queue {
+  background: #2d333b !important;
+  color: #e6edf3 !important;
+  border: 1px solid #444c56 !important;
+}
+
+.nxdt-card-btn-queue:hover {
+  border-color: #da8e35 !important;
+  color: #da8e35 !important;
+}
+
+/* Archive Inspector */
+.nxdt-inspect-btn {
+  background: #2d333b !important;
+  border: 1px solid #444c56 !important;
+  color: #c9d1d9 !important;
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-left: 8px !important;
+}
+
+.nxdt-inspection-panel {
+  margin-top: 8px !important;
+  padding: 12px 14px !important;
+  background: #1e2228 !important;
+  border: 1px solid #444c56 !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  color: #c9d1d9 !important;
+}
+
+.nxdt-inspect-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+.nxdt-empty-queue,
+.nxdt-empty-notice {
+  text-align: center !important;
+  padding: 24px !important;
+  color: #8b949e !important;
+  font-size: 13px !important;
+}
+

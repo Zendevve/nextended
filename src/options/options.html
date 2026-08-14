@@ -8,9 +8,43 @@
 </head>
 <body>
   <main>
-    <h1>Nexus Mods Download Tools</h1>
+    <header class="main-header">
+      <div class="header-branding">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="6" fill="#24282E" stroke="#DA8E35" stroke-width="2"/>
+          <path d="M16 8V20M16 20L11 15M16 20L21 15M9 24H23" stroke="#DA8E35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h1>Nexus Mods Download Tools</h1>
+          <span class="version-tag">v0.1.0 (Definitive Suite)</span>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input type="search" id="settings-search" placeholder="🔍 Search settings..." />
+      </div>
+    </header>
 
-    <section>
+    <!-- Presets Selector -->
+    <div class="presets-container">
+      <span class="presets-title">⚡ Quick Configuration Presets:</span>
+      <div class="presets-grid">
+        <button type="button" class="preset-btn" data-preset="solo_modder" title="Fast 1-click downloads, auto-close tabs, instant countdown skip">
+          🚀 Solo Modder
+        </button>
+        <button type="button" class="preset-btn" data-preset="collection_hoarder" title="Bulk background queue, 4 parallel slots, resilient auto-retry">
+          📦 Collection Hoarder
+        </button>
+        <button type="button" class="preset-btn" data-preset="free_tier" title="Gentle serial 1-at-a-time pacing to prevent rate limits">
+          🛡️ Free-Tier Safe
+        </button>
+        <button type="button" class="preset-btn" data-preset="mo2_power_user" title="NXM protocol routing, MO2 .meta generation, structured folder staging">
+          🛠️ MO2 Power User
+        </button>
+      </div>
+    </div>
+
+    <!-- General Settings -->
+    <section class="settings-section">
       <h2>General</h2>
       <label class="switch">
         <input type="checkbox" name="enabled" />
@@ -25,7 +59,8 @@
       </label>
     </section>
 
-    <section>
+    <!-- Automation -->
+    <section class="settings-section">
       <h2>Automation (No-Wait++)</h2>
       <label class="switch">
         <input type="checkbox" name="autoStartDownload" />
@@ -63,22 +98,44 @@
       </label>
     </section>
 
-    <section>
-      <h2>Collection Downloader</h2>
+    <!-- Bulk Queue & Concurrency -->
+    <section class="settings-section">
+      <h2>Bulk Queue & Concurrency</h2>
+      <label>
+        Max concurrent downloads (1-5 slots)
+        <input type="number" name="maxConcurrentDownloads" min="1" max="5" />
+      </label>
+
+      <label>
+        Auto-retry attempts on failure
+        <input type="number" name="retryAttempts" min="0" max="10" />
+      </label>
+
+      <label>
+        Retry backoff base delay (ms)
+        <input type="number" name="retryBackoffBaseMs" min="500" max="30000" />
+      </label>
+
       <label>
         Pause between downloads (seconds)
         <input type="number" name="collectionPauseBetweenDownload" min="0" max="60" />
       </label>
 
       <label>
-        Download speed (MB/s)
+        Download speed pacing (MB/s)
         <input type="number" name="collectionDownloadSpeed" step="0.1" min="0" max="100" />
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="notifyOnQueueCompletion" />
+        <span class="slider"></span>
+        <span>Desktop notification on queue complete</span>
       </label>
 
       <span class="group-label">Collection download method</span>
       <label>
         <input type="radio" name="collectionDownloadMethod" value="0" />
-        Send to Vortex / MO2
+        Send to Vortex / MO2 (NXM Protocol)
       </label>
       <label>
         <input type="radio" name="collectionDownloadMethod" value="1" />
@@ -86,7 +143,51 @@
       </label>
     </section>
 
-    <section>
+    <!-- In-Page Ergonomics -->
+    <section class="settings-section">
+      <h2>In-Page Features & Browsing</h2>
+      <label class="switch">
+        <input type="checkbox" name="enableSearchCardButtons" />
+        <span class="slider"></span>
+        <span>Inject Quick-Download buttons on search/browse cards</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="enableRequirementsBundler" />
+        <span class="slider"></span>
+        <span>Enable Smart Requirements Bundler on mod pages</span>
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="enableArchiveInspector" />
+        <span class="slider"></span>
+        <span>Enable Inline Archive Inspector</span>
+      </label>
+    </section>
+
+    <!-- File Organization & MO2 -->
+    <section class="settings-section">
+      <h2>File Organization & Mod Manager</h2>
+      <label class="switch">
+        <input type="checkbox" name="organizeDownloads" />
+        <span class="slider"></span>
+        <span>Organize downloads into game & mod subfolders</span>
+      </label>
+
+      <label>
+        Folder template
+        <input type="text" name="downloadFolderTemplate" style="width: 240px;" placeholder="NexusMods/{game}/{mod_name}" />
+      </label>
+
+      <label class="switch">
+        <input type="checkbox" name="generateMo2Meta" />
+        <span class="slider"></span>
+        <span>Generate MO2-compatible .meta files alongside archives</span>
+      </label>
+    </section>
+
+    <!-- Advanced -->
+    <section class="settings-section">
       <h2>Advanced</h2>
       <label class="switch">
         <input type="checkbox" name="debugLogging" />
@@ -101,8 +202,8 @@
     </section>
 
     <footer>
-      <button id="save-btn" type="button">Save</button>
-      <button id="reset-btn" type="button">Reset to defaults</button>
+      <button id="save-btn" type="button">Save Settings</button>
+      <button id="reset-btn" type="button">Reset to Defaults</button>
     </footer>
   </main>
   <script src="options.js"></script>
