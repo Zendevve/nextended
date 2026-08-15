@@ -16,7 +16,8 @@ const NXM_SCHEME = 'nxm:';
 const NXM_URL_PATTERN = /^nxm:\/\/[^\s/]+(?:\/|$)/i;
 const COLLECTION_DOWNLOAD_ENDPOINT =
   'https://www.nexusmods.com/Core/Libs/Common/Managers/Downloads?GenerateDownloadUrl';
-
+const SLUG_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const FILE_ID_PATTERN = /^\d+$/;
 function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -265,8 +266,8 @@ export async function startDownload(payload, deps = {}) {
 
 export async function resolveCollectionDownload(payload, _deps = {}) {
   const { fileId, gameId, gameDomain, isNMM, modId } = payload || {};
-  if (!fileId) {
-    return { url: null, error: 'Missing fileId', code: ERROR_CODES.INVALID_INPUT };
+  if (!fileId || typeof fileId !== 'string' || !FILE_ID_PATTERN.test(fileId.trim())) {
+    return { url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT };
   }
   const settings = await getSettings();
   const timeout = settings.requestTimeout || 30000;
@@ -302,8 +303,15 @@ export async function resolveCollectionDownload(payload, _deps = {}) {
 
 export async function resolveArchivedDownload(payload, _deps = {}) {
   const { fileId, slug, isNMM } = payload || {};
-  if (!fileId || !slug) {
-    return { url: null, error: 'Missing fileId or slug', code: ERROR_CODES.INVALID_INPUT };
+  if (
+    !fileId ||
+    !slug ||
+    typeof slug !== 'string' ||
+    !SLUG_PATTERN.test(slug) ||
+    typeof fileId !== 'string' ||
+    !FILE_ID_PATTERN.test(fileId.trim())
+  ) {
+    return { url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT };
   }
   const settings = await getSettings();
   const timeout = settings.requestTimeout || 30000;

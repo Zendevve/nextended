@@ -84,7 +84,14 @@ export class CollectionClient {
         }
       }
     }`;
-    const variables = { slug: collectionSlug, viewAdultContent: true, revision };
+    const revNum = revision != null && revision !== '' ? Number(revision) : null;
+    const variables = {
+      slug: collectionSlug,
+      viewAdultContent: true,
+    };
+    if (Number.isInteger(revNum) && revNum > 0) {
+      variables.revision = revNum;
+    }
 
     const data = await this._postGraphql(query, variables, 'CollectionRevisionMods');
     if (!data?.collectionRevision) {

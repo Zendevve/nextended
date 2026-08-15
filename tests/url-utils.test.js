@@ -8,6 +8,8 @@ import {
   extractSlugFromPathname,
   toIntSafe,
   isIntString,
+  extractFileIdFromUrl,
+  extractSlugAndModId,
 } from '../src/nexus/url-utils.js';
 
 describe('url-utils', () => {
@@ -71,5 +73,37 @@ describe('url-utils', () => {
     const url = new URL(u);
     expect(url.searchParams.get('file_id')).toBe('123456');
     expect(url.searchParams.get('game_id')).toBe('1704');
+  });
+
+  it('extractFileIdFromUrl extracts file_id, fileId, or id', () => {
+    expect(extractFileIdFromUrl(new URLSearchParams('?file_id=123'))).toBe('123');
+    expect(extractFileIdFromUrl(new URLSearchParams('?fileId=456'))).toBe('456');
+    expect(extractFileIdFromUrl(new URLSearchParams('?id=999'))).toBe('999');
+    expect(extractFileIdFromUrl(new URLSearchParams('?other=abc'))).toBeNull();
+    expect(extractFileIdFromUrl(null)).toBeNull();
+  });
+
+  it('extractSlugAndModId extracts slug and modId from URLs and paths', () => {
+    expect(
+      extractSlugAndModId('https://www.nexusmods.com/skyrimspecialedition/mods/12345')
+    ).toEqual({ slug: 'skyrimspecialedition', modId: '12345' });
+
+    expect(
+      extractSlugAndModId('https://www.nexusmods.com/stardewvalley/mods/42?tab=files')
+    ).toEqual({ slug: 'stardewvalley', modId: '42' });
+
+    expect(extractSlugAndModId('/cyberpunk2077/mods/999/files')).toEqual({
+      slug: 'cyberpunk2077',
+      modId: '999',
+    });
+
+    expect(extractSlugAndModId('not-a-url')).toEqual({ slug: null, modId: null });
+    expect(extractSlugAndModId('https://www.nexusmods.com/mods/12345')).toEqual({
+      slug: null,
+      modId: null,
+    });
+    expect(extractSlugAndModId('')).toEqual({ slug: null, modId: null });
+    expect(extractSlugAndModId(null)).toEqual({ slug: null, modId: null });
+    expect(extractSlugAndModId(123)).toEqual({ slug: null, modId: null });
   });
 });

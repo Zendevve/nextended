@@ -7,6 +7,10 @@ import { createLogger } from '../shared/logger.js';
 
 const log = createLogger('collection-ui');
 
+function getModFileId(mod) {
+  const id = mod?.file?.fileId ?? mod?.fileId;
+  return id != null && id !== '' ? String(id) : '';
+}
 function convertSize(sizeInKB) {
   if (!sizeInKB || isNaN(sizeInKB)) return '0 MB';
   const sizeInMB = sizeInKB / 1024;
@@ -137,7 +141,7 @@ export class CollectionManager {
 
   async fetchDownloadUrl(mod, downloadMethod = this.downloadMethod) {
     const domain = mod.file?.mod?.game?.domainName || this.gameDomain;
-    const fileId = mod.file?.fileId || mod.fileId;
+    const fileId = getModFileId(mod);
     const gameId = mod.file?.mod?.game?.id || '0';
     const isNMM = downloadMethod === DOWNLOAD_METHOD_VORTEX;
 
@@ -208,7 +212,7 @@ export class CollectionManager {
         const mod = modsList[index];
         const modNumber = `${index + 1}/${modsList.length}`;
         const modName = mod.file?.name || mod.file?.mod?.name || 'Unknown Mod';
-        const fileId = String(mod.fileId);
+        const fileId = getModFileId(mod);
 
         if (this.aborted || runToken !== this.runToken) break;
 
@@ -598,9 +602,27 @@ export class CollectionSelectModal {
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
     this.element.setAttribute('data-nxdt-modal', 'true');
+    this._handleKeydown = (e) => {
+      if (e.key === 'Escape') {
+        this.close();
+      }
+    };
+  }
+
+  close() {
+    document.removeEventListener('keydown', this._handleKeydown);
+    this.element.remove();
   }
 
   render() {
+    document.addEventListener('keydown', this._handleKeydown);
+
+    this.element.addEventListener('click', (e) => {
+      if (e.target === this.element) {
+        this.close();
+      }
+    });
+
     this.element.innerHTML = `
       <div class="nxdt-modal-box">
         <div class="nxdt-modal-header">
@@ -641,6 +663,7 @@ export class CollectionSelectModal {
       listContainer.innerHTML = '';
       const filterLower = filter.toLowerCase();
       this.manager.mods.all.forEach((mod) => {
+        const fileId = getModFileId(mod);
         const name = mod.file?.name || mod.file?.mod?.name || 'Unknown Mod';
         if (filterLower && !name.toLowerCase().includes(filterLower)) return;
 
@@ -652,8 +675,8 @@ export class CollectionSelectModal {
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.setAttribute('data-file-id', String(mod.fileId));
-        checkbox.checked = checkedIds.has(String(mod.fileId));
+        checkbox.setAttribute('data-file-id', fileId);
+        checkbox.checked = checkedIds.has(fileId);
 
         const title = document.createElement('span');
         title.className = 'nxdt-modal-row-title';
@@ -710,11 +733,11 @@ export class CollectionSelectModal {
       updateCount();
     });
 
-    this.element.querySelector('#nxdtCloseSel').addEventListener('click', () => this.element.remove());
+    this.element.querySelector('#nxdtCloseSel').addEventListener('click', () => this.close());
 
     this.element.querySelector('#nxdtStartSel').addEventListener('click', () => {
-      const selectedMods = this.manager.mods.all.filter((m) => checkedIds.has(String(m.fileId)));
-      this.element.remove();
+      const selectedMods = this.manager.mods.all.filter((m) => checkedIds.has(getModFileId(m)));
+      this.close();
       this.manager.downloadMods(selectedMods, 'selected');
     });
   }
@@ -726,9 +749,27 @@ export class CollectionUpdateModal {
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
     this.element.setAttribute('data-nxdt-modal', 'true');
+    this._handleKeydown = (e) => {
+      if (e.key === 'Escape') {
+        this.close();
+      }
+    };
+  }
+
+  close() {
+    document.removeEventListener('keydown', this._handleKeydown);
+    this.element.remove();
   }
 
   async render() {
+    document.addEventListener('keydown', this._handleKeydown);
+
+    this.element.addEventListener('click', (e) => {
+      if (e.target === this.element) {
+        this.close();
+      }
+    });
+
     this.element.innerHTML = `
       <div class="nxdt-modal-box">
         <div class="nxdt-modal-header">
@@ -747,7 +788,7 @@ export class CollectionUpdateModal {
       </div>
     `;
 
-    this.element.querySelector('#nxdtCloseDiff').addEventListener('click', () => this.element.remove());
+    this.element.querySelector('#nxdtCloseDiff').addEventListener('click', () => this.close());
 
     try {
       const res = await sendMessage(MESSAGE_TYPES.FETCH_COLLECTION_REVISIONS, {

@@ -6,6 +6,10 @@ import {
   appendNmmParam,
   resolveAndStartDownload,
   archivedFileHandler,
+  forceModManagerHandler,
+  removeArchivedInjected,
+  removeForceInjected,
+  removeSlowDownloadIntercepts,
   applyNoWaitFeatures,
   resetNoWaitState,
 } from '../src/content/no-wait.js';
@@ -249,5 +253,104 @@ describe('applyNoWaitFeatures settings reactivity', () => {
     // Re-inject after reset works because WeakSet entries were cleared.
     applyNoWaitFeatures({ handleArchivedFiles: true });
     expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(2);
+  });
+});
+
+describe('removeArchivedInjected and removeForceInjected', () => {
+  it('removeArchivedInjected removes injected elements and clears references', () => {
+    window.happyDOM.setURL(ARCHIVED_PAGE);
+    document.body.innerHTML = `
+      <div id="files-tab-footer"></div>
+      <div class="row">
+        <div class="file-expander-header" data-id="1234">Archived file 1</div>
+        <div class="accordion-downloads"><span class="size">1 MB</span></div>
+      </div>
+    `;
+
+    archivedFileHandler({ handleArchivedFiles: true });
+    expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(2);
+
+    removeArchivedInjected();
+    expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(0);
+
+    // Can re-inject after removal
+    archivedFileHandler({ handleArchivedFiles: true });
+    expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(2);
+  });
+
+  it('removeArchivedInjected handles disconnected nodes gracefully', () => {
+    window.happyDOM.setURL(ARCHIVED_PAGE);
+    document.body.innerHTML = `
+      <div class="row" id="row1">
+        <div class="file-expander-header" data-id="1111">Archived 1</div>
+        <div class="accordion-downloads"></div>
+      </div>
+      <div class="row" id="row2">
+        <div class="file-expander-header" data-id="2222">Archived 2</div>
+        <div class="accordion-downloads"></div>
+      </div>
+    `;
+
+    archivedFileHandler({ handleArchivedFiles: true });
+    expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(4);
+
+    // Detach row1 from DOM before removeArchivedInjected
+    const row1 = document.getElementById('row1');
+    row1.remove();
+
+    expect(() => removeArchivedInjected()).not.toThrow();
+    expect(document.querySelectorAll('[data-nxdt-archived-dl]')).toHaveLength(0);
+  });
+
+  it('removeForceInjected removes injected elements and clears references', () => {
+    window.happyDOM.setURL(MOD_PAGE);
+    document.body.innerHTML = `
+      <div class="actions">
+        <a href="https://www.nexusmods.com/stardewvalley/mods/1234?tab=files&file_id=5678" class="btn">Manual download</a>
+      </div>
+    `;
+
+    forceModManagerHandler({ forceModManagerDownload: true });
+    expect(document.querySelectorAll('[data-nxdt-force-manager]')).toHaveLength(1);
+
+    removeForceInjected();
+    expect(document.querySelectorAll('[data-nxdt-force-manager]')).toHaveLength(0);
+
+    // Can re-inject after removal
+    forceModManagerHandler({ forceModManagerDownload: true });
+    expect(document.querySelectorAll('[data-nxdt-force-manager]')).toHaveLength(1);
+  });
+
+  it('removeForceInjected handles disconnected nodes gracefully', () => {
+    window.happyDOM.setURL(MOD_PAGE);
+    document.body.innerHTML = `
+      <div id="container">
+        <a id="link1" href="https://www.nexusmods.com/stardewvalley/mods/1234?tab=files&file_id=5678" class="btn">Manual download</a>
+      </div>
+    `;
+
+    forceModManagerHandler({ forceModManagerDownload: true });
+    expect(document.querySelectorAll('[data-nxdt-force-manager]')).toHaveLength(1);
+
+    // Detach container from DOM
+    document.getElementById('container').remove();
+
+    expect(() => removeForceInjected()).not.toThrow();
+    expect(document.querySelectorAll('[data-nxdt-force-manager]')).toHaveLength(0);
+  });
+
+  it('removeSlowDownloadIntercepts cleans up listeners and clears arrays', () => {
+    window.happyDOM.setURL('https://www.nexusmods.com/stardewvalley/mods/1234?tab=files&file_id=9999');
+    document.body.innerHTML = `
+      <button id="slowDownloadButton">Slow Download</button>
+    `;
+    const btn = document.getElementById('slowDownloadButton');
+    const removeEventListenerSpy = vi.spyOn(btn, 'removeEventListener');
+
+    applyNoWaitFeatures({ enabled: true });
+    removeSlowDownloadIntercepts();
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function));
+    removeEventListenerSpy.mockRestore();
   });
 });

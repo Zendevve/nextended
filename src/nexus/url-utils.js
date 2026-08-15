@@ -47,8 +47,16 @@ function toIntString(value) {
 
 export function extractFileIdFromUrl(searchParams) {
   if (!searchParams) return null;
-  const id = searchParams.get('file_id') || searchParams.get('fileId');
+  const id = searchParams.get('file_id') || searchParams.get('fileId') || searchParams.get('id');
   return id || null;
+}
+
+export function extractSlugAndModId(urlOrPath) {
+  if (typeof urlOrPath !== 'string' || !urlOrPath) return { slug: null, modId: null };
+  const pathname = urlOrPath.startsWith('http') ? parseUrlSafe(urlOrPath)?.pathname || '' : urlOrPath;
+  const match = pathname.match(/^\/([a-zA-Z0-9_-]+)\/mods\/(\d+)/i);
+  if (!match) return { slug: null, modId: null };
+  return { slug: match[1], modId: match[2] };
 }
 
 export function isNexusHost(host) {

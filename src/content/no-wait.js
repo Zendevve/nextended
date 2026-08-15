@@ -267,6 +267,21 @@ export function archivedFileHandler(settings = {}) {
   if (!settings.handleArchivedFiles || !isModPage()) return;
   const url = window.location.href;
 
+  for (let i = archivedFooters.length - 1; i >= 0; i--) {
+    const el = archivedFooters[i];
+    if (!el || !el.isConnected) {
+      handledArchive.delete(el);
+      archivedFooters.splice(i, 1);
+    }
+  }
+  for (let i = archivedBoxes.length - 1; i >= 0; i--) {
+    const el = archivedBoxes[i];
+    if (!el || !el.isConnected) {
+      handledArchive.delete(el);
+      archivedBoxes.splice(i, 1);
+    }
+  }
+
   if (url.includes('tab=files') && !url.includes('category=archived')) {
     const footer = document.querySelector(FILES_TAB_FOOTER_SELECTOR);
     if (footer && !handledArchive.has(footer)) {
@@ -350,6 +365,15 @@ function appendArchivedDownloadButtons(box, fileId) {
 
 export function forceModManagerHandler(settings = {}) {
   if (!settings.forceModManagerDownload || !isModPage()) return;
+
+  for (let i = forceLinks.length - 1; i >= 0; i--) {
+    const el = forceLinks[i];
+    if (!el || !el.isConnected) {
+      handledForceNmm.delete(el);
+      forceLinks.splice(i, 1);
+    }
+  }
+
   const links = document.querySelectorAll(FORCE_MANAGER_LINK_SELECTORS.join(','));
   links.forEach((link) => {
     if (handledForceNmm.has(link)) return;
@@ -393,7 +417,7 @@ export function forceModManagerHandler(settings = {}) {
   });
 }
 
-function removeArchivedInjected() {
+export function removeArchivedInjected() {
   document.querySelectorAll(ARCHIVED_ENTRY_BTN_SELECTOR).forEach((el) => el.remove());
   document.querySelectorAll(ARCHIVED_DL_BTN_SELECTOR).forEach((el) => el.remove());
   for (const el of archivedFooters) handledArchive.delete(el);
@@ -402,13 +426,13 @@ function removeArchivedInjected() {
   archivedBoxes.length = 0;
 }
 
-function removeForceInjected() {
+export function removeForceInjected() {
   document.querySelectorAll(FORCE_MANAGER_BTN_SELECTOR).forEach((el) => el.remove());
   for (const el of forceLinks) handledForceNmm.delete(el);
   forceLinks.length = 0;
 }
 
-function removeSlowDownloadIntercepts() {
+export function removeSlowDownloadIntercepts() {
   for (const btn of slowDlButtons) {
     const handler = slowDlHandlers.get(btn);
     if (handler) btn.removeEventListener('click', handler);

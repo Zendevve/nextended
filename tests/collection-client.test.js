@@ -73,4 +73,48 @@ describe('CollectionClient', () => {
     const client = new CollectionClient({ fetchImpl: mockFetch });
     await expect(client.fetchRevisions('skyrim', 'invalid')).rejects.toThrow('Collection not found');
   });
+  it('fetchMods handles string revision and omits revision variable when null or undefined', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          collectionRevision: {
+            modFiles: [],
+          },
+        },
+      }),
+    });
+
+    const client = new CollectionClient({ fetchImpl: mockFetch });
+
+    // String revision "2" -> passes numeric revision 2 in GraphQL variables
+    await client.fetchMods('skyrimspecialedition', 'mycollection', '2');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const body1 = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body1.variables).toEqual({
+      slug: 'mycollection',
+      viewAdultContent: true,
+      revision: 2,
+    });
+
+    // null revision -> omits revision variable
+    await client.fetchMods('skyrimspecialedition', 'mycollection', null);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const body2 = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(body2.variables).toEqual({
+      slug: 'mycollection',
+      viewAdultContent: true,
+    });
+    expect('revision' in body2.variables).toBe(false);
+
+    // undefined revision -> omits revision variable
+    await client.fetchMods('skyrimspecialedition', 'mycollection', undefined);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    const body3 = JSON.parse(mockFetch.mock.calls[2][1].body);
+    expect(body3.variables).toEqual({
+      slug: 'mycollection',
+      viewAdultContent: true,
+    });
+    expect('revision' in body3.variables).toBe(false);
+  });
 });

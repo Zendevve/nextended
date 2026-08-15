@@ -376,6 +376,33 @@ describe('CollectionManager download queue', () => {
       modId: 456,
     });
   });
+  it('extracts nested file.fileId when mod.fileId is undefined', async () => {
+    const send = mockSendMessage((msg) => defaultResponses[msg.type] ?? ok({}));
+    const manager = createManager();
+    const mod = {
+      optional: false,
+      file: {
+        fileId: 789,
+        name: 'Nested Mod Only',
+        size: 1024,
+        mod: { name: 'Nested Mod Only', modId: 123, game: { domainName: 'skyrimspecialedition', id: 1704 } },
+      },
+    };
+
+    await manager.downloadMods([mod], 'all');
+
+    const resolveCalls = send.mock.calls.filter(
+      ([m]) => m.type === MESSAGE_TYPES.RESOLVE_COLLECTION_DOWNLOAD
+    );
+    expect(resolveCalls).toHaveLength(1);
+    expect(resolveCalls[0][0].payload.fileId).toBe('789');
+
+    const historyCalls = send.mock.calls.filter(
+      ([m]) => m.type === MESSAGE_TYPES.SET_COLLECTION_HISTORY
+    );
+    expect(historyCalls).toHaveLength(1);
+    expect(historyCalls[0][0].payload.fileIds).toEqual(['789']);
+  });
 });
 
 describe('CollectionSelectModal', () => {
@@ -442,6 +469,37 @@ describe('CollectionSelectModal', () => {
     expect(boxes[1].checked).toBe(false);
     expect(countBadge.textContent).toBe('1 selected');
   });
+
+  it('closes on Escape key press and cleans up event listener', () => {
+    const manager = createManager();
+    manager.mods = { all: [], mandatory: [], optional: [] };
+    const modal = new CollectionSelectModal(manager);
+    document.body.appendChild(modal.element);
+    modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(document.body.contains(modal.element)).toBe(false);
+  });
+
+  it('closes on backdrop click', () => {
+    const manager = createManager();
+    manager.mods = { all: [], mandatory: [], optional: [] };
+    const modal = new CollectionSelectModal(manager);
+    document.body.appendChild(modal.element);
+    modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    const modalBox = modal.element.querySelector('.nxdt-modal-box');
+    modalBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    modal.element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(false);
+  });
 });
 
 describe('CollectionUpdateModal', () => {
@@ -493,5 +551,35 @@ describe('CollectionUpdateModal', () => {
     expect(output.querySelector('[onerror]')).toBeNull();
     expect(output.textContent).toContain(evilName);
     expect(document.body.dataset.pwned).toBeUndefined();
+  });
+  it('closes on Escape key press', async () => {
+    mockSendMessage(() => ok({ revisions: [] }));
+    const manager = createManager();
+    const modal = new CollectionUpdateModal(manager);
+    document.body.appendChild(modal.element);
+    await modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(document.body.contains(modal.element)).toBe(false);
+  });
+
+  it('closes on backdrop click', async () => {
+    mockSendMessage(() => ok({ revisions: [] }));
+    const manager = createManager();
+    const modal = new CollectionUpdateModal(manager);
+    document.body.appendChild(modal.element);
+    await modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    const modalBox = modal.element.querySelector('.nxdt-modal-box');
+    modalBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    modal.element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(false);
   });
 });

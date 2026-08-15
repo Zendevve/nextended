@@ -274,6 +274,20 @@ describe('background handlers', () => {
       const res = await handlers.resolveArchivedDownload({ fileId: '1' });
       expect(res).toMatchObject({ url: null, code: ERROR_CODES.INVALID_INPUT });
     });
+
+    it('rejects invalid slug or non-numeric fileId with INVALID_INPUT', async () => {
+      const res1 = await handlers.resolveArchivedDownload({ fileId: '123', slug: '../evil' });
+      expect(res1).toEqual({ url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT });
+
+      const res2 = await handlers.resolveArchivedDownload({ fileId: '123', slug: '' });
+      expect(res2).toEqual({ url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT });
+
+      const res3 = await handlers.resolveArchivedDownload({ fileId: 'abc', slug: 'skyrim' });
+      expect(res3).toEqual({ url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT });
+
+      const res4 = await handlers.resolveArchivedDownload({ fileId: '12.34', slug: 'skyrim' });
+      expect(res4).toEqual({ url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT });
+    });
   });
 
   describe('RESOLVE_COLLECTION_DOWNLOAD', () => {
@@ -337,6 +351,17 @@ describe('background handlers', () => {
       vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(403, 'forbidden')));
       const res = await handlers.resolveCollectionDownload({ fileId: '123', isNMM: false });
       expect(res).toMatchObject({ url: null, code: ERROR_CODES.AUTH_ERROR });
+    });
+
+    it('rejects non-numeric or missing fileId with INVALID_INPUT', async () => {
+      const res1 = await handlers.resolveCollectionDownload({ fileId: 'abc' });
+      expect(res1).toEqual({ url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT });
+
+      const res2 = await handlers.resolveCollectionDownload({ fileId: '../bad' });
+      expect(res2).toEqual({ url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT });
+
+      const res3 = await handlers.resolveCollectionDownload({});
+      expect(res3).toEqual({ url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT });
     });
   });
 
