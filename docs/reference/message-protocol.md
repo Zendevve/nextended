@@ -39,7 +39,16 @@ An unhandled `type` resolves to `{ error: 'Unhandled message type: <type>' }`. A
 | `NXDT_GET_COLLECTION_HISTORY` | content → SW | Read per-collection downloaded fileId history | result `{ history }`; nested `gameDomain → collectionSlug → type → fileIds` |
 | `NXDT_SET_COLLECTION_HISTORY` | content → SW | Record downloaded fileIds for a collection | payload `{ gameDomain, collectionSlug, type, fileIds, replace? }`; atomic merge in SW; `replace: true` clears the list first; blocklist guards `__proto__|constructor|prototype`; result `{ ok: true }` / `{ ok: false, error, code: 'INVALID_INPUT' }` |
 | `NXDT_FOCUS_COLLECTION_PANEL` | popup → content script (NOT via SW) | Scroll the collection panel into view and flash focus | `chrome.tabs.sendMessage(id, { type: NXDT_FOCUS_COLLECTION_PANEL })`; content script `scrollIntoView({ behavior: 'smooth', block: 'center' })` on `[data-nxdt-collection]`, adds `nxdt-panel-focus` for 1600 ms; responds `{ ok: true }` / `{ ok: false }` |
-
+| `NXDT_FETCH_MOD_REQUIREMENTS` | content → SW | Fetch required dependencies for a specific mod | payload `{ gameDomain, modId }`; result `{ requirements }` |
+| `NXDT_APPLY_PRESET` | options / popup → SW | Apply a predefined tuning profile | payload `{ presetKey }` (e.g. `'solo_modder'`, `'collection_hoarder'`); result `{ success: true, settings }` |
+| `NXDT_VERIFY_COLLECTION_DOWNLOADS` | content → SW | Verify downloaded collection files on disk against manifest | payload `{ items }`; result verification summary object with matched/missing counts |
+| `NXDT_ENQUEUE_ITEMS` | content / popup → SW | Enqueue items into the persistent download queue | payload `{ items: Array, options?: Object }`; result `{ enqueued: number, total: number }` |
+| `NXDT_QUEUE_PAUSE` | popup / drawer → SW | Pause active download queue processing | result `{ ok: true }` |
+| `NXDT_QUEUE_RESUME` | popup / drawer → SW | Resume paused download queue | result `{ ok: true }` |
+| `NXDT_QUEUE_CLEAR` | popup / drawer → SW | Clear all pending items from download queue | result `{ ok: true }` |
+| `NXDT_QUEUE_SKIP_ITEM` | popup / drawer → SW | Skip a specific pending or active queue item | payload `{ itemId }`; result `{ ok: true }` |
+| `NXDT_QUEUE_RETRY_FAILED` | popup / drawer → SW | Re-queue failed download items | result `{ retriedCount: number }` |
+| `NXDT_GET_QUEUE_STATE` | popup / drawer → SW | Query live queue telemetry and active items | result `{ status: string, items: Array, stats: Object }` |
 ## Resolver endpoints
 
 Archived (GET, built by `buildGenerateDownloadUrl` in `src/nexus/url-utils.js`):
