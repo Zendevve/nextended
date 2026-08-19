@@ -311,6 +311,41 @@ describe('background handlers', () => {
       });
       expect(res).toEqual({ url: 'https://files.nexus-cdn.com/abc/file.rar', fileId: '123' });
     });
+    it('falls back to game-specific GenerateDownloadUrl when collection manager returns no URL', async () => {
+      const fetchMock = vi.fn(async (url, options) => {
+        if (options.method === 'POST') {
+          return jsonResponse(200, { success: false, error: 'no url' });
+        }
+        expect(url).toContain('/stardewvalley/Core/Downloads/GenerateDownloadUrl');
+        expect(url).toContain('file_id=123');
+        expect(url).toContain('game_id=1704');
+        return jsonResponse(200, { url: 'https://files.nexus-cdn.com/stardew/fish.zip' });
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const res = await handlers.resolveCollectionDownload({
+        fileId: '123',
+        gameId: '1704',
+        gameDomain: 'stardewvalley',
+        isNMM: false,
+      });
+      expect(res).toEqual({ url: 'https://files.nexus-cdn.com/stardew/fish.zip', fileId: '123' });
+    });
+
+    it('falls back to safe uri from manifest if network endpoints return no URL', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse(200, { success: false, error: 'no url' }))
+      );
+      const res = await handlers.resolveCollectionDownload({
+        fileId: '123',
+        gameDomain: 'stardewvalley',
+        isNMM: false,
+        uri: 'https://files.nexus-cdn.com/direct/manifest-file.zip',
+      });
+      expect(res).toEqual({ url: 'https://files.nexus-cdn.com/direct/manifest-file.zip', fileId: '123' });
+    });
+
 
     it('builds the NMM fallback from payload.modId, never /mods/1/', async () => {
       vi.stubGlobal(

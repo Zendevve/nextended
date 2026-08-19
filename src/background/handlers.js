@@ -272,13 +272,14 @@ export async function startDownload(payload, deps = {}) {
 }
 
 export async function resolveCollectionDownload(payload, _deps = {}) {
-  const { fileId, gameId, gameDomain, isNMM, modId } = payload || {};
+  const { fileId, gameId, gameDomain, isNMM, modId, uri } = payload || {};
   if (!fileId || typeof fileId !== 'string' || !FILE_ID_PATTERN.test(fileId.trim())) {
     return { url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT };
   }
   const settings = await getSettings();
   const timeout = settings.requestTimeout || 30000;
   const body = `fid=${encodeURIComponent(fileId)}&game_id=${encodeURIComponent(gameId || '0')}${isNMM ? '&nmm=1' : ''}`;
+  let primaryError = null;
   try {
     const response = await fetchWithTimeout(
       COLLECTION_DOWNLOAD_ENDPOINT,
@@ -296,16 +297,49 @@ export async function resolveCollectionDownload(payload, _deps = {}) {
     );
     const url = await extractValidatedUrl(response);
     if (url) return { url, fileId };
-    if (isNMM && gameDomain && modId) {
-      return { url: `nxm://${gameDomain}/mods/${modId}/files/${fileId}`, fileId };
-    }
-    if (isNMM) {
-      return { url: null, error: 'Missing modId for NMM download', code: ERROR_CODES.INVALID_URL };
-    }
-    return { url: null, error: 'No download URL returned from Nexus', code: ERROR_CODES.INVALID_RESPONSE };
   } catch (e) {
-    return resolveFailure(e);
+    primaryError = e;
   }
+
+  // Fallback 1: Try standard game-specific GenerateDownloadUrl endpoint
+  if (gameDomain && typeof gameDomain === 'string' && SLUG_PATTERN.test(gameDomain)) {
+    try {
+      const endpoint = `${buildGenerateDownloadUrl(gameDomain, fileId, gameId)}${isNMM ? '&nmm=1' : ''}`;
+      const response = await fetchWithTimeout(
+        endpoint,
+        {
+          method: 'GET',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            Origin: 'https://www.nexusmods.com',
+          },
+          credentials: 'include',
+        },
+        timeout
+      );
+      const url = await extractValidatedUrl(response);
+      if (url) return { url, fileId };
+    } catch (e) {
+      if (!primaryError) primaryError = e;
+    }
+  }
+
+  // Fallback 2: Direct URI if supplied by GraphQL and valid
+  if (uri && typeof uri === 'string' && isSafeDownloadUrl(uri)) {
+    return { url: uri, fileId };
+  }
+
+  // Fallback 3: NXM URL for Vortex / MO2 mode
+  if (isNMM && gameDomain && modId) {
+    return { url: `nxm://${gameDomain}/mods/${modId}/files/${fileId}`, fileId };
+  }
+  if (isNMM) {
+    return { url: null, error: 'Missing modId for NMM download', code: ERROR_CODES.INVALID_URL };
+  }
+  if (primaryError) {
+    return resolveFailure(primaryError);
+  }
+  return { url: null, error: 'No download URL returned from Nexus', code: ERROR_CODES.INVALID_RESPONSE };
 }
 
 export async function resolveArchivedDownload(payload, _deps = {}) {

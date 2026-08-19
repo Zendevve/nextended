@@ -7,6 +7,23 @@ import { createLogger } from '../shared/logger.js';
 
 const log = createLogger('collection-ui');
 
+const ICONS = {
+  vortex: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+  browser: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
+  download: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+  mandatory: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`,
+  select: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
+  diff: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>`,
+  queue: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path></svg>`,
+  verify: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`,
+  check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+  play: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+  pause: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`,
+  stop: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>`,
+  skip: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>`,
+  terminal: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`,
+};
+
 function getModFileId(mod) {
   const id = mod?.file?.fileId ?? mod?.fileId;
   return id != null && id !== '' ? String(id) : '';
@@ -140,10 +157,12 @@ export class CollectionManager {
   }
 
   async fetchDownloadUrl(mod, downloadMethod = this.downloadMethod) {
-    const domain = mod.file?.mod?.game?.domainName || this.gameDomain;
+    const domain = mod.file?.mod?.game?.domainName || mod.gameDomain || this.gameDomain;
     const fileId = getModFileId(mod);
-    const gameId = mod.file?.mod?.game?.id || '0';
+    const gameId = mod.file?.mod?.game?.id || mod.gameId || '0';
     const isNMM = downloadMethod === DOWNLOAD_METHOD_VORTEX;
+    const modId = mod.file?.mod?.modId ?? mod.modId ?? mod.file?.modId;
+    const uri = mod.file?.uri || mod.uri || '';
 
     if (!fileId) {
       return { downloadUrl: '', error: 'Missing fileId' };
@@ -155,7 +174,8 @@ export class CollectionManager {
         gameId: String(gameId),
         gameDomain: domain,
         isNMM,
-        modId: mod.file?.mod?.modId,
+        modId,
+        uri,
       });
 
       if (res?.url) {
@@ -382,30 +402,50 @@ class CollectionDownloadButton {
     const totalCount = this.manager.mods.all.length;
     const mandatoryCount = this.manager.mods.mandatory.length;
     this.element.innerHTML = `
-      <div class="nxdt-segmented" role="radiogroup" aria-label="Download method">
-        <label class="nxdt-seg-btn">
-          <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_VORTEX}" ${isVortex ? 'checked' : ''} />
-          <span>Send to Vortex / MO2</span>
-        </label>
-        <label class="nxdt-seg-btn">
-          <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_BROWSER}" ${!isVortex ? 'checked' : ''} />
-          <span>Browser Direct Download</span>
-        </label>
+      <div class="nxdt-controls-header">
+        <div class="nxdt-segmented" role="radiogroup" aria-label="Download method">
+          <label class="nxdt-seg-btn" title="Send downloads to Vortex or Mod Organizer 2 via NXM protocol">
+            <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_VORTEX}" ${isVortex ? 'checked' : ''} />
+            ${ICONS.vortex}
+            <span>Vortex / MO2</span>
+          </label>
+          <label class="nxdt-seg-btn" title="Download mod archives directly in browser">
+            <input type="radio" name="nxdtMethod" value="${DOWNLOAD_METHOD_BROWSER}" ${!isVortex ? 'checked' : ''} />
+            ${ICONS.browser}
+            <span>Browser Direct</span>
+          </label>
+        </div>
+        <div class="nxdt-queue-row">
+          <button id="nxdtQueueBackground" class="nxdt-btn-util nxdt-btn-util-amber" title="Add all collection mods to background persistent queue">
+            ${ICONS.queue}
+            <span>Queue to BG</span>
+          </button>
+          <button id="nxdtVerifyDownloads" class="nxdt-btn-util nxdt-btn-util-blue" title="Scan downloads and check for missing files">
+            ${ICONS.verify}
+            <span>Verify</span>
+          </button>
+        </div>
       </div>
       <button id="nxdtDownloadAll" class="nxdt-btn-hero" title="Download All Mods">
-        <span>Download All Mods</span>
+        <div class="nxdt-btn-hero-left">
+          ${ICONS.download}
+          <span>Download All Mods</span>
+        </div>
         <span class="nxdt-btn-hero-badge">${totalCount} mods</span>
       </button>
       <div class="nxdt-secondary-row">
         <button id="nxdtDownloadMandatory" class="nxdt-btn-secondary" title="Download Mandatory Mods Only">
-          Mandatory (${mandatoryCount})
+          ${ICONS.mandatory}
+          <span>Mandatory (${mandatoryCount})</span>
         </button>
-        <button id="nxdtSelectMods" class="nxdt-btn-secondary">Select Mods</button>
-        <button id="nxdtUpdateCollection" class="nxdt-btn-secondary">Update Diff</button>
-      </div>
-      <div class="nxdt-queue-row" style="margin-top: 6px; display:flex; gap:6px;">
-        <button id="nxdtQueueBackground" class="nxdt-btn-secondary" style="flex:1; border-color:#da8e35;color:#da8e35;font-weight:600;" title="Add all collection mods to background persistent queue">Queue All to Background</button>
-        <button id="nxdtVerifyDownloads" class="nxdt-btn-secondary" style="border-color:#58a6ff;color:#58a6ff;font-weight:600;" title="Scan downloads and check for missing files">Verify</button>
+        <button id="nxdtSelectMods" class="nxdt-btn-secondary" title="Select specific mods to download">
+          ${ICONS.select}
+          <span>Select Mods</span>
+        </button>
+        <button id="nxdtUpdateCollection" class="nxdt-btn-secondary" title="Compare collection revisions">
+          ${ICONS.diff}
+          <span>Update Diff</span>
+        </button>
       </div>
       <div id="nxdtDownloadSummary" style="display:none;"></div>
     `;
@@ -462,9 +502,9 @@ class CollectionDownloadButton {
       try {
         await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items });
         if (queueBtn) {
-          queueBtn.textContent = 'Queued to Background!';
+          queueBtn.innerHTML = `${ICONS.check} <span>Queued!</span>`;
           setTimeout(() => {
-            queueBtn.textContent = 'Queue to Background';
+            queueBtn.innerHTML = `${ICONS.queue} <span>Queue to BG</span>`;
           }, 2000);
         }
       } catch (err) {
@@ -596,29 +636,39 @@ export class CollectionProgressBar {
           <span id="nxdtStatusText">Downloading...</span>
           <span id="nxdtCount">0/0</span>
         </div>
-        <div class="nxdt-progress-subline" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 11px; color: #8b949e; min-height: 16px;">
-          <span id="nxdtCurrentMod" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;"></span>
-          <span id="nxdtProgressEta"></span>
-        </div>
+      </div>
+      <div class="nxdt-progress-subline">
+        <span id="nxdtCurrentMod"></span>
+        <span id="nxdtProgressEta"></span>
       </div>
       <div class="nxdt-progress-actions">
         <div class="nxdt-progress-actions-group">
-          <button id="nxdtPlayPause" class="nxdt-progress-btn">Pause</button>
-          <button id="nxdtStop" class="nxdt-progress-btn nxdt-progress-btn-danger">Stop</button>
+          <button id="nxdtPlayPause" class="nxdt-progress-btn">
+            ${ICONS.pause}
+            <span>Pause</span>
+          </button>
+          <button id="nxdtStop" class="nxdt-progress-btn nxdt-progress-btn-danger">
+            ${ICONS.stop}
+            <span>Stop</span>
+          </button>
         </div>
         <div class="nxdt-progress-actions-group">
-          <button id="nxdtSkipPause" class="nxdt-progress-btn">Skip Wait</button>
+          <button id="nxdtSkipPause" class="nxdt-progress-btn">
+            ${ICONS.skip}
+            <span>Skip Wait</span>
+          </button>
         </div>
       </div>
     `;
 
     this.element.querySelector('#nxdtPlayPause').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
       if (this.status === CollectionProgressBar.STATUS_DOWNLOADING) {
         this.setStatus(CollectionProgressBar.STATUS_PAUSED);
-        e.target.textContent = 'Resume';
+        btn.innerHTML = `${ICONS.play} <span>Resume</span>`;
       } else {
         this.setStatus(CollectionProgressBar.STATUS_DOWNLOADING);
-        e.target.textContent = 'Pause';
+        btn.innerHTML = `${ICONS.pause} <span>Pause</span>`;
       }
     });
 
@@ -691,13 +741,15 @@ class CollectionLogConsole {
     this.element = document.createElement('div');
     this.element.className = 'nxdt-console-container';
     this.element.innerHTML = `
-      <div class="nxdt-log-toggle" id="nxdtToggleLogs">
-        <span>Activity Log</span>
-        <span id="nxdtLogState">Hide</span>
+      <div class="nxdt-log-toggle" id="nxdtToggleLogs" title="Toggle activity log console">
+        <div class="nxdt-log-toggle-left">
+          ${ICONS.terminal}
+          <span>Activity Log</span>
+        </div>
+        <span id="nxdtLogState" class="nxdt-log-state-badge">Show</span>
       </div>
-      <div id="nxdtLogOutput" class="nxdt-log-box"></div>
+      <div id="nxdtLogOutput" class="nxdt-log-box" style="display:none;"></div>
     `;
-
     this.output = this.element.querySelector('#nxdtLogOutput');
     const toggle = this.element.querySelector('#nxdtToggleLogs');
     const state = this.element.querySelector('#nxdtLogState');
