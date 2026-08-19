@@ -176,8 +176,11 @@ npm run check
 
 ## Documentation
 
-Comprehensive architecture, security, and developer reference guides are located in the [`docs/`](docs/) directory:
+Comprehensive guides and developer references are available across the repository and [`docs/`](docs/):
 
+- **[User Installation Guide (INSTALLATION.md)](INSTALLATION.md)**
+- **[Browser Installation & Update Guide](docs/how-to/installation-guide.md)**
+- **[Packaging & Distribution Guide](docs/how-to/distribute.md)**
 - [Architecture Overview](docs/reference/architecture.md)
 - [Message Protocol Specification](docs/reference/message-protocol.md)
 - [Security Model & Allow-List Policy](docs/reference/security-model.md)
