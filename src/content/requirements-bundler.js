@@ -58,7 +58,7 @@ export class RequirementsBundler {
     btn.type = 'button';
     btn.className = 'btn inline-flex nxdt-bundle-trigger-btn';
     btn.setAttribute('data-nxdt-bundle-btn', 'true');
-    btn.innerHTML = `<span class="flex-label">📦 Download Mod + Requirements</span>`;
+    btn.innerHTML = `<span class="flex-label">Download Mod + Requirements</span>`;
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -127,8 +127,8 @@ export class RequirementsBundler {
     this.modal.innerHTML = `
       <div class="nxdt-modal-box">
         <div class="nxdt-modal-header">
-          <h3>📦 Smart Requirements & Dependency Resolver</h3>
-          <button class="nxdt-modal-close" id="nxdt-req-close" aria-label="Close">✕</button>
+          <h3>Smart Requirements & Dependency Resolver</h3>
+          <button class="nxdt-modal-close" id="nxdt-req-close" aria-label="Close">&times;</button>
         </div>
         <div class="nxdt-modal-body">
           <p class="nxdt-modal-desc">
@@ -145,7 +145,7 @@ export class RequirementsBundler {
                 <button type="button" class="nxdt-btn-sm" id="nxdt-req-select-all">Select All (<span id="nxdt-all-count">${totalCount}</span>)</button>
                 <button type="button" class="nxdt-btn-sm" id="nxdt-req-select-nexus">Select Nexus Only (${nexusCount})</button>
                 <button type="button" class="nxdt-btn-sm" id="nxdt-req-deselect-all">Deselect All (0)</button>
-                <button type="button" class="nxdt-btn-sm nxdt-btn-crawl" id="nxdt-req-crawl-tree">🔍 Deep Crawl Tree</button>
+                <button type="button" class="nxdt-btn-sm nxdt-btn-crawl" id="nxdt-req-crawl-tree">Deep Crawl Tree</button>
               </div>
               <div class="nxdt-req-section-title">Requirements & Dependencies (<span id="nxdt-req-count">${totalCount}</span>):</div>
               <div class="nxdt-req-list nxdt-modal-list" id="nxdt-req-container">
@@ -156,7 +156,7 @@ export class RequirementsBundler {
         </div>
         <div class="nxdt-modal-footer">
           <button class="nxdt-btn nxdt-btn-dark nxdt-btn-secondary" id="nxdt-req-cancel">Cancel</button>
-          <button class="nxdt-btn nxdt-btn-amber nxdt-btn-primary" id="nxdt-req-enqueue">⚡ Queue in Dependency Order</button>
+          <button class="nxdt-btn nxdt-btn-amber nxdt-btn-primary" id="nxdt-req-enqueue">Queue in Dependency Order</button>
         </div>
       </div>
     `;
@@ -200,7 +200,7 @@ export class RequirementsBundler {
     if (crawlBtn) {
       crawlBtn.addEventListener('click', async () => {
         crawlBtn.disabled = true;
-        crawlBtn.textContent = '⏳ Crawling dependencies...';
+        crawlBtn.textContent = 'Crawling dependencies...';
         try {
           const res = await sendMessage({
             type: MESSAGE_TYPES.CRAWL_DEPENDENCY_TREE,
@@ -237,10 +237,10 @@ export class RequirementsBundler {
               if (allCountEl) allCountEl.textContent = String(requirements.length);
             }
 
-            crawlBtn.textContent = `✓ Crawled (${res.flattened.length} Sub-Deps)`;
+            crawlBtn.textContent = `Crawled (${res.flattened.length} Sub-Deps)`;
             showToast(`Resolved ${res.flattened.length} nested dependencies`, 'success');
           } else {
-            crawlBtn.textContent = '✓ Tree Complete';
+            crawlBtn.textContent = 'Tree Complete';
           }
         } catch (err) {
           log.warn('Failed to crawl dependency tree', { error: err?.message });
@@ -335,7 +335,7 @@ export class RequirementsBundler {
 
       if (enqueueBtn) {
         enqueueBtn.disabled = true;
-        enqueueBtn.textContent = '⚡ Enqueuing...';
+        enqueueBtn.textContent = 'Enqueuing...';
       }
       if (cancelBtn) {
         cancelBtn.disabled = true;

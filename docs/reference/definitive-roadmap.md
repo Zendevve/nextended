@@ -13,7 +13,7 @@ To establish **Nexus Mods Download Tools (NXDT)** as the undisputed, definitive 
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 THE DEFINITIVE NXDT SUITE                                   │
 ├──────────────────────────────┬──────────────────────────────┬───────────────────────────────┤
-│  ⚡ Zero-Friction Browsing   │  📦 Resilient Bulk Engine    │  🛠️ Mod Manager Harmony       │
+│  Zero-Friction Browsing      │  Resilient Bulk Engine       │  Mod Manager Harmony          │
 │  • Instant 1-Click Downloads │  • Persistent Background S.W.│  • Structured Subfolders      │
 │  • Search Card Quick Buttons │  • 1-5 Slot Adaptive Concurr.│  • MO2 .meta File Generation  │
 │  • Smart Requirement Bundler │  • Exponential Backoff (429) │  • NXM Direct Protocol Bridge │
@@ -82,10 +82,10 @@ To establish **Nexus Mods Download Tools (NXDT)** as the undisputed, definitive 
 ### Pillar 6: Nexus Native Dark Glass Design System & Preset Profiles
 * **Modern Aesthetic**: Dark graphite (`#1a1c1f`, `#24282e`) with Nexus amber accents (`#da8e35`, `#f59e0b`), frosted glass blur backdrop, crisp typography, and fluid micro-animations.
 * **Settings Quick Presets**:
-  * 🚀 **Fast Solo Modder**: Instant 1-click download, auto-close tab, auto-start slow countdown, skip warning modals.
-  * 📦 **Collection Hoarder**: Persistent background queue, 3-slot concurrency, auto-retry on 429, desktop notifications.
-  * 🛡️ **Cautious Free-Tier**: Serial 1-by-1 queue with gentle 3s pacing, Cloudflare detection safeguard, structured subfolders.
-  * 🛠️ **MO2 Power User**: Force NXM manager routing, generate `.meta` files, custom download folder categorization.
+  * **Fast Solo Modder**: Instant 1-click download, auto-close tab, auto-start slow countdown, skip warning modals.
+  * **Collection Hoarder**: Persistent background queue, 3-slot concurrency, auto-retry on 429, desktop notifications.
+  * **Cautious Free-Tier**: Serial 1-by-1 queue with gentle 3s pacing, Cloudflare detection safeguard, structured subfolders.
+  * **MO2 Power User**: Force NXM manager routing, generate `.meta` files, custom download folder categorization.
 
 ---
 

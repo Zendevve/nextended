@@ -57,13 +57,13 @@ export class SearchCardActions {
     nxmBtn.className = 'nxdt-card-btn nxdt-card-btn-nxm';
     nxmBtn.href = `${modInfo.url}?tab=files`;
     nxmBtn.title = 'Open files & auto-download';
-    nxmBtn.textContent = '⬇ NXM';
+    nxmBtn.textContent = 'NXM';
 
     const queueBtn = document.createElement('button');
     queueBtn.type = 'button';
     queueBtn.className = 'nxdt-card-btn nxdt-card-btn-queue';
     queueBtn.title = 'Queue mod to background';
-    queueBtn.textContent = '⚡ Queue';
+    queueBtn.textContent = 'Queue';
 
     const modDisplayName = modInfo.name || modInfo.title || 'Mod';
 
@@ -90,11 +90,11 @@ export class SearchCardActions {
             ],
           },
         });
-        queueBtn.textContent = '✓ Queued';
+        queueBtn.textContent = 'Queued';
         queueBtn.classList.add('nxdt-card-btn-queued');
         showToast(`Added "${modDisplayName}" to queue`, 'success');
         setTimeout(() => {
-          queueBtn.textContent = '⚡ Queue';
+          queueBtn.textContent = 'Queue';
           queueBtn.classList.remove('nxdt-card-btn-queued');
           queueBtn.disabled = false;
         }, 2000);

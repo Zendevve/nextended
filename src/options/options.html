@@ -53,35 +53,42 @@
       </div>
       <div class="presets-grid" role="group" aria-label="Configuration Presets">
         <button type="button" class="preset-btn" data-preset="solo_modder" title="Fast 1-click downloads, auto-close tabs, instant countdown skip">
-          <span class="preset-icon" aria-hidden="true">⚡</span>
+          <span class="preset-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </span>
           <div class="preset-info">
             <span class="preset-name">Solo Modder</span>
             <span class="preset-desc">Fast 1-click direct downloads</span>
           </div>
         </button>
         <button type="button" class="preset-btn" data-preset="collection_hoarder" title="Bulk background queue, 4 parallel slots, resilient auto-retry">
-          <span class="preset-icon" aria-hidden="true">📦</span>
+          <span class="preset-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </span>
           <div class="preset-info">
             <span class="preset-name">Collection Hoarder</span>
             <span class="preset-desc">Parallel queue with auto-retry</span>
           </div>
         </button>
         <button type="button" class="preset-btn" data-preset="free_tier" title="Gentle serial 1-at-a-time pacing to prevent rate limits">
-          <span class="preset-icon" aria-hidden="true">🛡️</span>
+          <span class="preset-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </span>
           <div class="preset-info">
             <span class="preset-name">Free-Tier Safe</span>
             <span class="preset-desc">Gentle pacing to prevent rate limits</span>
           </div>
         </button>
         <button type="button" class="preset-btn" data-preset="mo2_power_user" title="NXM protocol routing, MO2 .meta generation, structured folder staging">
-          <span class="preset-icon" aria-hidden="true">⚙️</span>
+          <span class="preset-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </span>
           <div class="preset-info">
             <span class="preset-name">MO2 Power User</span>
             <span class="preset-desc">NXM routing & .meta files</span>
           </div>
         </button>
       </div>
-    </div>
 
     <!-- Category Tab Bar -->
     <nav class="tabs-nav" aria-label="Settings Categories">
@@ -358,7 +365,7 @@
         </div>
 
         <div style="display: flex; gap: 8px; margin: 12px 0 6px 0; align-items: center; flex-wrap: wrap;">
-          <button id="import-inv-btn" type="button" class="btn-primary" style="font-size: 11px; padding: 6px 14px;">📥 Import & Index Inventory</button>
+          <button id="import-inv-btn" type="button" class="btn-primary" style="font-size: 11px; padding: 6px 14px;">Import & Index Inventory</button>
           <button id="clear-inv-btn" type="button" class="btn-secondary" style="font-size: 11px; padding: 6px 14px;">Clear Game Inventory</button>
           <span id="inv-status-msg" style="font-size: 11.5px; color: var(--nexus-orange); font-weight: 600;"></span>
         </div>
@@ -368,9 +375,10 @@
     <!-- Support & Donation Card -->
     <section class="support-card" aria-labelledby="support-heading">
       <div class="support-content">
-        <div class="support-icon" aria-hidden="true">☕</div>
+        <div class="support-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+        </div>
         <div class="support-text">
-          <h3 id="support-heading" class="support-title">Enjoying Nexus Mods Download Tools?</h3>
           <p class="support-desc">This extension is 100% free and open source. If it saves you time and enhances your modding workflow, consider supporting development on Buy Me a Coffee!</p>
         </div>
       </div>
@@ -387,7 +395,9 @@
         <button id="save-btn" type="button" class="btn-primary">Save Settings</button>
         <button id="reset-btn" type="button" class="btn-secondary">Reset to Defaults</button>
         <a href="https://buymeacoffee.com/zendevve" target="_blank" rel="noopener noreferrer" class="btn-coffee-footer" title="Support creator on Buy Me a Coffee">
-          <span class="btn-coffee-footer-icon" aria-hidden="true">☕</span>
+          <span class="btn-coffee-footer-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+          </span>
           <span>Buy Me a Coffee</span>
         </a>
       </div>

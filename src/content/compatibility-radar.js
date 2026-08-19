@@ -72,7 +72,9 @@ export class CompatibilityRadar {
     card.innerHTML = `
       <div class="nxdt-radar-header">
         <div class="nxdt-radar-title">
-          <span class="nxdt-radar-icon">🎯</span>
+          <span class="nxdt-radar-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          </span>
           <span>Compatibility & Mod Health Radar</span>
         </div>
         <span class="nxdt-radar-score ${radarData.status || 'healthy'}">${radarData.healthScore}% Health</span>
@@ -92,7 +94,7 @@ export class CompatibilityRadar {
         ${
           radarData.warnings && radarData.warnings.length > 0
             ? `<div class="nxdt-radar-warnings">
-                ${radarData.warnings.map((w) => `<div class="nxdt-radar-warn-item">⚠ ${w}</div>`).join('')}
+                ${radarData.warnings.map((w) => `<div class="nxdt-radar-warn-item"><span class="nxdt-warn-bullet">!</span> ${w}</div>`).join('')}
               </div>`
             : ''
         }

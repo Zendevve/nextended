@@ -78,7 +78,7 @@ describe('FloatingDrawer UI & Actions', () => {
     expect(coffeeLink.getAttribute('target')).toBe('_blank');
     expect(coffeeLink.getAttribute('rel')).toBe('noopener noreferrer');
     expect(coffeeLink.getAttribute('title')).toBe('Support development on Buy Me a Coffee');
-    expect(coffeeLink.textContent).toContain('☕ Buy Me a Coffee');
+    expect(coffeeLink.textContent).toContain('Buy Me a Coffee');
   });
 
   it('closes open drawer on Escape key press and cleans up listener', () => {

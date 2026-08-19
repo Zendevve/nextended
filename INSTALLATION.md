@@ -39,7 +39,7 @@ Follow these steps to load the extension into any Chromium-based browser:
 #### Step 1: Extract the Zip Archive
 1. Download `nexus-download-tools-chrome-vX.X.X.zip`.
 2. Extract (unzip) the file into a permanent folder on your computer (e.g., `Documents/Browser-Extensions/nexus-download-tools` or `C:\Extensions\nexus-download-tools`).
-   > ⚠️ **Important:** Do not delete or move this folder after installing, as the browser loads files directly from this directory.
+   > **Important:** Do not delete or move this folder after installing, as the browser loads files directly from this directory.
 
 #### Step 2: Open Extensions Management
 Open your browser and navigate to the extensions page:
@@ -67,7 +67,7 @@ Look in the top-right corner of the Extensions page and switch the **Developer m
 
 #### Step 5: Pin the Toolbar Icon
 1. Click the **Puzzle icon** (Extensions menu) in your browser toolbar.
-2. Find **Nexus Mods Download Tools** and click the **Pin icon** (📌) to keep it visible on your toolbar.
+2. Find **Nexus Mods Download Tools** and click the **Pin** icon to keep it visible on your toolbar.
 3. You can now press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> (or <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> on macOS) to open the extension popup anytime.
 
 ---
@@ -87,7 +87,7 @@ If you are using Firefox Developer Edition, Firefox Nightly, or Floorp:
 1. Navigate to `about:config` in your address bar and accept the warning.
 2. Search for `xpinstall.signatures.required` and set it to `false`.
 3. Navigate to `about:addons` (or press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>).
-4. Click the gear icon (⚙️) in the top-right and select **Install Add-on From File...**.
+4. Click the gear icon in the top-right and select **Install Add-on From File...**.
 5. Select the downloaded `.zip` file.
 
 ---
@@ -132,7 +132,7 @@ When a new version is released:
 1. Download the new `nexus-download-tools-*-vX.X.X.zip` file from [Releases](https://github.com/Zendevve/nexus-mods-downloader/releases).
 2. Extract the new zip file and **overwrite** the files in your existing extension folder.
 3. Open `chrome://extensions` in your browser.
-4. Locate the **Nexus Mods Download Tools** card and click the **Reload** icon (🔄 circular arrow).
+4. Locate the **Nexus Mods Download Tools** card and click the **Reload** icon (circular arrow).
 5. Refresh any open Nexus Mods tabs to apply the update.
 
 ---
@@ -140,7 +140,7 @@ When a new version is released:
 ## Post-Installation & First Run
 
 1. **Log in to Nexus Mods**: Make sure you are logged in to your account on [nexusmods.com](https://www.nexusmods.com). The extension uses your standard browser login session; you never need to share API keys or passwords.
-2. **Open the Settings Page**: Click the extension icon in your toolbar, then click the **Settings** (⚙️) button to select your preferred preset:
+2. **Open the Settings Page**: Click the extension icon in your toolbar, then click the **Settings** button to select your preferred preset:
    - **Solo Modder**: Instant zero-delay single downloads and countdown skips.
    - **Collection Hoarder**: 4 concurrent download workers for massive collection downloads.
    - **Cautious Free-Tier**: 1 download slot with 3s spacing to prevent rate limits.
@@ -180,8 +180,8 @@ nexus-download-tools/   <── Select THIS folder
 
 ---
 
-## 💖 Support the Project
+## Support the Project
 
 If Nexus Mods Download Tools makes your modding experience smoother, consider supporting future development and maintenance:
 
-☕ **[Buy Me a Coffee](https://buymeacoffee.com/zendevve)**
+**[Buy Me a Coffee](https://buymeacoffee.com/zendevve)**

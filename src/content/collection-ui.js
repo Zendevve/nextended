@@ -404,8 +404,8 @@ class CollectionDownloadButton {
         <button id="nxdtUpdateCollection" class="nxdt-btn-secondary">Update Diff</button>
       </div>
       <div class="nxdt-queue-row" style="margin-top: 6px; display:flex; gap:6px;">
-        <button id="nxdtQueueBackground" class="nxdt-btn-secondary" style="flex:1; border-color:#da8e35;color:#da8e35;font-weight:600;" title="Add all collection mods to background persistent queue">⚡ Queue All to Background</button>
-        <button id="nxdtVerifyDownloads" class="nxdt-btn-secondary" style="border-color:#58a6ff;color:#58a6ff;font-weight:600;" title="Scan downloads and check for missing files">🔍 Verify</button>
+        <button id="nxdtQueueBackground" class="nxdt-btn-secondary" style="flex:1; border-color:#da8e35;color:#da8e35;font-weight:600;" title="Add all collection mods to background persistent queue">Queue All to Background</button>
+        <button id="nxdtVerifyDownloads" class="nxdt-btn-secondary" style="border-color:#58a6ff;color:#58a6ff;font-weight:600;" title="Scan downloads and check for missing files">Verify</button>
       </div>
       <div id="nxdtDownloadSummary" style="display:none;"></div>
     `;
@@ -462,9 +462,9 @@ class CollectionDownloadButton {
       try {
         await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items });
         if (queueBtn) {
-          queueBtn.textContent = '✓ Queued to Background!';
+          queueBtn.textContent = 'Queued to Background!';
           setTimeout(() => {
-            queueBtn.textContent = '⚡ Queue to Background';
+            queueBtn.textContent = 'Queue to Background';
           }, 2000);
         }
       } catch (err) {
@@ -494,7 +494,7 @@ class CollectionDownloadButton {
       summaryEl.style.marginTop = '8px';
       summaryEl.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
-          <span style="font-weight:600;">⚠️ ${failed.length} mod download(s) failed</span>
+          <span style="font-weight:600;">${failed.length} mod download(s) failed</span>
           <div style="display:flex;gap:6px;align-items:center;">
             <button type="button" id="nxdtOpenFailedExternal" class="nxdt-btn-sm" style="background:#292e36;color:#58a6ff;border:1px solid #444c56;cursor:pointer;" title="Open pages for failed items">Open External Links</button>
             <button type="button" id="nxdtRetryFailed" class="nxdt-btn-sm" style="background:#da8e35;color:#fff;border:none;cursor:pointer;font-weight:600;">Retry Failed (${failed.length})</button>
@@ -532,7 +532,7 @@ class CollectionDownloadButton {
       summaryEl.style.color = '#3fb950';
       summaryEl.style.borderColor = 'rgba(63, 185, 80, 0.4)';
       summaryEl.style.marginTop = '8px';
-      summaryEl.textContent = `✓ Completed: ${completed} downloaded, ${skipped} skipped`;
+      summaryEl.textContent = `Completed: ${completed} downloaded, ${skipped} skipped`;
     } else {
       summaryEl.style.display = 'none';
       summaryEl.innerHTML = '';
@@ -1071,10 +1071,10 @@ export class CollectionVerificationModal {
       <div class="nxdt-modal-box" style="max-width: 600px;">
         <div class="nxdt-modal-header">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:18px;">🔍</span>
+            <span class="nxdt-modal-icon" style="display:flex;align-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
             <h3>Download Verification & Integrity Scanner</h3>
           </div>
-          <button id="nxdtCloseVerifHeader" class="nxdt-btn-icon">✕</button>
+          <button id="nxdtCloseVerifHeader" class="nxdt-btn-icon">&times;</button>
         </div>
         <div id="nxdtVerifBody" style="padding: 16px 20px;">
           <div style="text-align:center;padding:30px;color:#8b949e;">
@@ -1122,7 +1122,7 @@ export class CollectionVerificationModal {
       <div style="margin-bottom: 16px; background: rgba(30, 34, 40, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 14px 16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
           <span style="font-size:14px; font-weight:700; color:#f0f6fc;">
-            ${confirmed === total ? '🎉 Collection 100% Downloaded!' : 'Verification Scan Complete'}
+            ${confirmed === total ? 'Collection 100% Downloaded!' : 'Verification Scan Complete'}
           </span>
           <span style="font-size:13px; font-weight:700; color:#da8e35;">${percentage}% Complete</span>
         </div>
@@ -1149,8 +1149,8 @@ export class CollectionVerificationModal {
         <button id="nxdtCloseVerif" class="nxdt-btn-sm">Close</button>
         ${
           missing > 0
-            ? `<button id="nxdtDownloadMissing" class="nxdt-btn-primary" style="background:#da8e35;color:#fff;">⚡ Download Missing Only (${missing})</button>`
-            : `<button id="nxdtCloseVerif2" class="nxdt-btn-primary" style="background:#3fb950;color:#fff;">✓ Everything Downloaded</button>`
+            ? `<button id="nxdtDownloadMissing" class="nxdt-btn-primary" style="background:#da8e35;color:#fff;">Download Missing Only (${missing})</button>`
+            : `<button id="nxdtCloseVerif2" class="nxdt-btn-primary" style="background:#3fb950;color:#fff;">Everything Downloaded</button>`
         }
       </div>
     `;
@@ -1188,7 +1188,7 @@ export class CollectionVerificationModal {
         const left = document.createElement('div');
         left.className = 'nxdt-modal-row-left';
         left.innerHTML = `
-          <span style="font-size:14px;">${item.confirmed ? '✅' : '❌'}</span>
+          <span class="nxdt-pill-tag ${item.confirmed ? 'nxdt-pill-nexus' : 'nxdt-pill-offsite'}">${item.confirmed ? 'OK' : 'FAIL'}</span>
           <div>
             <div class="nxdt-modal-row-title">${item.modName}</div>
             <div style="font-size:11px;color:#8b949e;">${item.fileName} • ${convertSize(item.fileSize)}</div>

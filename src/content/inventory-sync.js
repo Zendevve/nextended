@@ -129,20 +129,20 @@ export class InventoryAnnotator {
     if (match.isInstalled) {
       if (match.updateAvailable) {
         badge.classList.add('nxdt-badge-update');
-        badge.innerHTML = `⚡ <b>Update Available</b> ${
+        badge.innerHTML = `<b>Update Available</b> ${
           match.installedVersion ? `(Installed v${match.installedVersion})` : ''
         }`;
         badge.title = 'You have an older version of this mod in your local load order.';
       } else {
         badge.classList.add('nxdt-badge-installed');
-        badge.innerHTML = `✓ <b>Installed</b> ${
+        badge.innerHTML = `<b>Installed</b> ${
           match.installedVersion ? `v${match.installedVersion}` : ''
         }`;
         badge.title = 'This mod is installed in your local mod manager.';
       }
     } else {
       badge.classList.add('nxdt-badge-not-installed');
-      badge.innerHTML = `+ <b>Not Installed</b>`;
+      badge.innerHTML = `<b>Not Installed</b>`;
       badge.title = 'Not detected in your local mod manager inventory.';
     }
 

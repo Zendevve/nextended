@@ -91,7 +91,7 @@ export function renderDownloadFallback(url) {
   notice.innerHTML = `
     <span style="display:inline-flex;align-items:center;gap:6px;">
       <span class="nxdt-pulse-dot" style="display:inline-block;width:6px;height:6px;background:#3fb950;border-radius:50%;"></span>
-      <span>⚡ <b>Auto-Download:</b> Countdown skipped.</span>
+      <span><b>Auto-Download:</b> Countdown skipped.</span>
     </span>
     <a href="${url}" class="nxdt-fallback-link" ${isNmm ? '' : 'download'} style="color:#58a6ff;text-decoration:underline;cursor:pointer;margin-left:4px;">Click here if download didn't start</a>
   `;
@@ -158,7 +158,7 @@ export function resolveAndStartDownload(fileId, isNMM, href) {
       const nxmUrl = `nxm://${gameSlug}/mods/${modId}/files/${fileId}`;
       log.info('Auto-triggering NXM download', { nxmUrl, from: href });
       triggerDownload(nxmUrl);
-      showToast('⚡ Auto-started NXM download (countdown bypassed)', 'info');
+      showToast('Auto-started NXM download (countdown bypassed)', 'info');
       return Promise.resolve(true);
     }
     return Promise.resolve(false);
@@ -193,7 +193,7 @@ export function resolveAndStartDownload(fileId, isNMM, href) {
               host: safeUrlHost(res.result.url),
             });
             triggerDownload(res.result.url);
-            showToast('⚡ Auto-started download (countdown bypassed)', 'info');
+            showToast('Auto-started download (countdown bypassed)', 'info');
             return finish(true);
           }
           log.warn('Failed to resolve archived download', {

@@ -280,7 +280,7 @@ describe('SearchCardActions', () => {
 
     const queueBtn = container.querySelector('.nxdt-card-btn-queue');
     expect(queueBtn).not.toBeNull();
-    expect(queueBtn.textContent).toBe('⚡ Queue');
+    expect(queueBtn.textContent).toBe('Queue');
 
     // Click Queue button
     await queueBtn.click();
@@ -301,7 +301,7 @@ describe('SearchCardActions', () => {
     );
 
     // Visual feedback morphing
-    expect(queueBtn.textContent).toBe('✓ Queued');
+    expect(queueBtn.textContent).toBe('Queued');
     expect(queueBtn.classList.contains('nxdt-card-btn-queued')).toBe(true);
 
     // Toast notification
@@ -311,7 +311,7 @@ describe('SearchCardActions', () => {
 
     // Revert after 2 seconds
     vi.advanceTimersByTime(2000);
-    expect(queueBtn.textContent).toBe('⚡ Queue');
+    expect(queueBtn.textContent).toBe('Queue');
     expect(queueBtn.classList.contains('nxdt-card-btn-queued')).toBe(false);
   });
 

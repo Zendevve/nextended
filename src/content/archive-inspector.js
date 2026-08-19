@@ -32,7 +32,7 @@ export class ArchiveInspector {
     btn.type = 'button';
     btn.className = 'nxdt-inspect-btn';
     btn.title = 'Inspect archive structure & components';
-    btn.textContent = '🔍 Inspect';
+    btn.textContent = 'Inspect';
 
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -63,29 +63,25 @@ export class ArchiveInspector {
     panel.innerHTML = `
       <div class="nxdt-inspect-header">
         <div class="nxdt-inspect-title">
-          <span class="nxdt-inspect-icon">🔍</span>
+          <span class="nxdt-inspect-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
           <span><b>Archive Inspector</b> (File #${fileId})</span>
         </div>
-        <button type="button" class="nxdt-btn-icon nxdt-inspect-close-btn" id="nxdt-inspect-close" aria-label="Close Inspector">✕</button>
+        <button type="button" class="nxdt-btn-icon nxdt-inspect-close-btn" id="nxdt-inspect-close" aria-label="Close Inspector">&times;</button>
       </div>
       <div class="nxdt-inspect-body">
         <div class="nxdt-inspect-item">
-          <span class="nxdt-inspect-item-icon">📦</span>
           <span class="nxdt-inspect-item-label">Archive Format:</span>
           <span class="nxdt-pill-tag nxdt-pill-nexus">ZIP / 7Z / RAR</span>
         </div>
         <div class="nxdt-inspect-item">
-          <span class="nxdt-inspect-item-icon">📁</span>
           <span class="nxdt-inspect-item-label">Target Layout:</span>
           <span class="nxdt-pill-tag nxdt-pill-info">Game Root / Data</span>
         </div>
         <div class="nxdt-inspect-item">
-          <span class="nxdt-inspect-item-icon">⚙️</span>
           <span class="nxdt-inspect-item-label">Manager Compatibility:</span>
           <span class="nxdt-pill-tag nxdt-pill-nexus">FOMOD / Standard (100%)</span>
         </div>
         <div class="nxdt-inspect-item">
-          <span class="nxdt-inspect-item-icon">🛡️</span>
           <span class="nxdt-inspect-item-label">Integrity Status:</span>
           <span class="nxdt-pill-tag nxdt-pill-nexus">Verified Clean</span>
         </div>

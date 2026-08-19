@@ -96,19 +96,19 @@
     <g transform="translate(0, 160)">
       <!-- Tag 1 -->
       <rect width="140" height="32" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="1"/>
-      <text x="70" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">⚡ No-Wait Skip</text>
+      <text x="70" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">No-Wait Skip</text>
 
       <!-- Tag 2 -->
       <rect x="152" width="165" height="32" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="1"/>
-      <text x="234.5" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">📦 Collection Sync</text>
+      <text x="234.5" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">Collection Sync</text>
 
       <!-- Tag 3 -->
       <rect x="329" width="175" height="32" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="1"/>
-      <text x="416.5" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">🧩 Require Bundler</text>
+      <text x="416.5" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">Require Bundler</text>
 
       <!-- Tag 4 -->
       <rect x="516" width="160" height="32" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="1"/>
-      <text x="596" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">🚀 5x Concurrency</text>
+      <text x="596" y="21" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#e2e8f0" text-anchor="middle">5x Concurrency</text>
     </g>
   </g>
 </svg>

@@ -192,7 +192,7 @@ Comprehensive guides and developer references are available across the repositor
 
 ---
 
-## 💖 Support & Donations
+## Support & Donations
 
 If **Nexus Mods Download Tools** has saved you time or made your modding workflow smoother, please consider supporting the project!
 
@@ -203,4 +203,4 @@ Maintaining an extension that interfaces directly with third-party web platforms
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate%20%E2%98%95-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=000000)](https://buymeacoffee.com/zendevve)
 
-☕ **Support development on Buy Me a Coffee**: [https://buymeacoffee.com/zendevve](https://buymeacoffee.com/zendevve)
+**Support development on Buy Me a Coffee**: [https://buymeacoffee.com/zendevve](https://buymeacoffee.com/zendevve)

@@ -172,7 +172,7 @@ function save(notifyToast = true) {
     chrome.runtime?.sendMessage?.({ type: MESSAGE_TYPES.SETTINGS_CHANGED, payload: { settings } });
 
     if (form.saveBtn) {
-      form.saveBtn.textContent = '✓ Saved!';
+      form.saveBtn.textContent = 'Saved!';
       setTimeout(() => {
         form.saveBtn.textContent = 'Save Settings';
       }, 1500);
@@ -359,7 +359,7 @@ function setupInventoryManager() {
         const data = res?.result || res;
         if (data?.modCount != null) {
           showToast(`Indexed ${data.modCount} mods for ${gameDomain}`, 'success');
-          if (statusMsg) statusMsg.textContent = `✓ Indexed ${data.modCount} mods`;
+          if (statusMsg) statusMsg.textContent = `Indexed ${data.modCount} mods`;
         } else {
           showToast('Failed to parse mod inventory', 'warning');
         }
