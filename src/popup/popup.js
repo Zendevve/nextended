@@ -1,5 +1,7 @@
 import { STORAGE_KEY_SETTINGS, STORAGE_KEY_QUEUE, MESSAGE_TYPES, QUEUE_STATUS } from '../shared/constants.js';
 
+export const DONATE_URL = 'https://buymeacoffee.com/zendevve';
+
 const NEXUS_HOST_RE = /(?:^|\.)nexusmods\.com$/i;
 const COLLECTION_PATH_RE = /^\/games\/[^/]+\/collections\/[^/]+(?:\/revisions\/\d+)?\/?$/i;
 const MOD_PATH_RE = /^\/[^/]+\/mods\/\d+/i;
@@ -238,6 +240,16 @@ if (openSettingsBtn) {
   });
 }
 
+const openDonateBtn = document.getElementById('open-donate');
+if (openDonateBtn) {
+  openDonateBtn.addEventListener('click', () => {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: DONATE_URL });
+    } else if (typeof window !== 'undefined' && window.open) {
+      window.open(DONATE_URL, '_blank', 'noopener,noreferrer');
+    }
+  });
+}
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
   chrome.runtime.onMessage.addListener((message) => {
     if (message && message.type === MESSAGE_TYPES.SETTINGS_CHANGED) {

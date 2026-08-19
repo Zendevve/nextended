@@ -11,8 +11,9 @@
 [![Chromium](https://img.shields.io/badge/Chromium-Extension-4285f4?style=flat-square)](https://www.google.com/chrome/)
 [![Firefox](https://img.shields.io/badge/Firefox-AMO%20Ready-ff7139?style=flat-square)](https://addons.mozilla.org/)
 [![Tests](https://img.shields.io/badge/tests-vitest%20passing-brightgreen?style=flat-square)](https://vitest.dev/)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate%20%E2%98%95-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=000000)](https://buymeacoffee.com/zendevve)
 
-[Overview](#overview) • [Features](#key-features) • [Installation](#installation) • [Presets](#tuning-presets) • [Permissions](#permissions) • [Development](#development) • [Documentation](#documentation)
+[Overview](#overview) • [Features](#key-features) • [Installation](#installation) • [Presets](#tuning-presets) • [Permissions](#permissions) • [Development](#development) • [Documentation](#documentation) • [Support](#-support--donations)
 
 </div>
 
@@ -188,3 +189,18 @@ Comprehensive guides and developer references are available across the repositor
 - [Download Queue & Concurrency Engine](docs/explanation/how-the-download-queue-works.md)
 - [Cloudflare & Rate-Limiting Strategy](docs/explanation/cloudflare-and-rate-limits.md)
 - [Error Taxonomy & Handling](docs/reference/errors.md)
+
+---
+
+## 💖 Support & Donations
+
+If **Nexus Mods Download Tools** has saved you time or made your modding workflow smoother, please consider supporting the project!
+
+Maintaining an extension that interfaces directly with third-party web platforms requires continuous effort. Your donations directly help:
+- **Maintain Compatibility**: Keeping up with Nexus Mods site updates, API changes, and Cloudflare adjustments.
+- **Test Infrastructure**: Supporting automated cross-browser test suites and CI coverage across Chromium and Firefox.
+- **Rapid Feature Development**: Building requested community features like improved collection queueing, smarter dependency resolvers, and deeper Mod Organizer 2 integrations.
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate%20%E2%98%95-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=000000)](https://buymeacoffee.com/zendevve)
+
+☕ **Support development on Buy Me a Coffee**: [https://buymeacoffee.com/zendevve](https://buymeacoffee.com/zendevve)

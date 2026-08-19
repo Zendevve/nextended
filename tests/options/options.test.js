@@ -202,4 +202,46 @@ describe('options page', () => {
 
     expect(secGeneral.style.display).toBe('block');
   });
+
+  it('renders Buy Me a Coffee donation links with the correct URL and attributes', async () => {
+    await loadOptions();
+
+    const DONATION_URL = 'https://buymeacoffee.com/zendevve';
+
+    // 1. Header donate button
+    const headerDonateBtn = document.querySelector('.header-donate-btn');
+    expect(headerDonateBtn).not.toBeNull();
+    expect(headerDonateBtn.getAttribute('href')).toBe(DONATION_URL);
+    expect(headerDonateBtn.getAttribute('target')).toBe('_blank');
+    expect(headerDonateBtn.getAttribute('rel')).toContain('noopener');
+
+    // 2. Main support card callout
+    const supportCard = document.querySelector('.support-card');
+    expect(supportCard).not.toBeNull();
+    expect(supportCard.querySelector('.support-content')).not.toBeNull();
+    expect(supportCard.querySelector('.support-icon')).not.toBeNull();
+    expect(supportCard.querySelector('.support-text')).not.toBeNull();
+
+    const supportBtn = supportCard.querySelector('.btn-support');
+    expect(supportBtn).not.toBeNull();
+    expect(supportBtn.getAttribute('href')).toBe(DONATION_URL);
+    expect(supportBtn.getAttribute('target')).toBe('_blank');
+    expect(supportBtn.getAttribute('rel')).toContain('noopener');
+
+    // 3. Footer donation button
+    const footerCoffeeBtn = document.querySelector('.btn-coffee-footer');
+    expect(footerCoffeeBtn).not.toBeNull();
+    expect(footerCoffeeBtn.getAttribute('href')).toBe(DONATION_URL);
+    expect(footerCoffeeBtn.getAttribute('target')).toBe('_blank');
+    expect(footerCoffeeBtn.getAttribute('rel')).toContain('noopener');
+
+    // 4. All donation links point to the creator's Buy Me a Coffee URL
+    const donationLinks = document.querySelectorAll('a[href*="buymeacoffee.com"]');
+    expect(donationLinks.length).toBeGreaterThanOrEqual(3);
+    donationLinks.forEach((link) => {
+      expect(link.getAttribute('href')).toBe(DONATION_URL);
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
+    });
+  });
 });

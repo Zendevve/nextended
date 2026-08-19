@@ -61,6 +61,26 @@ describe('FloatingDrawer UI & Actions', () => {
     expect(document.getElementById('nxdt-drawer-panel')).toBeNull();
   });
 
+  it('renders Buy Me a Coffee link in footer when drawer is open', () => {
+    drawer.updateState({
+      status: QUEUE_STATUS.IDLE,
+      counts: { total: 1, completed: 1, failed: 0, active: 0, pending: 0 },
+      items: [{ id: '1', modName: 'Mod 1', status: ITEM_STATUS.COMPLETED }],
+    });
+
+    drawer.open();
+    const footer = document.querySelector('.nxdt-drawer-footer');
+    expect(footer).not.toBeNull();
+
+    const coffeeLink = footer.querySelector('.nxdt-drawer-coffee-link');
+    expect(coffeeLink).not.toBeNull();
+    expect(coffeeLink.getAttribute('href')).toBe('https://buymeacoffee.com/zendevve');
+    expect(coffeeLink.getAttribute('target')).toBe('_blank');
+    expect(coffeeLink.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(coffeeLink.getAttribute('title')).toBe('Support development on Buy Me a Coffee');
+    expect(coffeeLink.textContent).toContain('☕ Buy Me a Coffee');
+  });
+
   it('closes open drawer on Escape key press and cleans up listener', () => {
     drawer.updateState({
       status: QUEUE_STATUS.RUNNING,

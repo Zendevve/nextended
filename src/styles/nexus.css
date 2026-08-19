@@ -1308,6 +1308,53 @@
   outline-offset: 2px !important;
 }
 
+.nxdt-drawer-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 10px 18px !important;
+  background: rgba(20, 23, 26, 0.75) !important;
+  border-top: 1px solid var(--nxdt-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.nxdt-drawer-coffee-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: var(--nxdt-amber-base, #da8e35) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  padding: 6px 14px !important;
+  border-radius: var(--nxdt-radius-pill, 9999px) !important;
+  background: var(--nxdt-amber-subtle, rgba(218, 142, 53, 0.14)) !important;
+  border: 1px solid var(--nxdt-amber-border, rgba(218, 142, 53, 0.45)) !important;
+  transition: color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+              background-color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+              border-color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+              box-shadow 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+              transform 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) !important;
+}
+
+.nxdt-drawer-coffee-link:hover {
+  color: #ffffff !important;
+  background-color: var(--nxdt-amber-base, #da8e35) !important;
+  border-color: var(--nxdt-amber-hover, #e89b44) !important;
+  box-shadow: 0 0 12px var(--nxdt-amber-glow, rgba(218, 142, 53, 0.35)) !important;
+  transform: translateY(-1px) !important;
+  text-decoration: none !important;
+}
+
+.nxdt-drawer-coffee-link:active {
+  background-color: var(--nxdt-amber-active, #c47d28) !important;
+  transform: translateY(0) scale(0.97) !important;
+}
+
+.nxdt-drawer-coffee-link:focus-visible {
+  outline: 2px solid var(--nxdt-amber-base, #da8e35) !important;
+  outline-offset: 2px !important;
+}
+
 .nxdt-autodownload-banner {
   position: relative !important;
   display: flex !important;

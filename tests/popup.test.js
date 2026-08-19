@@ -230,4 +230,36 @@ describe('popup', () => {
     document.getElementById('open-settings').click();
     expect(chromeMock.runtime.openOptionsPage).toHaveBeenCalledTimes(1);
   });
+
+  it('renders the donate button in the DOM', async () => {
+    await loadPopup();
+    const donateBtn = document.getElementById('open-donate');
+    expect(donateBtn).not.toBeNull();
+    expect(donateBtn.classList.contains('btn-donate')).toBe(true);
+    expect(donateBtn.textContent).toContain('Buy Me a Coffee');
+  });
+
+  it('opens the Buy Me a Coffee link when clicking the donate button', async () => {
+    await loadPopup();
+    const donateBtn = document.getElementById('open-donate');
+    donateBtn.click();
+    expect(chromeMock.tabs.create).toHaveBeenCalledTimes(1);
+    expect(chromeMock.tabs.create).toHaveBeenCalledWith({
+      url: 'https://buymeacoffee.com/zendevve',
+    });
+  });
+
+  it('falls back to window.open when chrome.tabs.create is unavailable', async () => {
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    await loadPopup();
+    delete globalThis.chrome.tabs.create;
+    const donateBtn = document.getElementById('open-donate');
+    donateBtn.click();
+    expect(windowOpenSpy).toHaveBeenCalledWith(
+      'https://buymeacoffee.com/zendevve',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    windowOpenSpy.mockRestore();
+  });
 });

@@ -222,13 +222,21 @@ footer {
   margin-top: 2px;
 }
 
-#open-settings {
+.footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#open-settings,
+#open-donate,
+.btn-donate {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 9px 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: #22262d;
@@ -239,6 +247,8 @@ footer {
   cursor: pointer;
   box-sizing: border-box;
   user-select: none;
+  text-decoration: none;
+  white-space: nowrap;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s var(--popup-ease), box-shadow 0.15s ease;
 }
 
@@ -258,4 +268,46 @@ footer {
 #open-settings:active {
   transform: scale(0.98);
   background: #181b1f;
+}
+
+#open-donate,
+.btn-donate {
+  border-color: rgba(218, 142, 53, 0.35);
+  background: rgba(218, 142, 53, 0.08);
+  color: #ffdd00;
+}
+
+#open-donate svg,
+.btn-donate svg {
+  color: #ffdd00;
+  stroke: #ffdd00;
+  flex-shrink: 0;
+}
+
+#open-donate:hover,
+.btn-donate:hover {
+  background: rgba(218, 142, 53, 0.2);
+  border-color: #ffdd00;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(218, 142, 53, 0.25);
+}
+
+#open-donate:hover svg,
+.btn-donate:hover svg {
+  stroke: #ffffff;
+  color: #ffffff;
+}
+
+#open-donate:focus-visible,
+.btn-donate:focus-visible {
+  outline: 2px solid #ffdd00;
+  outline-offset: 2px;
+}
+
+#open-donate:active,
+.btn-donate:active {
+  transform: scale(0.98);
+  background: rgba(218, 142, 53, 0.28);
+  border-color: #da8e35;
 }

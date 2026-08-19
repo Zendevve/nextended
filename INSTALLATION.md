@@ -177,3 +177,11 @@ nexus-download-tools/   <── Select THIS folder
 
 ### Q5: What happens during Cloudflare verification?
 - If Nexus Mods prompts you for a Cloudflare captcha or Turnstile challenge, the extension detects the challenge and yields control to your browser tab so you can complete verification normally. Once verified, download queues resume automatically.
+
+---
+
+## 💖 Support the Project
+
+If Nexus Mods Download Tools makes your modding experience smoother, consider supporting future development and maintenance:
+
+☕ **[Buy Me a Coffee](https://buymeacoffee.com/zendevve)**

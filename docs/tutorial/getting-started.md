@@ -163,3 +163,9 @@ You have now built the extension, loaded it, traced a download through the messa
 - [Explanation: How the download queue works](../explanation/how-the-download-queue-works.md)
 - [Explanation: Cloudflare and rate limits](../explanation/cloudflare-and-rate-limits.md)
 - [Explanation: The popup UX flow](../explanation/the-popup-ux-flow.md)
+
+---
+
+## Support the project
+
+If you find this project helpful or want to support ongoing maintenance and feature development, consider [buying me a coffee](https://buymeacoffee.com/zendevve).

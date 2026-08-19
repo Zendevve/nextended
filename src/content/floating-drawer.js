@@ -265,6 +265,9 @@ export class FloatingDrawer {
                     .join('')
             }
           </div>
+          <div class="nxdt-drawer-footer">
+            <a class="nxdt-drawer-coffee-link" href="https://buymeacoffee.com/zendevve" target="_blank" rel="noopener noreferrer" title="Support development on Buy Me a Coffee">☕ Buy Me a Coffee</a>
+          </div>
         </div>
       `;
     }

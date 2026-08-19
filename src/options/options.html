@@ -12,15 +12,23 @@
 
   <main>
     <header class="main-header">
-      <div class="header-branding">
-        <svg class="branding-logo" width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="32" height="32" rx="6" fill="#24282E" stroke="#DA8E35" stroke-width="2"/>
-          <path d="M16 8V20M16 20L11 15M16 20L21 15M9 24H23" stroke="#DA8E35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div class="branding-text">
-          <h1>Nexus Mods Download Tools</h1>
-          <span class="version-tag">v0.1.0 • Definitive Suite</span>
+      <div class="header-top">
+        <div class="header-branding">
+          <svg class="branding-logo" width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="32" height="32" rx="6" fill="#24282E" stroke="#DA8E35" stroke-width="2"/>
+            <path d="M16 8V20M16 20L11 15M16 20L21 15M9 24H23" stroke="#DA8E35" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div class="branding-text">
+            <h1>Nexus Mods Download Tools</h1>
+            <span class="version-tag">v0.1.0 • Definitive Suite</span>
+          </div>
         </div>
+        <a href="https://buymeacoffee.com/zendevve" target="_blank" rel="noopener noreferrer" class="header-donate-btn" title="Support development on Buy Me a Coffee">
+          <svg class="header-donate-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
+          </svg>
+          <span>Buy Me a Coffee</span>
+        </a>
       </div>
       <div class="search-wrap">
         <input type="search" id="settings-search" placeholder="Search all settings..." aria-label="Search settings" />
@@ -328,10 +336,31 @@
       </label>
     </section>
 
+    <!-- Support & Donation Card -->
+    <section class="support-card" aria-labelledby="support-heading">
+      <div class="support-content">
+        <div class="support-icon" aria-hidden="true">☕</div>
+        <div class="support-text">
+          <h3 id="support-heading" class="support-title">Enjoying Nexus Mods Download Tools?</h3>
+          <p class="support-desc">This extension is 100% free and open source. If it saves you time and enhances your modding workflow, consider supporting development on Buy Me a Coffee!</p>
+        </div>
+      </div>
+      <a href="https://buymeacoffee.com/zendevve" target="_blank" rel="noopener noreferrer" class="btn-support" title="Support development on Buy Me a Coffee">
+        <svg class="btn-support-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/>
+        </svg>
+        <span>Buy Me a Coffee</span>
+      </a>
+    </section>
+
     <footer class="options-footer">
       <div class="footer-actions">
         <button id="save-btn" type="button" class="btn-primary">Save Settings</button>
         <button id="reset-btn" type="button" class="btn-secondary">Reset to Defaults</button>
+        <a href="https://buymeacoffee.com/zendevve" target="_blank" rel="noopener noreferrer" class="btn-coffee-footer" title="Support creator on Buy Me a Coffee">
+          <span class="btn-coffee-footer-icon" aria-hidden="true">☕</span>
+          <span>Buy Me a Coffee</span>
+        </a>
       </div>
     </footer>
   </main>
