@@ -5,7 +5,7 @@ export const STORAGE_KEY_STATS = 'stats';
 export const STORAGE_KEY_COLLECTION_HISTORY = 'collection_history';
 export const STORAGE_KEY_QUEUE = 'download_queue';
 export const STORAGE_KEY_DRAWER_STATE = 'drawer_state';
-
+export const STORAGE_KEY_INVENTORY = 'mod_inventory';
 export const NEXUS_HOSTS = ['nexusmods.com'];
 export const CDN_HOSTS = ['nexus-cdn.com'];
 
@@ -61,6 +61,16 @@ export const MESSAGE_TYPES = {
   FETCH_ARCHIVE_TREE: 'NXDT_FETCH_ARCHIVE_TREE',
   APPLY_PRESET: 'NXDT_APPLY_PRESET',
   VERIFY_COLLECTION_DOWNLOADS: 'NXDT_VERIFY_COLLECTION_DOWNLOADS',
+
+  // Local Inventory & Load Order Sync
+  IMPORT_INVENTORY: 'NXDT_IMPORT_INVENTORY',
+  GET_INVENTORY: 'NXDT_GET_INVENTORY',
+  CLEAR_INVENTORY: 'NXDT_CLEAR_INVENTORY',
+  CHECK_MOD_INVENTORY: 'NXDT_CHECK_MOD_INVENTORY',
+
+  // Deep Recursive Dependency Crawler & Health Radar
+  CRAWL_DEPENDENCY_TREE: 'NXDT_CRAWL_DEPENDENCY_TREE',
+  GET_MOD_HEALTH_RADAR: 'NXDT_GET_MOD_HEALTH_RADAR',
 };
 
 export const PRESET_PROFILES = {

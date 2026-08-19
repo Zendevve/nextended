@@ -6,6 +6,8 @@ import { FloatingDrawer } from './floating-drawer.js';
 import { RequirementsBundler } from './requirements-bundler.js';
 import { SearchCardActions } from './search-card-actions.js';
 import { ArchiveInspector } from './archive-inspector.js';
+import { InventoryAnnotator } from './inventory-sync.js';
+import { CompatibilityRadar } from './compatibility-radar.js';
 import { getSettings } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
 import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../shared/constants.js';
@@ -24,7 +26,8 @@ const floatingDrawer = new FloatingDrawer();
 const requirementsBundler = new RequirementsBundler();
 const searchCardActions = new SearchCardActions();
 const archiveInspector = new ArchiveInspector();
-
+const inventoryAnnotator = new InventoryAnnotator();
+const compatibilityRadar = new CompatibilityRadar();
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message && message.type === MESSAGE_TYPES.FOCUS_COLLECTION_PANEL) {
     const panel = document.querySelector(COLLECTION_PANEL_SELECTOR);
@@ -101,6 +104,8 @@ function processInPageFeatures() {
   if (currentSettings.enableArchiveInspector) {
     archiveInspector.processFiles();
   }
+  inventoryAnnotator.run().catch(() => {});
+  compatibilityRadar.renderRadar().catch(() => {});
 }
 
 async function init() {

@@ -326,7 +326,69 @@ if (form.resetBtn) {
   });
 }
 
+// Inventory Manager Setup
+function setupInventoryManager() {
+  const importBtn = document.getElementById('import-inv-btn');
+  const clearBtn = document.getElementById('clear-inv-btn');
+  const domainInput = document.getElementById('inv-game-domain');
+  const typeSelect = document.getElementById('inv-manager-type');
+  const pasteArea = document.getElementById('inv-paste-area');
+  const statusMsg = document.getElementById('inv-status-msg');
+
+  if (importBtn) {
+    importBtn.addEventListener('click', async () => {
+      const gameDomain = domainInput?.value?.trim() || 'skyrimspecialedition';
+      const managerType = typeSelect?.value || 'mo2';
+      const rawText = pasteArea?.value || '';
+
+      if (!rawText.trim()) {
+        showToast('Please paste modlist text before importing', 'warning');
+        return;
+      }
+
+      try {
+        const res = await chrome.runtime?.sendMessage?.({
+          type: MESSAGE_TYPES.IMPORT_INVENTORY,
+          payload: {
+            gameDomain,
+            managerType,
+            data: { rawText, modlistText: rawText },
+          },
+        });
+
+        const data = res?.result || res;
+        if (data?.modCount != null) {
+          showToast(`Indexed ${data.modCount} mods for ${gameDomain}`, 'success');
+          if (statusMsg) statusMsg.textContent = `✓ Indexed ${data.modCount} mods`;
+        } else {
+          showToast('Failed to parse mod inventory', 'warning');
+        }
+      } catch {
+        showToast('Error importing inventory', 'warning');
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      const gameDomain = domainInput?.value?.trim() || 'skyrimspecialedition';
+      try {
+        await chrome.runtime?.sendMessage?.({
+          type: MESSAGE_TYPES.CLEAR_INVENTORY,
+          payload: { gameDomain },
+        });
+        showToast(`Cleared inventory for ${gameDomain}`, 'info');
+        if (pasteArea) pasteArea.value = '';
+        if (statusMsg) statusMsg.textContent = 'Cleared';
+      } catch {
+        showToast('Error clearing inventory', 'warning');
+      }
+    });
+  }
+}
+
 setupTabNavigation();
 setupSearchFilter();
+setupInventoryManager();
 
 document.addEventListener('DOMContentLoaded', loadSettings);

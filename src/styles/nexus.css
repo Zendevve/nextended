@@ -1,53 +1,53 @@
 /* Nexus Mods Download Tools CSS */
 
 :root {
-  --nxdt-bg-base: #0d1117;
-  --nxdt-bg-surface: #161b22;
-  --nxdt-bg-elevated: #21262d;
-  --nxdt-bg-glass: rgba(22, 27, 34, 0.94);
-  --nxdt-bg-overlay: rgba(13, 17, 23, 0.75);
+  --nxdt-bg-base: #1a1d20;
+  --nxdt-bg-surface: #24282e;
+  --nxdt-bg-elevated: #2b3138;
+  --nxdt-bg-glass: rgba(36, 40, 46, 0.96);
+  --nxdt-bg-overlay: rgba(20, 23, 26, 0.85);
 
-  --nxdt-border-subtle: rgba(255, 255, 255, 0.08);
-  --nxdt-border-medium: rgba(255, 255, 255, 0.14);
-  --nxdt-border-highlight: rgba(255, 255, 255, 0.22);
+  --nxdt-border-subtle: #333842;
+  --nxdt-border-medium: #3e4552;
+  --nxdt-border-highlight: #4a5260;
 
-  --nxdt-text-primary: #f0f6fc;
-  --nxdt-text-secondary: #8b949e;
+  --nxdt-text-primary: #e2e4e8;
+  --nxdt-text-secondary: #9399a5;
   --nxdt-text-bright: #ffffff;
-  --nxdt-text-muted: #6e7681;
+  --nxdt-text-muted: #676e7b;
 
-  --nxdt-amber-base: #e5933a;
-  --nxdt-amber-hover: #f09f45;
-  --nxdt-amber-active: #c87a24;
-  --nxdt-amber-glow: rgba(229, 147, 58, 0.15);
-  --nxdt-amber-border: rgba(229, 147, 58, 0.32);
-  --nxdt-amber-subtle: rgba(229, 147, 58, 0.1);
+  --nxdt-amber-base: #da8e35;
+  --nxdt-amber-hover: #e89b44;
+  --nxdt-amber-active: #c47d28;
+  --nxdt-amber-glow: rgba(218, 142, 53, 0.15);
+  --nxdt-amber-border: rgba(218, 142, 53, 0.4);
+  --nxdt-amber-subtle: rgba(218, 142, 53, 0.14);
 
-  --nxdt-green-base: #3fb950;
-  --nxdt-green-hover: #4ac25b;
-  --nxdt-green-active: #2ea043;
-  --nxdt-green-border: rgba(63, 185, 80, 0.35);
-  --nxdt-green-glow: rgba(63, 185, 80, 0.15);
+  --nxdt-green-base: #4fa84e;
+  --nxdt-green-hover: #5cb85c;
+  --nxdt-green-active: #449d44;
+  --nxdt-green-border: rgba(79, 168, 78, 0.4);
+  --nxdt-green-glow: rgba(79, 168, 78, 0.15);
 
   --nxdt-blue-base: #58a6ff;
   --nxdt-blue-hover: #79b8ff;
   --nxdt-blue-border: rgba(88, 166, 255, 0.35);
 
-  --nxdt-red-base: #f85149;
-  --nxdt-red-hover: #ff6b64;
-  --nxdt-red-active: #da3633;
-  --nxdt-red-border: rgba(248, 81, 73, 0.35);
+  --nxdt-red-base: #d9534f;
+  --nxdt-red-hover: #c9302c;
+  --nxdt-red-active: #ac2925;
+  --nxdt-red-border: rgba(217, 83, 79, 0.4);
 
   --nxdt-yellow-base: #d29922;
   --nxdt-yellow-border: rgba(210, 153, 34, 0.35);
 
-  --nxdt-radius-sm: 6px;
-  --nxdt-radius-md: 8px;
-  --nxdt-radius-lg: 10px;
-  --nxdt-radius-xl: 12px;
+  --nxdt-radius-sm: 3px;
+  --nxdt-radius-md: 4px;
+  --nxdt-radius-lg: 6px;
+  --nxdt-radius-xl: 6px;
   --nxdt-radius-pill: 9999px;
 
-  --nxdt-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --nxdt-font-sans: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --nxdt-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
 
   --nxdt-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -1692,4 +1692,168 @@
   color: var(--nxdt-text-secondary, #8b949e) !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
+}
+
+/* Local Inventory Sync Badges */
+.nxdt-inventory-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 8px !important;
+  border-radius: var(--nxdt-radius-sm, 3px) !important;
+  font-family: var(--nxdt-font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px !important;
+  margin-left: 8px !important;
+  vertical-align: middle !important;
+  user-select: none !important;
+}
+
+.nxdt-badge-installed {
+  background-color: rgba(79, 168, 78, 0.18) !important;
+  border: 1px solid var(--nxdt-green-border, rgba(79, 168, 78, 0.4)) !important;
+  color: var(--nxdt-green-hover, #5cb85c) !important;
+}
+
+.nxdt-badge-update {
+  background-color: rgba(218, 142, 53, 0.2) !important;
+  border: 1px solid var(--nxdt-amber-border, rgba(218, 142, 53, 0.4)) !important;
+  color: var(--nxdt-amber-hover, #e89b44) !important;
+}
+
+.nxdt-badge-not-installed {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--nxdt-border-subtle, #333842) !important;
+  color: var(--nxdt-text-secondary, #9399a5) !important;
+}
+
+.nxdt-badge-compact {
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+  margin-left: 0 !important;
+}
+
+/* Requirement Tree & Depth Tags */
+.nxdt-depth-tag {
+  display: inline-block !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  color: var(--nxdt-amber-base, #da8e35) !important;
+  background: var(--nxdt-amber-subtle, rgba(218, 142, 53, 0.14)) !important;
+  border: 1px solid var(--nxdt-amber-border, rgba(218, 142, 53, 0.4)) !important;
+  border-radius: var(--nxdt-radius-sm, 3px) !important;
+  padding: 1px 5px !important;
+  margin-left: 6px !important;
+}
+
+.nxdt-btn-crawl {
+  background: var(--nxdt-amber-subtle, rgba(218, 142, 53, 0.14)) !important;
+  border-color: var(--nxdt-amber-border, rgba(218, 142, 53, 0.4)) !important;
+  color: var(--nxdt-amber-base, #da8e35) !important;
+}
+
+.nxdt-btn-crawl:hover {
+  background: var(--nxdt-amber-base, #da8e35) !important;
+  color: #ffffff !important;
+}
+
+/* Compatibility & Health Radar */
+.nxdt-compatibility-radar {
+  margin: 12px 0 !important;
+  padding: 12px 14px !important;
+  background: var(--nxdt-bg-surface, #24282e) !important;
+  border: 1px solid var(--nxdt-border-subtle, #333842) !important;
+  border-left: 4px solid var(--nxdt-green-base, #4fa84e) !important;
+  border-radius: var(--nxdt-radius-md, 4px) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.nxdt-radar-caution {
+  border-left-color: var(--nxdt-amber-base, #da8e35) !important;
+}
+
+.nxdt-radar-warning {
+  border-left-color: var(--nxdt-red-base, #d9534f) !important;
+}
+
+.nxdt-radar-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+.nxdt-radar-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-family: var(--nxdt-font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+  color: var(--nxdt-text-bright, #ffffff) !important;
+}
+
+.nxdt-radar-score {
+  font-family: var(--nxdt-font-sans) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 2px 7px !important;
+  border-radius: var(--nxdt-radius-sm, 3px) !important;
+  color: #ffffff !important;
+}
+
+.nxdt-radar-score.healthy {
+  background: var(--nxdt-green-base, #4fa84e) !important;
+}
+
+.nxdt-radar-score.caution {
+  background: var(--nxdt-amber-base, #da8e35) !important;
+}
+
+.nxdt-radar-score.warning {
+  background: var(--nxdt-red-base, #d9534f) !important;
+}
+
+.nxdt-radar-badges {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-top: 6px !important;
+}
+
+.nxdt-radar-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: var(--nxdt-radius-sm, 3px) !important;
+  background: var(--nxdt-bg-base, #1a1d20) !important;
+  border: 1px solid var(--nxdt-border-subtle, #333842) !important;
+  color: var(--nxdt-text-primary, #e2e4e8) !important;
+}
+
+.nxdt-tag-installed {
+  border-color: var(--nxdt-green-border, rgba(79, 168, 78, 0.4)) !important;
+  color: var(--nxdt-green-hover, #5cb85c) !important;
+}
+
+.nxdt-tag-version {
+  border-color: var(--nxdt-amber-border, rgba(218, 142, 53, 0.4)) !important;
+  color: var(--nxdt-amber-base, #da8e35) !important;
+}
+
+.nxdt-radar-warnings {
+  margin-top: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.nxdt-radar-warn-item {
+  font-size: 11px !important;
+  color: var(--nxdt-amber-hover, #e89b44) !important;
 }

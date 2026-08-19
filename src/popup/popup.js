@@ -113,6 +113,30 @@ function renderQueueState(queueState) {
   }
 }
 
+function renderInventoryState(inventory, tab) {
+  const el = document.getElementById('inventory-state');
+  if (!el) return;
+  if (!inventory || !inventory.games) {
+    el.textContent = 'Not Synced';
+    return;
+  }
+  let gameDomain = '';
+  try {
+    const parts = tab?.url ? new URL(tab.url).pathname.split('/') : [];
+    gameDomain = parts[1] || '';
+  } catch {
+    gameDomain = '';
+  }
+
+  const game = inventory.games[gameDomain];
+  if (game && game.modCount) {
+    el.textContent = `${game.modCount} Mods (${inventory.managerType ? inventory.managerType.toUpperCase() : 'MO2'})`;
+  } else {
+    const totalMods = Object.values(inventory.games).reduce((acc, g) => acc + (g.modCount || 0), 0);
+    el.textContent = totalMods > 0 ? `${totalMods} Mods Sync` : 'Not Synced';
+  }
+}
+
 function renderStats(stats) {
   const collectionsEl = document.getElementById('collections-count');
   if (collectionsEl) {
@@ -125,12 +149,12 @@ function renderStats(stats) {
 }
 
 export async function refresh() {
-  const [pingRes, settingsRes, queueRes] = await Promise.all([
+  const [pingRes, settingsRes, queueRes, invRes] = await Promise.all([
     sendMessage({ type: MESSAGE_TYPES.PING }),
     sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS }),
     sendMessage({ type: MESSAGE_TYPES.GET_QUEUE_STATE }),
+    sendMessage({ type: MESSAGE_TYPES.GET_INVENTORY }),
   ]);
-
   const ping = pingRes.result || pingRes || {};
   const alive = ping.alive === true;
   const stats = ping.stats || {};
@@ -139,6 +163,7 @@ export async function refresh() {
   currentSettings = { ...settings };
 
   const queueState = queueRes.result || queueRes || {};
+  const inventory = invRes.result?.inventory || invRes.inventory || {};
 
   renderDot(alive, settings);
   renderCollectionState(settings);
@@ -148,6 +173,7 @@ export async function refresh() {
 
   activeTab = await getActiveTab();
   renderSite(activeTab);
+  renderInventoryState(inventory, activeTab);
 }
 
 async function toggleNowait() {
@@ -233,6 +259,15 @@ if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick)
 const nowaitRow = document.getElementById('nowait-row');
 if (nowaitRow) nowaitRow.addEventListener('click', () => toggleNowait());
 
+const inventoryRow = document.getElementById('inventory-row');
+if (inventoryRow) {
+  inventoryRow.addEventListener('click', () => {
+    if (chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    }
+    window.close?.();
+  });
+}
 const openSettingsBtn = document.getElementById('open-settings');
 if (openSettingsBtn) {
   openSettingsBtn.addEventListener('click', () => {

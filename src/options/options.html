@@ -23,7 +23,7 @@
           <div class="branding-text">
             <div class="branding-title-row">
               <h1>Nexus Download Tools</h1>
-              <span class="version-tag">v0.1.1</span>
+              <span class="version-tag">v0.1.2</span>
             </div>
             <p class="branding-subtitle">High-speed downloading, automation & organization suite</p>
           </div>
@@ -86,12 +86,13 @@
     <!-- Category Tab Bar -->
     <nav class="tabs-nav" aria-label="Settings Categories">
       <div class="tabs-bar" role="tablist" aria-label="Settings Categories">
-        <button type="button" role="tab" id="tab-all" class="tab-btn active" aria-selected="true" aria-controls="section-general section-automation section-queue section-inpage section-organize section-advanced" tabindex="0">All Settings</button>
+        <button type="button" role="tab" id="tab-all" class="tab-btn active" aria-selected="true" aria-controls="section-general section-automation section-queue section-inpage section-organize section-inventory section-advanced" tabindex="0">All Settings</button>
         <button type="button" role="tab" id="tab-general" class="tab-btn" aria-selected="false" aria-controls="section-general" tabindex="-1">General</button>
         <button type="button" role="tab" id="tab-automation" class="tab-btn" aria-selected="false" aria-controls="section-automation" tabindex="-1">Automation</button>
         <button type="button" role="tab" id="tab-queue" class="tab-btn" aria-selected="false" aria-controls="section-queue" tabindex="-1">Queue & Limits</button>
         <button type="button" role="tab" id="tab-inpage" class="tab-btn" aria-selected="false" aria-controls="section-inpage" tabindex="-1">In-Page UX</button>
         <button type="button" role="tab" id="tab-organize" class="tab-btn" aria-selected="false" aria-controls="section-organize" tabindex="-1">Organization</button>
+        <button type="button" role="tab" id="tab-inventory" class="tab-btn" aria-selected="false" aria-controls="section-inventory" tabindex="-1">Load Order & Inventory</button>
         <button type="button" role="tab" id="tab-advanced" class="tab-btn" aria-selected="false" aria-controls="section-advanced" tabindex="-1">Advanced</button>
       </div>
     </nav>
@@ -324,6 +325,43 @@
           </div>
           <input type="number" name="requestTimeout" min="5000" max="120000" />
         </label>
+      </div>
+    </section>
+
+    <!-- Section 7: Load Order & Local Inventory -->
+    <section id="section-inventory" class="settings-section" role="tabpanel" aria-labelledby="tab-inventory" tabindex="0">
+      <h2>Load Order & Mod Inventory Sync</h2>
+      <div class="section-card">
+        <div class="input-row">
+          <div class="control-text">
+            <span class="control-title">Game Domain</span>
+            <span class="control-hint">Nexus game domain name (e.g. skyrimspecialedition, fallout4, starfield)</span>
+          </div>
+          <input type="text" id="inv-game-domain" style="width: 200px;" placeholder="skyrimspecialedition" value="skyrimspecialedition" />
+        </div>
+
+        <div class="input-row">
+          <div class="control-text">
+            <span class="control-title">Mod Manager Format</span>
+            <span class="control-hint">Select the format of the modlist or export you are pasting</span>
+          </div>
+          <select id="inv-manager-type" style="background: var(--nexus-bg-input); border: 1px solid var(--nexus-border-medium); color: var(--nexus-text-bright); padding: 6px 10px; border-radius: var(--nexus-radius); font-family: var(--nexus-font);">
+            <option value="mo2">Mod Organizer 2 (modlist.txt)</option>
+            <option value="vortex">Vortex (Export JSON)</option>
+            <option value="custom">Generic List (1 per line)</option>
+          </select>
+        </div>
+
+        <div class="input-group-vertical">
+          <span class="group-label">Paste Mod List Content</span>
+          <textarea id="inv-paste-area" rows="6" placeholder="Paste lines from MO2 modlist.txt (+ModName) or Vortex export JSON..." style="width: 100%; background: var(--nexus-bg-input); border: 1px solid var(--nexus-border-medium); border-radius: var(--nexus-radius); color: var(--nexus-text-bright); font-family: monospace; font-size: 11.5px; padding: 8px 10px; box-sizing: border-box; resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin: 12px 0 6px 0; align-items: center; flex-wrap: wrap;">
+          <button id="import-inv-btn" type="button" class="btn-primary" style="font-size: 11px; padding: 6px 14px;">📥 Import & Index Inventory</button>
+          <button id="clear-inv-btn" type="button" class="btn-secondary" style="font-size: 11px; padding: 6px 14px;">Clear Game Inventory</button>
+          <span id="inv-status-msg" style="font-size: 11.5px; color: var(--nexus-orange); font-weight: 600;"></span>
+        </div>
       </div>
     </section>
 

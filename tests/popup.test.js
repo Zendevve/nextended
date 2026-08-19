@@ -91,6 +91,7 @@ describe('popup', () => {
       ['queue-state', 'Background Queue'],
       ['collection-state', 'Collection Downloader'],
       ['nowait-state', 'Countdown Skip'],
+      ['inventory-state', 'Mod Inventory'],
     ];
     for (const [valueId, label] of rows) {
       const valueEl = document.getElementById(valueId);
@@ -99,7 +100,7 @@ describe('popup', () => {
       expect(button.type).toBe('button');
       expect(button.textContent).toContain(label);
     }
-    expect(document.querySelectorAll('.chevron').length).toBe(4);
+    expect(document.querySelectorAll('.chevron').length).toBe(5);
     expect(document.querySelector('h1').textContent).toBe('Nexus Download Tools');
     expect(document.getElementById('status-dot')).not.toBeNull();
   });

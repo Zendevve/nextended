@@ -1,6 +1,6 @@
 {
   "name": "nexus-download-tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Restores and improves download controls for archived Nexus Mods files, collections, and mod requirements.",
   "funding": "https://buymeacoffee.com/zendevve",
   "private": true,

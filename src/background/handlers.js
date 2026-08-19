@@ -9,7 +9,14 @@ import { parseUrlSafe, isSafeDownloadUrl, buildGenerateDownloadUrl } from '../ne
 import { registerHandler } from './message-router.js';
 import { PRESETS } from '../options/presets.js';
 import { downloadMo2MetaFile } from './mo2-meta-generator.js';
-
+import {
+  handleImportInventory,
+  handleGetInventory,
+  handleClearInventory,
+  handleCheckModInventory,
+  handleCrawlDependencyTree,
+  handleGetModHealthRadar,
+} from './inventory-handler.js';
 const log = createLogger('handlers');
 
 const NXM_SCHEME = 'nxm:';
@@ -483,4 +490,18 @@ export function registerHandlers(deps = {}) {
   registerHandler(MESSAGE_TYPES.GET_QUEUE_STATE, async () => {
     return deps.queueManager?.getState() || { status: 'idle', items: [] };
   });
+
+  // Local Inventory & Load Order Handlers
+  registerHandler(MESSAGE_TYPES.IMPORT_INVENTORY, (payload) => handleImportInventory(payload));
+  registerHandler(MESSAGE_TYPES.GET_INVENTORY, () => handleGetInventory());
+  registerHandler(MESSAGE_TYPES.CLEAR_INVENTORY, (payload) => handleClearInventory(payload));
+  registerHandler(MESSAGE_TYPES.CHECK_MOD_INVENTORY, (payload) => handleCheckModInventory(payload));
+
+  // Deep Dependency Tree & Health Radar
+  registerHandler(MESSAGE_TYPES.CRAWL_DEPENDENCY_TREE, (payload) =>
+    handleCrawlDependencyTree(payload, deps)
+  );
+  registerHandler(MESSAGE_TYPES.GET_MOD_HEALTH_RADAR, (payload) =>
+    handleGetModHealthRadar(payload)
+  );
 }
