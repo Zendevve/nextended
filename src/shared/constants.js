@@ -71,6 +71,7 @@ export const MESSAGE_TYPES = {
   // Deep Recursive Dependency Crawler & Health Radar
   CRAWL_DEPENDENCY_TREE: 'NXDT_CRAWL_DEPENDENCY_TREE',
   GET_MOD_HEALTH_RADAR: 'NXDT_GET_MOD_HEALTH_RADAR',
+  OPEN_OPTIONS: 'NXDT_OPEN_OPTIONS',
 };
 
 export const PRESET_PROFILES = {

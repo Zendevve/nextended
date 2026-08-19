@@ -22,6 +22,7 @@ const ICONS = {
   stop: `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>`,
   skip: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>`,
   terminal: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`,
+  cog: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
 };
 
 function getModFileId(mod) {
@@ -424,6 +425,10 @@ class CollectionDownloadButton {
             ${ICONS.verify}
             <span>Verify</span>
           </button>
+          <button id="nxdtOpenSettings" class="nxdt-btn-util nxdt-btn-util-settings" title="Open extension configuration & options">
+            ${ICONS.cog}
+            <span>Config</span>
+          </button>
         </div>
       </div>
       <button id="nxdtDownloadAll" class="nxdt-btn-hero" title="Download All Mods">
@@ -481,6 +486,18 @@ class CollectionDownloadButton {
       const modal = new CollectionVerificationModal(this.manager);
       document.body.appendChild(modal.element);
       modal.render();
+    });
+
+    this.element.querySelector('#nxdtOpenSettings')?.addEventListener('click', () => {
+      try {
+        if (chrome.runtime?.openOptionsPage) {
+          chrome.runtime.openOptionsPage();
+        } else {
+          sendMessage(MESSAGE_TYPES.OPEN_OPTIONS);
+        }
+      } catch {
+        sendMessage(MESSAGE_TYPES.OPEN_OPTIONS);
+      }
     });
 
     this.element.querySelector('#nxdtQueueBackground')?.addEventListener('click', async () => {

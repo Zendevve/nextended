@@ -447,6 +447,16 @@
   color: var(--nxdt-blue-hover, #79b8ff) !important;
 }
 
+.nxdt-btn-util-settings {
+  border: 1px solid var(--nxdt-border-medium, rgba(255, 255, 255, 0.14)) !important;
+  color: var(--nxdt-text-secondary, #8b949e) !important;
+}
+
+.nxdt-btn-util-settings:hover {
+  border-color: var(--nxdt-border-highlight, rgba(255, 255, 255, 0.25)) !important;
+  color: var(--nxdt-text-primary, #e6edf3) !important;
+}
+
 .nxdt-btn-hero {
   display: flex !important;
   align-items: center !important;

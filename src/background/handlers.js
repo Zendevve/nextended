@@ -41,6 +41,43 @@ function isValidDownloadUrl(value) {
   return isSafeDownloadUrl(value);
 }
 
+function extractUrlFromData(data) {
+  if (!data) return null;
+  if (typeof data === 'string') {
+    const trimmed = data.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('nxm://')) {
+      return trimmed;
+    }
+    return null;
+  }
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const u = extractUrlFromData(item);
+      if (u) return u;
+    }
+    return null;
+  }
+  if (typeof data === 'object') {
+    return (
+      data.url ||
+      data.URL ||
+      data.Url ||
+      data.URI ||
+      data.uri ||
+      data.directUrl ||
+      data.direct_url ||
+      data.downloadUrl ||
+      data.download_url ||
+      extractUrlFromData(data.data) ||
+      extractUrlFromData(data.result) ||
+      extractUrlFromData(data.files) ||
+      extractUrlFromData(data.servers) ||
+      null
+    );
+  }
+  return null;
+}
+
 async function extractValidatedUrl(response) {
   const text = await response.text();
   if (response.status === 404) {
@@ -66,10 +103,10 @@ async function extractValidatedUrl(response) {
     json = null;
   }
 
-  let url =
-    json?.url || json?.URL || json?.Url || json?.data?.URI || json?.data?.url || null;
+  let url = extractUrlFromData(json);
   if (!url && text) {
-    const match = text.match(/nxm:\/\/[^\s"'<>]+/i) || text.match(/https?:\/\/[^\s"'<>]+/i);
+    const unescapedText = text.replace(/\\\//g, '/');
+    const match = unescapedText.match(/nxm:\/\/[^\s"'<>]+/i) || unescapedText.match(/https?:\/\/[^\s"'<>]+/i);
     if (match) url = match[0];
   }
   if (!url) return null;
@@ -278,7 +315,14 @@ export async function resolveCollectionDownload(payload, _deps = {}) {
   }
   const settings = await getSettings();
   const timeout = settings.requestTimeout || 30000;
-  const body = `fid=${encodeURIComponent(fileId)}&game_id=${encodeURIComponent(gameId || '0')}${isNMM ? '&nmm=1' : ''}`;
+  const bodyParts = [`fid=${encodeURIComponent(fileId)}`];
+  if (gameId && gameId !== '0' && gameId !== 0 && String(gameId).trim() !== '') {
+    bodyParts.push(`game_id=${encodeURIComponent(gameId)}`);
+  }
+  if (isNMM) {
+    bodyParts.push('nmm=1');
+  }
+  const body = bodyParts.join('&');
   let primaryError = null;
   try {
     const response = await fetchWithTimeout(
@@ -496,6 +540,12 @@ export function registerHandlers(deps = {}) {
   registerHandler(MESSAGE_TYPES.VERIFY_COLLECTION_DOWNLOADS, (payload) =>
     verifyCollectionDownloads(payload)
   );
+  registerHandler(MESSAGE_TYPES.OPEN_OPTIONS, async () => {
+    if (chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    }
+    return { ok: true };
+  });
 
   // Queue Manager Handlers
   registerHandler(MESSAGE_TYPES.ENQUEUE_ITEMS, async (payload) => {

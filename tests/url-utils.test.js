@@ -75,6 +75,16 @@ describe('url-utils', () => {
     expect(url.searchParams.get('game_id')).toBe('1704');
   });
 
+  it('omits game_id when gameId is 0 or empty string in buildGenerateDownloadUrl', () => {
+    const u0 = buildGenerateDownloadUrl('stardewvalley', '999', '0');
+    expect(u0).toBe('https://www.nexusmods.com/stardewvalley/Core/Downloads/GenerateDownloadUrl?file_id=999');
+    const url0 = new URL(u0);
+    expect(url0.searchParams.has('game_id')).toBe(false);
+
+    const uEmpty = buildGenerateDownloadUrl('stardewvalley', '999', '');
+    expect(uEmpty).toBe('https://www.nexusmods.com/stardewvalley/Core/Downloads/GenerateDownloadUrl?file_id=999');
+  });
+
   it('extractFileIdFromUrl extracts file_id, fileId, or id', () => {
     expect(extractFileIdFromUrl(new URLSearchParams('?file_id=123'))).toBe('123');
     expect(extractFileIdFromUrl(new URLSearchParams('?fileId=456'))).toBe('456');

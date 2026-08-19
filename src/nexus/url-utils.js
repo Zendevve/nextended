@@ -97,7 +97,9 @@ export function buildGenerateDownloadUrl(slug, fileId, gameId) {
   const params = new URLSearchParams({
     file_id: String(fileId),
   });
-  if (gameId) params.set('game_id', String(gameId));
+  if (gameId && gameId !== '0' && gameId !== 0 && String(gameId).trim() !== '') {
+    params.set('game_id', String(gameId));
+  }
   return `${base}/Core/Downloads/GenerateDownloadUrl?${params.toString()}`;
 }
 

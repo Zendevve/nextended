@@ -311,6 +311,37 @@ describe('background handlers', () => {
       });
       expect(res).toEqual({ url: 'https://files.nexus-cdn.com/abc/file.rar', fileId: '123' });
     });
+    it('resolves download URL from array of mirror objects with URI property', async () => {
+      const fetchMock = vi.fn(async () => {
+        return jsonResponse(200, [
+          { name: 'Nexus CDN', short_name: 'Nexus CDN', URI: 'https://files.nexus-cdn.com/1303/123/fish.zip' }
+        ]);
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const res = await handlers.resolveCollectionDownload({
+        fileId: '123',
+        gameId: '1303',
+        gameDomain: 'stardewvalley',
+        isNMM: false,
+      });
+      expect(res).toEqual({ url: 'https://files.nexus-cdn.com/1303/123/fish.zip', fileId: '123' });
+    });
+
+    it('resolves download URL when text contains escaped slashes', async () => {
+      const fetchMock = vi.fn(async () => {
+        return jsonResponse(200, '{"status":true,"data":"https:\\/\\/files.nexus-cdn.com\\/1303\\/123\\/fish.zip"}');
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const res = await handlers.resolveCollectionDownload({
+        fileId: '123',
+        gameDomain: 'stardewvalley',
+        isNMM: false,
+      });
+      expect(res).toEqual({ url: 'https://files.nexus-cdn.com/1303/123/fish.zip', fileId: '123' });
+    });
+
     it('falls back to game-specific GenerateDownloadUrl when collection manager returns no URL', async () => {
       const fetchMock = vi.fn(async (url, options) => {
         if (options.method === 'POST') {
@@ -517,6 +548,20 @@ describe('background handlers', () => {
       const res = await handlers.collectionFinished();
       expect(res).toEqual({ ok: true });
       expect(store.stats.collectionsDownloaded).toBe(1);
+    });
+  });
+
+  describe('OPEN_OPTIONS message handler', () => {
+    it('registers OPEN_OPTIONS handler and invokes openOptionsPage', async () => {
+      const openSpy = vi.fn();
+      globalThis.chrome = {
+        runtime: { openOptionsPage: openSpy },
+      };
+      handlers.registerHandlers();
+      const router = await import('../../src/background/message-router.js');
+      const res = await router.dispatch({ type: 'NXDT_OPEN_OPTIONS' }, {});
+      expect(res).toEqual({ success: true, result: { ok: true } });
+      expect(openSpy).toHaveBeenCalled();
     });
   });
 });
