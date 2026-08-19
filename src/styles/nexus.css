@@ -1,53 +1,53 @@
 /* Nexus Mods Download Tools CSS */
 
 :root {
-  --nxdt-bg-base: #14171a;
-  --nxdt-bg-surface: #1e2227;
-  --nxdt-bg-elevated: #282d35;
-  --nxdt-bg-glass: rgba(28, 32, 38, 0.88);
-  --nxdt-bg-overlay: rgba(12, 14, 18, 0.78);
+  --nxdt-bg-base: #0d1117;
+  --nxdt-bg-surface: #161b22;
+  --nxdt-bg-elevated: #21262d;
+  --nxdt-bg-glass: rgba(22, 27, 34, 0.94);
+  --nxdt-bg-overlay: rgba(13, 17, 23, 0.75);
 
   --nxdt-border-subtle: rgba(255, 255, 255, 0.08);
   --nxdt-border-medium: rgba(255, 255, 255, 0.14);
   --nxdt-border-highlight: rgba(255, 255, 255, 0.22);
 
-  --nxdt-text-primary: #e6edf3;
+  --nxdt-text-primary: #f0f6fc;
   --nxdt-text-secondary: #8b949e;
   --nxdt-text-bright: #ffffff;
   --nxdt-text-muted: #6e7681;
 
-  --nxdt-amber-base: #da8e35;
-  --nxdt-amber-hover: #e89b44;
-  --nxdt-amber-active: #c47d28;
-  --nxdt-amber-glow: rgba(218, 142, 53, 0.28);
-  --nxdt-amber-border: rgba(218, 142, 53, 0.45);
-  --nxdt-amber-subtle: rgba(218, 142, 53, 0.14);
+  --nxdt-amber-base: #e5933a;
+  --nxdt-amber-hover: #f09f45;
+  --nxdt-amber-active: #c87a24;
+  --nxdt-amber-glow: rgba(229, 147, 58, 0.15);
+  --nxdt-amber-border: rgba(229, 147, 58, 0.32);
+  --nxdt-amber-subtle: rgba(229, 147, 58, 0.1);
 
   --nxdt-green-base: #3fb950;
   --nxdt-green-hover: #4ac25b;
   --nxdt-green-active: #2ea043;
-  --nxdt-green-border: rgba(63, 185, 80, 0.45);
-  --nxdt-green-glow: rgba(63, 185, 80, 0.25);
+  --nxdt-green-border: rgba(63, 185, 80, 0.35);
+  --nxdt-green-glow: rgba(63, 185, 80, 0.15);
 
   --nxdt-blue-base: #58a6ff;
   --nxdt-blue-hover: #79b8ff;
-  --nxdt-blue-border: rgba(88, 166, 255, 0.45);
+  --nxdt-blue-border: rgba(88, 166, 255, 0.35);
 
   --nxdt-red-base: #f85149;
   --nxdt-red-hover: #ff6b64;
   --nxdt-red-active: #da3633;
-  --nxdt-red-border: rgba(248, 81, 73, 0.45);
+  --nxdt-red-border: rgba(248, 81, 73, 0.35);
 
   --nxdt-yellow-base: #d29922;
-  --nxdt-yellow-border: rgba(210, 153, 34, 0.45);
+  --nxdt-yellow-border: rgba(210, 153, 34, 0.35);
 
-  --nxdt-radius-sm: 4px;
-  --nxdt-radius-md: 6px;
-  --nxdt-radius-lg: 8px;
+  --nxdt-radius-sm: 6px;
+  --nxdt-radius-md: 8px;
+  --nxdt-radius-lg: 10px;
   --nxdt-radius-xl: 12px;
   --nxdt-radius-pill: 9999px;
 
-  --nxdt-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Montserrat', 'Segoe UI', Roboto, sans-serif;
+  --nxdt-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --nxdt-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
 
   --nxdt-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -1058,26 +1058,25 @@
 .nxdt-dock-pill {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  padding: 10px 18px !important;
-  background: rgba(28, 32, 38, 0.88) !important;
-  backdrop-filter: blur(16px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-  border: 1px solid var(--nxdt-amber-border, rgba(218, 142, 53, 0.45)) !important;
+  gap: 8px !important;
+  padding: 8px 14px !important;
+  background: var(--nxdt-bg-glass, rgba(22, 27, 34, 0.94)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--nxdt-border-medium, rgba(255, 255, 255, 0.14)) !important;
   border-radius: var(--nxdt-radius-pill, 9999px) !important;
-  color: var(--nxdt-text-bright, #ffffff) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
+  color: var(--nxdt-text-primary, #f0f6fc) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
   cursor: pointer !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 16px var(--nxdt-amber-glow, rgba(218, 142, 53, 0.28)), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-  transition: transform 0.2s var(--nxdt-ease-out), box-shadow 0.2s ease, border-color 0.2s ease !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  transition: transform 0.15s var(--nxdt-ease-out), border-color 0.15s ease !important;
   user-select: none !important;
 }
 
 .nxdt-dock-pill:hover {
-  transform: translateY(-2px) scale(1.02) !important;
-  border-color: var(--nxdt-amber-base, #da8e35) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 22px var(--nxdt-amber-glow, rgba(218, 142, 53, 0.4)) !important;
+  transform: translateY(-1px) !important;
+  border-color: var(--nxdt-amber-border, rgba(229, 147, 58, 0.32)) !important;
 }
 
 .nxdt-dock-pill:active {
@@ -1321,37 +1320,31 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  color: var(--nxdt-amber-base, #da8e35) !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
+  color: var(--nxdt-text-secondary, #8b949e) !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
   text-decoration: none !important;
-  padding: 6px 14px !important;
-  border-radius: var(--nxdt-radius-pill, 9999px) !important;
-  background: var(--nxdt-amber-subtle, rgba(218, 142, 53, 0.14)) !important;
-  border: 1px solid var(--nxdt-amber-border, rgba(218, 142, 53, 0.45)) !important;
-  transition: color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              background-color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              border-color 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              box-shadow 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-              transform 0.2s var(--nxdt-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) !important;
+  padding: 5px 12px !important;
+  border-radius: var(--nxdt-radius-md, 8px) !important;
+  background: transparent !important;
+  border: 1px solid var(--nxdt-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease !important;
 }
 
 .nxdt-drawer-coffee-link:hover {
-  color: #ffffff !important;
-  background-color: var(--nxdt-amber-base, #da8e35) !important;
-  border-color: var(--nxdt-amber-hover, #e89b44) !important;
-  box-shadow: 0 0 12px var(--nxdt-amber-glow, rgba(218, 142, 53, 0.35)) !important;
-  transform: translateY(-1px) !important;
+  color: #f1b369 !important;
+  background-color: var(--nxdt-amber-subtle, rgba(229, 147, 58, 0.1)) !important;
+  border-color: var(--nxdt-amber-border, rgba(229, 147, 58, 0.32)) !important;
   text-decoration: none !important;
 }
 
 .nxdt-drawer-coffee-link:active {
-  background-color: var(--nxdt-amber-active, #c47d28) !important;
-  transform: translateY(0) scale(0.97) !important;
+  background-color: var(--nxdt-amber-subtle, rgba(229, 147, 58, 0.15)) !important;
+  transform: scale(0.98) !important;
 }
 
 .nxdt-drawer-coffee-link:focus-visible {
-  outline: 2px solid var(--nxdt-amber-base, #da8e35) !important;
+  outline: 2px solid var(--nxdt-amber-base, #e5933a) !important;
   outline-offset: 2px !important;
 }
 

@@ -6,7 +6,7 @@
 
 **High-performance Manifest V3 browser extension for one-click mod downloads, background queue management, and automated requirement bundling.**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-2d3238?style=flat-square)](https://github.com/Zendevve/nexus-mods-downloader)
+[![Version](https://img.shields.io/badge/version-0.1.1-2d3238?style=flat-square)](https://github.com/Zendevve/nexus-mods-downloader)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-1a1c1f?style=flat-square)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Chromium](https://img.shields.io/badge/Chromium-Extension-4285f4?style=flat-square)](https://www.google.com/chrome/)
 [![Firefox](https://img.shields.io/badge/Firefox-AMO%20Ready-ff7139?style=flat-square)](https://addons.mozilla.org/)
