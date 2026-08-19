@@ -4,6 +4,7 @@ import {
   CollectionProgressBar,
   CollectionSelectModal,
   CollectionUpdateModal,
+  CollectionVerificationModal,
 } from '../src/content/collection-ui.js';
 import { MESSAGE_TYPES, DOWNLOAD_METHOD_VORTEX, DOWNLOAD_METHOD_BROWSER } from '../src/shared/constants.js';
 
@@ -500,6 +501,46 @@ describe('CollectionSelectModal', () => {
     modal.element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.body.contains(modal.element)).toBe(false);
   });
+  it('quick-selects mandatory mods only when Mandatory Only is clicked', () => {
+    const manager = createManager();
+    manager.mods = {
+      all: [
+        { fileId: 1, optional: false, file: { name: 'Mod Mandatory', mod: {} } },
+        { fileId: 2, optional: true, file: { name: 'Mod Optional', mod: {} } },
+      ],
+      mandatory: [{ fileId: 1, optional: false, file: { name: 'Mod Mandatory', mod: {} } }],
+      optional: [{ fileId: 2, optional: true, file: { name: 'Mod Optional', mod: {} } }],
+    };
+    const modal = new CollectionSelectModal(manager);
+    document.body.appendChild(modal.element);
+    modal.render();
+
+    const btnMandatory = modal.element.querySelector('#nxdtSelMandatory');
+    const btnSelAll = modal.element.querySelector('#nxdtSelAll');
+    const btnDeselAll = modal.element.querySelector('#nxdtDeselAll');
+    const countBadge = modal.element.querySelector('#nxdtSelCount');
+    const checkboxes = modal.element.querySelectorAll('input[type="checkbox"]');
+
+    // Select All
+    btnSelAll.click();
+    expect(checkboxes[0].checked).toBe(true);
+    expect(checkboxes[1].checked).toBe(true);
+    expect(countBadge.textContent).toBe('2 selected');
+
+    // Mandatory Only
+    btnMandatory.click();
+    expect(checkboxes[0].checked).toBe(true);
+    expect(checkboxes[1].checked).toBe(false);
+    expect(countBadge.textContent).toBe('1 selected');
+
+    // Deselect All
+    btnDeselAll.click();
+    expect(checkboxes[0].checked).toBe(false);
+    expect(checkboxes[1].checked).toBe(false);
+    expect(countBadge.textContent).toBe('0 selected');
+
+    modal.close();
+  });
 });
 
 describe('CollectionUpdateModal', () => {
@@ -581,5 +622,116 @@ describe('CollectionUpdateModal', () => {
 
     modal.element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(document.body.contains(modal.element)).toBe(false);
+  });
+});
+
+describe('CollectionVerificationModal', () => {
+  it('closes on Escape key press', async () => {
+    mockSendMessage(() => ok({ total: 0, confirmed: 0, missing: 0, percentage: 0, results: [] }));
+    const manager = createManager();
+    const modal = new CollectionVerificationModal(manager);
+    document.body.appendChild(modal.element);
+    await modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(false);
+  });
+
+  it('closes on backdrop click', async () => {
+    mockSendMessage(() => ok({ total: 0, confirmed: 0, missing: 0, percentage: 0, results: [] }));
+    const manager = createManager();
+    const modal = new CollectionVerificationModal(manager);
+    document.body.appendChild(modal.element);
+    await modal.render();
+
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    const modalBox = modal.element.querySelector('.nxdt-modal-box');
+    modalBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(true);
+
+    modal.element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.body.contains(modal.element)).toBe(false);
+  });
+});
+
+describe('CollectionProgressBar indicators', () => {
+  it('updates current mod indicator and calculates ETA', () => {
+    const manager = createManager();
+    const pb = new CollectionProgressBar(manager);
+    pb.setModsCount(10);
+    pb.startTime = Date.now() - 5000; // 5 seconds elapsed
+    pb.setProgress(5);
+    pb.setCurrentMod('Awesome Overhaul');
+
+    const modEl = pb.element.querySelector('#nxdtCurrentMod');
+    const etaEl = pb.element.querySelector('#nxdtProgressEta');
+
+    expect(modEl.textContent).toContain('Awesome Overhaul');
+    expect(etaEl.textContent).toContain('left');
+  });
+});
+
+describe('CollectionManager failure summary & retry', () => {
+  it('displays failure summary and allows retrying failed downloads', async () => {
+    let shouldFail = true;
+    mockSendMessage((msg) => {
+      if (msg.type === MESSAGE_TYPES.RESOLVE_COLLECTION_DOWNLOAD) {
+        if (shouldFail && msg.payload.fileId === '200') {
+          return fail('Download link expired');
+        }
+        return ok({ url: 'https://files.nexus-cdn.com/mod.7z' });
+      }
+      return defaultResponses[msg.type] ?? ok({});
+    });
+    const manager = createManager();
+    manager.pauseBetweenDownload = 0;
+    const mods = [makeMod(100, 'Mod A'), makeMod(200, 'Mod B')];
+
+    await manager.downloadMods(mods, 'all');
+
+    const summary = manager.downloadButton.element.querySelector('#nxdtDownloadSummary');
+    expect(summary).not.toBeNull();
+    expect(summary.style.display).not.toBe('none');
+    expect(summary.textContent).toContain('1 mod download(s) failed');
+
+    const retryBtn = summary.querySelector('#nxdtRetryFailed');
+    expect(retryBtn).not.toBeNull();
+
+    // Retry without failure
+    shouldFail = false;
+    retryBtn.click();
+
+    await flushUntil(() => !manager.isRunning);
+    expect(summary.textContent).toContain('Completed');
+  });
+
+  it('opens external links in new tabs when Open External Links is clicked', async () => {
+    mockSendMessage((msg) => {
+      if (msg.type === MESSAGE_TYPES.RESOLVE_COLLECTION_DOWNLOAD) {
+        return fail('Download link expired');
+      }
+      return defaultResponses[msg.type] ?? ok({});
+    });
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => {});
+    const manager = createManager();
+    manager.pauseBetweenDownload = 0;
+    const mods = [makeMod(100, 'Mod A')];
+    mods[0].file.mod.modId = 999;
+
+    await manager.downloadMods(mods, 'all');
+
+    const summary = manager.downloadButton.element.querySelector('#nxdtDownloadSummary');
+    const openExtBtn = summary.querySelector('#nxdtOpenFailedExternal');
+    expect(openExtBtn).not.toBeNull();
+    openExtBtn.click();
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.nexusmods.com/skyrimspecialedition/mods/999',
+      '_blank',
+      'noopener,noreferrer'
+    );
+    openSpy.mockRestore();
   });
 });

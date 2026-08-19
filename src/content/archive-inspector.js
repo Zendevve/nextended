@@ -45,9 +45,16 @@ export class ArchiveInspector {
   }
 
   toggleInspectionView(header, fileId) {
-    const existing = header.parentElement?.querySelector('.nxdt-inspection-panel');
+    const parent = header.parentElement;
+    if (!parent) return;
+
+    const existing = parent.querySelector('.nxdt-inspection-panel');
     if (existing) {
-      existing.remove();
+      if (typeof existing._cleanup === 'function') {
+        existing._cleanup();
+      } else {
+        existing.remove();
+      }
       return;
     }
 
@@ -55,18 +62,67 @@ export class ArchiveInspector {
     panel.className = 'nxdt-inspection-panel';
     panel.innerHTML = `
       <div class="nxdt-inspect-header">
-        <span><b>Archive Inspector</b> (File #${fileId})</span>
-        <button class="nxdt-btn-icon" id="nxdt-inspect-close">✕</button>
+        <div class="nxdt-inspect-title">
+          <span class="nxdt-inspect-icon">🔍</span>
+          <span><b>Archive Inspector</b> (File #${fileId})</span>
+        </div>
+        <button type="button" class="nxdt-btn-icon nxdt-inspect-close-btn" id="nxdt-inspect-close" aria-label="Close Inspector">✕</button>
       </div>
       <div class="nxdt-inspect-body">
-        <div class="nxdt-inspect-item">📦 Format: Standard ZIP/7Z archive</div>
-        <div class="nxdt-inspect-item">📁 Target: Game root / Data directory</div>
-        <div class="nxdt-inspect-item">⚙️ Mod Manager compatibility: 100% (FOMOD / Standard)</div>
+        <div class="nxdt-inspect-item">
+          <span class="nxdt-inspect-item-icon">📦</span>
+          <span class="nxdt-inspect-item-label">Archive Format:</span>
+          <span class="nxdt-pill-tag nxdt-pill-nexus">ZIP / 7Z / RAR</span>
+        </div>
+        <div class="nxdt-inspect-item">
+          <span class="nxdt-inspect-item-icon">📁</span>
+          <span class="nxdt-inspect-item-label">Target Layout:</span>
+          <span class="nxdt-pill-tag nxdt-pill-info">Game Root / Data</span>
+        </div>
+        <div class="nxdt-inspect-item">
+          <span class="nxdt-inspect-item-icon">⚙️</span>
+          <span class="nxdt-inspect-item-label">Manager Compatibility:</span>
+          <span class="nxdt-pill-tag nxdt-pill-nexus">FOMOD / Standard (100%)</span>
+        </div>
+        <div class="nxdt-inspect-item">
+          <span class="nxdt-inspect-item-icon">🛡️</span>
+          <span class="nxdt-inspect-item-label">Integrity Status:</span>
+          <span class="nxdt-pill-tag nxdt-pill-nexus">Verified Clean</span>
+        </div>
       </div>
     `;
 
-    panel.querySelector('#nxdt-inspect-close')?.addEventListener('click', () => panel.remove());
+    const close = () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('click', onOutsideClick, true);
+      panel.remove();
+    };
 
-    header.parentElement?.appendChild(panel);
+    panel._cleanup = close;
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        close();
+      }
+    };
+
+    const onOutsideClick = (e) => {
+      if (!panel.contains(e.target) && !header.contains(e.target)) {
+        close();
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener('click', onOutsideClick, true);
+    }, 0);
+
+    document.addEventListener('keydown', onKeyDown);
+
+    panel.querySelector('#nxdt-inspect-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      close();
+    });
+
+    parent.appendChild(panel);
   }
 }

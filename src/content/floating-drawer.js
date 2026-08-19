@@ -5,6 +5,7 @@ import {
   ITEM_STATUS,
 } from '../shared/constants.js';
 import { createLogger } from '../shared/logger.js';
+import { showToast } from './toast.js';
 
 const log = createLogger('floating-drawer');
 
@@ -37,6 +38,11 @@ export class FloatingDrawer {
     this.container = null;
     this.drawer = null;
     this.dock = null;
+    this._handleKeydown = (e) => {
+      if (e.key === 'Escape' && this.isOpen) {
+        this.close();
+      }
+    };
   }
 
   init() {
@@ -98,9 +104,26 @@ export class FloatingDrawer {
     });
   }
 
-  toggle() {
-    this.isOpen = !this.isOpen;
+  open() {
+    if (this.isOpen) return;
+    this.isOpen = true;
+    document.addEventListener('keydown', this._handleKeydown);
     this.render();
+  }
+
+  close() {
+    if (!this.isOpen) return;
+    this.isOpen = false;
+    document.removeEventListener('keydown', this._handleKeydown);
+    this.render();
+  }
+
+  toggle() {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
   }
 
   render() {
@@ -142,9 +165,11 @@ export class FloatingDrawer {
               : 'nxdt-status-idle';
 
     let html = `
-      <div class="nxdt-dock-pill ${this.isOpen ? 'nxdt-hidden' : ''}" id="nxdt-dock-btn">
-        <span class="nxdt-dock-dot ${statusClass}"></span>
+      <div class="nxdt-dock-pill ${this.isOpen ? 'nxdt-hidden' : ''}" id="nxdt-dock-btn" title="Open Download Queue Drawer (Esc to close)">
+        <span class="nxdt-dock-dot ${statusClass} ${status === QUEUE_STATUS.RUNNING ? 'nxdt-pulse-dot' : ''}"></span>
         <span class="nxdt-dock-label">Queue: <b>${completed}/${total}</b> (${pct}%)</span>
+        ${active > 0 ? `<span class="nxdt-badge" style="background:#3fb950;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">${active} active</span>` : ''}
+        ${failed > 0 ? `<span class="nxdt-badge" style="background:#f85149;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;">${failed} failed</span>` : ''}
         ${status === QUEUE_STATUS.RUNNING ? `<span class="nxdt-dock-spinner"></span>` : ''}
       </div>
     `;
@@ -158,7 +183,7 @@ export class FloatingDrawer {
               <h3>Nexus Download Queue</h3>
               <span class="nxdt-header-badge ${statusClass}">${statusText}</span>
             </div>
-            <button class="nxdt-btn-icon" id="nxdt-drawer-close" title="Close Drawer">✕</button>
+            <button class="nxdt-btn-icon" id="nxdt-drawer-close" title="Close Drawer (Esc)">✕</button>
           </div>
 
           <div class="nxdt-drawer-progress">
@@ -174,18 +199,17 @@ export class FloatingDrawer {
           <div class="nxdt-drawer-toolbar">
             ${
               status === QUEUE_STATUS.RUNNING
-                ? `<button class="nxdt-btn nxdt-btn-amber" id="nxdt-queue-pause">⏸ Pause</button>`
-                : `<button class="nxdt-btn nxdt-btn-green" id="nxdt-queue-resume">▶ Resume</button>`
+                ? `<button class="nxdt-btn nxdt-btn-amber" id="nxdt-queue-pause">Pause All</button>`
+                : `<button class="nxdt-btn nxdt-btn-green" id="nxdt-queue-resume">Resume All</button>`
             }
             ${
               failed > 0
-                ? `<button class="nxdt-btn nxdt-btn-amber" id="nxdt-queue-retry">🔄 Retry Failed (${failed})</button>`
+                ? `<button class="nxdt-btn nxdt-btn-amber" id="nxdt-queue-retry">Retry Failed (${failed})</button>`
                 : ''
             }
             <button class="nxdt-btn nxdt-btn-dark" id="nxdt-queue-clear">Clear Finished</button>
-            <button class="nxdt-btn nxdt-btn-dark" id="nxdt-queue-export" title="Export download list">📋 Export</button>
+            <button class="nxdt-btn nxdt-btn-dark" id="nxdt-queue-export" title="Export download list">Export</button>
           </div>
-
           <div class="nxdt-drawer-items">
             ${
               items.length === 0
@@ -262,32 +286,45 @@ export class FloatingDrawer {
 
     const pauseBtn = this.container.querySelector('#nxdt-queue-pause');
     if (pauseBtn) {
-      pauseBtn.addEventListener('click', () => this.sendQueueMessage(MESSAGE_TYPES.QUEUE_PAUSE));
+      pauseBtn.addEventListener('click', () => {
+        this.sendQueueMessage(MESSAGE_TYPES.QUEUE_PAUSE);
+        showToast('Queue paused', 'info');
+      });
     }
 
     const resumeBtn = this.container.querySelector('#nxdt-queue-resume');
     if (resumeBtn) {
-      resumeBtn.addEventListener('click', () => this.sendQueueMessage(MESSAGE_TYPES.QUEUE_RESUME));
+      resumeBtn.addEventListener('click', () => {
+        this.sendQueueMessage(MESSAGE_TYPES.QUEUE_RESUME);
+        showToast('Queue resumed', 'info');
+      });
     }
 
     const retryBtn = this.container.querySelector('#nxdt-queue-retry');
     if (retryBtn) {
-      retryBtn.addEventListener('click', () => this.sendQueueMessage(MESSAGE_TYPES.QUEUE_RETRY_FAILED));
+      retryBtn.addEventListener('click', () => {
+        this.sendQueueMessage(MESSAGE_TYPES.QUEUE_RETRY_FAILED);
+        showToast('Retrying failed downloads', 'info');
+      });
     }
 
     const clearBtn = this.container.querySelector('#nxdt-queue-clear');
     if (clearBtn) {
-      clearBtn.addEventListener('click', () => this.sendQueueMessage(MESSAGE_TYPES.QUEUE_CLEAR));
+      clearBtn.addEventListener('click', () => {
+        this.sendQueueMessage(MESSAGE_TYPES.QUEUE_CLEAR);
+        showToast('Queue cleared', 'info');
+      });
     }
-
     const exportBtn = this.container.querySelector('#nxdt-queue-export');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => {
         const text = this.state.items
           .map((i) => `${i.modName} | ${i.fileName} | ${i.sourceUrl || i.externalUrl || i.fileId}`)
           .join('\n');
-        navigator.clipboard?.writeText(text);
-        alert('Queue item list copied to clipboard!');
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text);
+        }
+        showToast('Queue item list copied to clipboard', 'success');
       });
     }
 
@@ -296,6 +333,7 @@ export class FloatingDrawer {
         const itemId = e.target.dataset.itemId;
         if (itemId) {
           this.sendQueueMessage(MESSAGE_TYPES.QUEUE_SKIP_ITEM, { itemId });
+          showToast('Download skipped', 'info');
         }
       });
     });

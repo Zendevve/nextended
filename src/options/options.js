@@ -32,7 +32,22 @@ const form = {
   saveBtn: document.getElementById('save-btn'),
   resetBtn: document.getElementById('reset-btn'),
   searchInput: document.getElementById('settings-search'),
+  toast: document.getElementById('toast'),
 };
+
+let toastTimer = null;
+function showToast(message, type = 'success', duration = 2500) {
+  const toastEl = form.toast || document.getElementById('toast');
+  if (!toastEl) return;
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastEl.textContent = message;
+  toastEl.className = `toast show toast-${type}`;
+
+  toastTimer = setTimeout(() => {
+    toastEl.classList.remove('show');
+  }, duration);
+}
 
 function boolInput(input, name, settings) {
   if (!input) return;
@@ -97,6 +112,7 @@ function populateForm(settings) {
 }
 
 function loadSettings() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
   chrome.storage.local.get([STORAGE_KEY_SETTINGS], (res) => {
     const settings = res[STORAGE_KEY_SETTINGS] || {};
     populateForm(settings);
@@ -148,17 +164,22 @@ function collect() {
   return settings;
 }
 
-function save() {
+function save(notifyToast = true) {
   const settings = collect();
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
   chrome.storage.local.set({ [STORAGE_KEY_SETTINGS]: settings }, () => {
     log.info('Settings saved');
-    chrome.runtime.sendMessage({ type: MESSAGE_TYPES.SETTINGS_CHANGED, payload: { settings } });
+    chrome.runtime?.sendMessage?.({ type: MESSAGE_TYPES.SETTINGS_CHANGED, payload: { settings } });
 
     if (form.saveBtn) {
       form.saveBtn.textContent = '✓ Saved!';
       setTimeout(() => {
         form.saveBtn.textContent = 'Save Settings';
       }, 1500);
+    }
+
+    if (notifyToast) {
+      showToast('Settings saved successfully', 'success');
     }
   });
 }
@@ -167,11 +188,18 @@ function applyPreset(presetKey) {
   const preset = PRESETS[presetKey];
   if (!preset) return;
 
+  document.querySelectorAll('.preset-btn').forEach((btn) => {
+    const isThis = btn.dataset.preset === presetKey;
+    btn.classList.toggle('active', isThis);
+  });
+
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
   chrome.storage.local.get([STORAGE_KEY_SETTINGS], (res) => {
     const current = res[STORAGE_KEY_SETTINGS] || {};
     const merged = { ...current, ...preset.settings };
     populateForm(merged);
-    save();
+    save(false);
+    showToast(`Applied preset: ${preset.name || presetKey}`, 'success');
   });
 }
 
@@ -183,21 +211,99 @@ document.querySelectorAll('.preset-btn').forEach((btn) => {
   });
 });
 
+// Category Tab Navigation
+const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+const sections = Array.from(document.querySelectorAll('.settings-section'));
+
+function restoreControlRows() {
+  const rows = document.querySelectorAll('.settings-section label, .settings-section .input-row, .settings-section .radio-group-container');
+  rows.forEach((r) => {
+    r.style.display = '';
+  });
+}
+
+function selectTab(targetTab) {
+  if (!targetTab) return;
+  tabButtons.forEach((tab) => {
+    const isSelected = tab === targetTab;
+    tab.classList.toggle('active', isSelected);
+    tab.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    tab.setAttribute('tabindex', isSelected ? '0' : '-1');
+  });
+
+  const controls = targetTab.getAttribute('aria-controls') || '';
+  const targetIds = controls.split(/\s+/).filter(Boolean);
+
+  if (targetTab.id === 'tab-all') {
+    sections.forEach((sec) => {
+      sec.style.display = 'block';
+    });
+  } else {
+    sections.forEach((sec) => {
+      const match = targetIds.includes(sec.id);
+      sec.style.display = match ? 'block' : 'none';
+    });
+  }
+
+  restoreControlRows();
+}
+
+function setupTabNavigation() {
+  tabButtons.forEach((tab, index) => {
+    tab.addEventListener('click', () => {
+      if (form.searchInput && form.searchInput.value.trim()) {
+        form.searchInput.value = '';
+      }
+      selectTab(tab);
+    });
+
+    tab.addEventListener('keydown', (e) => {
+      let nextIndex = null;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        nextIndex = (index + 1) % tabButtons.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+      } else if (e.key === 'Home') {
+        nextIndex = 0;
+      } else if (e.key === 'End') {
+        nextIndex = tabButtons.length - 1;
+      }
+
+      if (nextIndex !== null) {
+        e.preventDefault();
+        const nextTab = tabButtons[nextIndex];
+        nextTab.focus();
+        if (form.searchInput && form.searchInput.value.trim()) {
+          form.searchInput.value = '';
+        }
+        selectTab(nextTab);
+      }
+    });
+  });
+}
+
 // Live Search Filter
-if (form.searchInput) {
+function setupSearchFilter() {
+  if (!form.searchInput) return;
+
   form.searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase().trim();
-    const sections = document.querySelectorAll('.settings-section');
+    if (!term) {
+      const activeTab = tabButtons.find((tab) => tab.classList.contains('active')) || tabButtons[0];
+      selectTab(activeTab);
+      return;
+    }
+
     sections.forEach((sec) => {
-      const labels = sec.querySelectorAll('label, .group-label');
+      const rows = sec.querySelectorAll('label, .input-row, .radio-group-container');
       let hasMatch = false;
-      labels.forEach((lbl) => {
-        const text = lbl.textContent.toLowerCase();
-        if (!term || text.includes(term)) {
-          lbl.style.display = 'flex';
+      rows.forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(term)) {
+          row.style.display = '';
           hasMatch = true;
         } else {
-          lbl.style.display = 'none';
+          row.style.display = 'none';
         }
       });
       sec.style.display = hasMatch ? 'block' : 'none';
@@ -205,17 +311,22 @@ if (form.searchInput) {
   });
 }
 
-if (form.saveBtn) form.saveBtn.addEventListener('click', save);
+if (form.saveBtn) form.saveBtn.addEventListener('click', () => save(true));
 if (form.resetBtn) {
   form.resetBtn.addEventListener('click', () => {
+    if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
     chrome.storage.local.remove(STORAGE_KEY_SETTINGS, () => {
       loadSettings();
-      chrome.runtime.sendMessage({
+      chrome.runtime?.sendMessage?.({
         type: MESSAGE_TYPES.SETTINGS_CHANGED,
         payload: { settings: DEFAULT_SETTINGS },
       });
+      showToast('Settings reset to defaults', 'info');
     });
   });
 }
+
+setupTabNavigation();
+setupSearchFilter();
 
 document.addEventListener('DOMContentLoaded', loadSettings);

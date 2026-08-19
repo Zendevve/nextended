@@ -205,8 +205,9 @@ export class CollectionManager {
       this.startDownload(modsList.length);
       const history = await this.getHistory();
       const downloadedHistory = history?.[this.gameDomain]?.[this.collectionSlug]?.[type] || [];
-
       const failedDownloads = [];
+      let completedCount = 0;
+      let skippedCount = 0;
 
       for (let index = 0; index < modsList.length; index++) {
         const mod = modsList[index];
@@ -216,9 +217,12 @@ export class CollectionManager {
 
         if (this.aborted || runToken !== this.runToken) break;
 
+        this.progressBar.setCurrentMod(modName);
+
         if (downloadedHistory.includes(fileId)) {
           this.console.log(`[${modNumber}] Skipped (already downloaded): ${modName}`);
           this.progressBar.incrementProgress();
+          skippedCount++;
           continue;
         }
 
@@ -234,6 +238,7 @@ export class CollectionManager {
           await this.updateHistory(type, fileId);
           if (this.aborted || runToken !== this.runToken) break;
           this.progressBar.incrementProgress();
+          completedCount++;
         } else {
           this.console.log(`[${modNumber}] Downloading: ${modName} (${convertSize(mod.file?.size)})`);
           let started = false;
@@ -252,8 +257,8 @@ export class CollectionManager {
           await this.updateHistory(type, fileId);
           if (this.aborted || runToken !== this.runToken) break;
           this.progressBar.incrementProgress();
+          completedCount++;
         }
-
         // Pause calculation between downloads
         if (index < modsList.length - 1) {
           const fileSizeKB = mod.file?.size || 1024;
@@ -297,6 +302,19 @@ export class CollectionManager {
 
       if (failedDownloads.length > 0) {
         this.console.log(`Failed to resolve ${failedDownloads.length} mod downloads.`, 'ERROR');
+        this.downloadButton.setSummary({
+          failed: failedDownloads,
+          completed: completedCount,
+          skipped: skippedCount,
+          type,
+        });
+      } else if (!this.aborted && (completedCount > 0 || skippedCount > 0)) {
+        this.downloadButton.setSummary({
+          failed: [],
+          completed: completedCount,
+          skipped: skippedCount,
+          type,
+        });
       }
     } finally {
       if (runToken === this.runToken) {
@@ -307,6 +325,7 @@ export class CollectionManager {
   }
 
   startDownload(count) {
+    this.downloadButton.setSummary(null);
     this.progressBar.setModsCount(count);
     this.progressBar.setProgress(0);
     this.progressBar.setStatus(CollectionProgressBar.STATUS_DOWNLOADING);
@@ -388,6 +407,7 @@ class CollectionDownloadButton {
         <button id="nxdtQueueBackground" class="nxdt-btn-secondary" style="flex:1; border-color:#da8e35;color:#da8e35;font-weight:600;" title="Add all collection mods to background persistent queue">⚡ Queue All to Background</button>
         <button id="nxdtVerifyDownloads" class="nxdt-btn-secondary" style="border-color:#58a6ff;color:#58a6ff;font-weight:600;" title="Scan downloads and check for missing files">🔍 Verify</button>
       </div>
+      <div id="nxdtDownloadSummary" style="display:none;"></div>
     `;
 
     const radioButtons = this.element.querySelectorAll('input[name="nxdtMethod"]');
@@ -458,6 +478,67 @@ class CollectionDownloadButton {
       rb.disabled = disabled;
     });
   }
+  setSummary(summaryData) {
+    const summaryEl = this.element.querySelector('#nxdtDownloadSummary');
+    if (!summaryEl) return;
+    if (!summaryData) {
+      summaryEl.style.display = 'none';
+      summaryEl.innerHTML = '';
+      return;
+    }
+
+    const { failed = [], completed = 0, skipped = 0, type = 'all' } = summaryData;
+    if (failed.length > 0) {
+      summaryEl.className = 'nxdt-panel-error';
+      summaryEl.style.display = 'block';
+      summaryEl.style.marginTop = '8px';
+      summaryEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
+          <span style="font-weight:600;">⚠️ ${failed.length} mod download(s) failed</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button type="button" id="nxdtOpenFailedExternal" class="nxdt-btn-sm" style="background:#292e36;color:#58a6ff;border:1px solid #444c56;cursor:pointer;" title="Open pages for failed items">Open External Links</button>
+            <button type="button" id="nxdtRetryFailed" class="nxdt-btn-sm" style="background:#da8e35;color:#fff;border:none;cursor:pointer;font-weight:600;">Retry Failed (${failed.length})</button>
+          </div>
+        </div>
+        <div class="nxdt-failed-list" style="font-size:11px;color:#f85149;max-height:80px;overflow-y:auto;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:4px;display:flex;flex-direction:column;gap:2px;">
+          ${failed
+            .map(
+              (m) =>
+                `<div>• ${m.file?.name || m.file?.mod?.name || 'Unknown Mod'}</div>`
+            )
+            .join('')}
+        </div>
+      `;
+      summaryEl.querySelector('#nxdtRetryFailed')?.addEventListener('click', () => {
+        this.manager.downloadMods(failed, type);
+      });
+      summaryEl.querySelector('#nxdtOpenFailedExternal')?.addEventListener('click', () => {
+        failed.forEach((mod) => {
+          const domain = mod.file?.mod?.game?.domainName || this.manager.gameDomain;
+          const modId = mod.file?.mod?.modId || mod.modId;
+          const url =
+            mod.file?.mod?.url ||
+            mod.sourceUrl ||
+            mod.externalUrl ||
+            (domain && modId ? `https://www.nexusmods.com/${domain}/mods/${modId}` : null);
+          if (url && typeof window !== 'undefined' && window.open) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        });
+      });
+    } else if (completed > 0 || skipped > 0) {
+      summaryEl.className = 'nxdt-panel-warn';
+      summaryEl.style.display = 'block';
+      summaryEl.style.color = '#3fb950';
+      summaryEl.style.borderColor = 'rgba(63, 185, 80, 0.4)';
+      summaryEl.style.marginTop = '8px';
+      summaryEl.textContent = `✓ Completed: ${completed} downloaded, ${skipped} skipped`;
+    } else {
+      summaryEl.style.display = 'none';
+      summaryEl.innerHTML = '';
+    }
+  }
+
 }
 
 export class CollectionProgressBar {
@@ -472,6 +553,8 @@ export class CollectionProgressBar {
     this.progress = 0;
     this.skipPause = false;
     this.status = CollectionProgressBar.STATUS_DOWNLOADING;
+    this.startTime = null;
+    this.currentModName = '';
     this.element = document.createElement('div');
     this.element.className = 'nxdt-progress-container';
     this.element.style.display = 'none';
@@ -480,6 +563,12 @@ export class CollectionProgressBar {
 
   setModsCount(count) {
     this.modsCount = count;
+    this.startTime = Date.now();
+    this.update();
+  }
+
+  setCurrentMod(name) {
+    this.currentModName = name || '';
     this.update();
   }
 
@@ -506,6 +595,10 @@ export class CollectionProgressBar {
           <span id="nxdtPercent">0%</span>
           <span id="nxdtStatusText">Downloading...</span>
           <span id="nxdtCount">0/0</span>
+        </div>
+        <div class="nxdt-progress-subline" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 11px; color: #8b949e; min-height: 16px;">
+          <span id="nxdtCurrentMod" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;"></span>
+          <span id="nxdtProgressEta"></span>
         </div>
       </div>
       <div class="nxdt-progress-actions">
@@ -544,15 +637,51 @@ export class CollectionProgressBar {
     const pctText = this.element.querySelector('#nxdtPercent');
     const cntText = this.element.querySelector('#nxdtCount');
     const statText = this.element.querySelector('#nxdtStatusText');
+    const curModText = this.element.querySelector('#nxdtCurrentMod');
+    const etaText = this.element.querySelector('#nxdtProgressEta');
 
     if (fill) fill.style.width = `${pct}%`;
     if (pctText) pctText.textContent = `${pct}%`;
     if (cntText) cntText.textContent = `${this.progress}/${this.modsCount}`;
+    if (curModText) {
+      curModText.textContent = this.currentModName ? `Mod: ${this.currentModName}` : '';
+      curModText.title = this.currentModName || '';
+    }
+
     if (statText) {
       if (this.status === CollectionProgressBar.STATUS_PAUSED) statText.textContent = 'Paused';
       else if (this.status === CollectionProgressBar.STATUS_FINISHED) statText.textContent = 'Finished';
       else if (this.status === CollectionProgressBar.STATUS_STOPPED) statText.textContent = 'Stopped';
       else statText.textContent = 'Downloading...';
+    }
+
+    if (etaText) {
+      if (
+        this.status === CollectionProgressBar.STATUS_DOWNLOADING &&
+        this.progress > 0 &&
+        this.modsCount > this.progress &&
+        this.startTime
+      ) {
+        const elapsedSec = Math.max(1, (Date.now() - this.startTime) / 1000);
+        const secPerMod = elapsedSec / this.progress;
+        const ratePerMin = ((this.progress / elapsedSec) * 60).toFixed(1);
+        const remainingSec = Math.round((this.modsCount - this.progress) * secPerMod);
+        if (remainingSec > 0 && isFinite(remainingSec)) {
+          let etaStr = '';
+          if (remainingSec < 60) {
+            etaStr = `~${remainingSec}s left`;
+          } else {
+            const m = Math.floor(remainingSec / 60);
+            const s = remainingSec % 60;
+            etaStr = `~${m}m ${s}s left`;
+          }
+          etaText.textContent = `${etaStr} • ${ratePerMin} mods/min`;
+        } else {
+          etaText.textContent = '';
+        }
+      } else {
+        etaText.textContent = '';
+      }
     }
   }
 }
@@ -632,6 +761,7 @@ export class CollectionSelectModal {
         <div class="nxdt-modal-search-bar">
           <input type="search" id="nxdtSearch" placeholder="Search mods..." />
           <button id="nxdtSelAll" class="nxdt-btn-sm">Select All</button>
+          <button id="nxdtSelMandatory" class="nxdt-btn-sm">Mandatory Only</button>
           <button id="nxdtDeselAll" class="nxdt-btn-sm">Deselect All</button>
         </div>
         <div id="nxdtModList" class="nxdt-modal-list"></div>
@@ -724,6 +854,22 @@ export class CollectionSelectModal {
       });
       updateCount();
     });
+    this.element.querySelector('#nxdtSelMandatory')?.addEventListener('click', () => {
+      this.manager.mods.all.forEach((mod) => {
+        const fileId = getModFileId(mod);
+        if (!mod.optional) {
+          checkedIds.add(fileId);
+        } else {
+          checkedIds.delete(fileId);
+        }
+      });
+      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        const fileId = cb.getAttribute('data-file-id');
+        cb.checked = checkedIds.has(fileId);
+      });
+      updateCount();
+    });
+
 
     this.element.querySelector('#nxdtDeselAll').addEventListener('click', () => {
       listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
@@ -901,9 +1047,26 @@ export class CollectionVerificationModal {
     this.element.setAttribute('data-nxdt-modal', 'true');
     this.verificationData = null;
     this.activeFilter = 'all';
+    this._handleKeydown = (e) => {
+      if (e.key === 'Escape') {
+        this.close();
+      }
+    };
+  }
+
+  close() {
+    document.removeEventListener('keydown', this._handleKeydown);
+    this.element.remove();
   }
 
   async render() {
+    document.addEventListener('keydown', this._handleKeydown);
+
+    this.element.addEventListener('click', (e) => {
+      if (e.target === this.element) {
+        this.close();
+      }
+    });
     this.element.innerHTML = `
       <div class="nxdt-modal-box" style="max-width: 600px;">
         <div class="nxdt-modal-header">
@@ -922,7 +1085,7 @@ export class CollectionVerificationModal {
       </div>
     `;
 
-    this.element.querySelector('#nxdtCloseVerifHeader')?.addEventListener('click', () => this.element.remove());
+    this.element.querySelector('#nxdtCloseVerifHeader')?.addEventListener('click', () => this.close());
 
     try {
       const modFiles = this.manager.mods.all.map((m) => ({
@@ -1066,8 +1229,8 @@ export class CollectionVerificationModal {
       this.renderReport();
     });
 
-    body.querySelector('#nxdtCloseVerif')?.addEventListener('click', () => this.element.remove());
-    body.querySelector('#nxdtCloseVerif2')?.addEventListener('click', () => this.element.remove());
+    body.querySelector('#nxdtCloseVerif')?.addEventListener('click', () => this.close());
+    body.querySelector('#nxdtCloseVerif2')?.addEventListener('click', () => this.close());
 
     body.querySelector('#nxdtDownloadMissing')?.addEventListener('click', async () => {
       const missingItems = results.filter((r) => !r.confirmed);
@@ -1087,7 +1250,7 @@ export class CollectionVerificationModal {
       try {
         await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items: itemsToQueue });
         alert(`Successfully queued ${itemsToQueue.length} missing mod(s) to the background queue!`);
-        this.element.remove();
+        this.close();
       } catch (err) {
         log.warn('Failed to enqueue missing mods', { error: err?.message });
       }

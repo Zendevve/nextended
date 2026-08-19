@@ -1,5 +1,6 @@
 import { createLogger } from '../shared/logger.js';
 import { MESSAGE_TYPES } from '../shared/constants.js';
+import { showToast } from './toast.js';
 import {
   FILES_TAB_FOOTER_SELECTOR,
   FILE_EXPANDER_HEADER_SELECTOR,
@@ -76,6 +77,44 @@ export function appendNmmParam(href) {
   return `${href}${href.includes('?') ? '&' : '?'}nmm=1`;
 }
 
+export function renderDownloadFallback(url) {
+  if (typeof document === 'undefined' || !url) return null;
+  const existing = document.querySelectorAll('[data-nxdt-fallback-notice]');
+  existing.forEach((el) => el.remove());
+
+  const isNmm = url.startsWith('nxm://');
+  const notice = document.createElement('div');
+  notice.className = 'nxdt-fallback-notice';
+  notice.setAttribute('data-nxdt-fallback-notice', 'true');
+  notice.style.cssText =
+    'display: inline-flex; align-items: center; gap: 8px; margin: 8px 0; padding: 6px 14px; background: rgba(32, 35, 39, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #444c56; border-radius: 20px; font-size: 12px; color: #e6edf3; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);';
+  notice.innerHTML = `
+    <span style="display:inline-flex;align-items:center;gap:6px;">
+      <span class="nxdt-pulse-dot" style="display:inline-block;width:6px;height:6px;background:#3fb950;border-radius:50%;"></span>
+      <span>⚡ <b>Auto-Download:</b> Countdown skipped.</span>
+    </span>
+    <a href="${url}" class="nxdt-fallback-link" ${isNmm ? '' : 'download'} style="color:#58a6ff;text-decoration:underline;cursor:pointer;margin-left:4px;">Click here if download didn't start</a>
+  `;
+
+  const slowBtn =
+    document.querySelector('#slowDownloadButton') ||
+    document.querySelector('.slow-download') ||
+    document.querySelector('#slow-download-wrap');
+  if (slowBtn && slowBtn.parentElement) {
+    slowBtn.parentElement.appendChild(notice);
+  } else {
+    const mainArea =
+      document.querySelector('.accordion-downloads') ||
+      document.querySelector('.files-tab') ||
+      document.querySelector('.main') ||
+      document.body;
+    if (mainArea) {
+      mainArea.appendChild(notice);
+    }
+  }
+  return notice;
+}
+
 export function triggerDownload(url) {
   if (!url) return;
   if (url.startsWith('nxm://')) {
@@ -84,10 +123,19 @@ export function triggerDownload(url) {
     iframe.src = url;
     document.body.appendChild(iframe);
     setTimeout(() => {
-      try { iframe.remove(); } catch { /* removed */ }
+      try {
+        iframe.remove();
+      } catch {
+        /* removed */
+      }
     }, 30000);
   } else {
     window.location.assign(url);
+  }
+  try {
+    renderDownloadFallback(url);
+  } catch {
+    // ignore in non-DOM environment
   }
 }
 
@@ -110,6 +158,7 @@ export function resolveAndStartDownload(fileId, isNMM, href) {
       const nxmUrl = `nxm://${gameSlug}/mods/${modId}/files/${fileId}`;
       log.info('Auto-triggering NXM download', { nxmUrl, from: href });
       triggerDownload(nxmUrl);
+      showToast('⚡ Auto-started NXM download (countdown bypassed)', 'info');
       return Promise.resolve(true);
     }
     return Promise.resolve(false);
@@ -144,6 +193,7 @@ export function resolveAndStartDownload(fileId, isNMM, href) {
               host: safeUrlHost(res.result.url),
             });
             triggerDownload(res.result.url);
+            showToast('⚡ Auto-started download (countdown bypassed)', 'info');
             return finish(true);
           }
           log.warn('Failed to resolve archived download', {
@@ -179,7 +229,11 @@ export function autoStartDownload(settings = {}) {
     }
     if (settings.autoCloseTab) {
       setTimeout(() => {
-        try { window.close(); } catch { /* ignore */ }
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
       }, settings.closeTabDelay || 2000);
     }
   });
@@ -210,7 +264,11 @@ export function setupSlowDownloadIntercept(settings = {}) {
     }
     if (settings.autoCloseTab) {
       setTimeout(() => {
-        try { window.close(); } catch { /* ignore */ }
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
       }, settings.closeTabDelay || 2000);
     }
   };
@@ -228,7 +286,11 @@ export function setupSlowDownloadIntercept(settings = {}) {
       }
       if (settings.autoCloseTab) {
         setTimeout(() => {
-          try { window.close(); } catch { /* ignore */ }
+          try {
+            window.close();
+          } catch {
+            /* ignore */
+          }
         }, settings.closeTabDelay || 2000);
       }
     });
@@ -470,4 +532,7 @@ export function resetNoWaitState() {
   removeArchivedInjected();
   removeForceInjected();
   removeSlowDownloadIntercepts();
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('[data-nxdt-fallback-notice]').forEach((el) => el.remove());
+  }
 }

@@ -1,11 +1,13 @@
 import { MESSAGE_TYPES } from '../shared/constants.js';
 import { createLogger } from '../shared/logger.js';
+import { showToast } from './toast.js';
 
 const log = createLogger('requirements-bundler');
 
 export class RequirementsBundler {
   constructor() {
     this.modal = null;
+    this._keyDownHandler = null;
   }
 
   isModPage() {
@@ -39,7 +41,6 @@ export class RequirementsBundler {
     btn.type = 'button';
     btn.className = 'btn inline-flex nxdt-bundle-trigger-btn';
     btn.setAttribute('data-nxdt-bundle-btn', 'true');
-    btn.style.cssText = 'background: #da8e35; color: #fff; margin: 4px 8px; font-weight: 600; cursor: pointer; border-radius: 4px; padding: 6px 14px; border: none;';
     btn.innerHTML = `<span class="flex-label">📦 Download Mod + Requirements</span>`;
 
     btn.addEventListener('click', (e) => {
@@ -82,41 +83,68 @@ export class RequirementsBundler {
     return reqs;
   }
 
+  closeModal() {
+    if (this._keyDownHandler) {
+      document.removeEventListener('keydown', this._keyDownHandler);
+      this._keyDownHandler = null;
+    }
+    if (this.modal) {
+      this.modal.remove();
+      this.modal = null;
+    }
+  }
+
   async openRequirementsModal() {
     const { gameDomain, modId, modName } = this.getModDetailsFromPage();
     const requirements = this.parseRequirementsFromPage();
 
-    if (this.modal) this.modal.remove();
+    this.closeModal();
+
+    const nexusCount = requirements.filter((r) => !r.isOffsite).length;
+    const totalCount = requirements.length;
 
     this.modal = document.createElement('div');
     this.modal.className = 'nxdt-modal-overlay';
+    this.modal.setAttribute('data-nxdt-modal', 'true');
     this.modal.innerHTML = `
       <div class="nxdt-modal-box">
         <div class="nxdt-modal-header">
           <h3>📦 Smart Requirements Bundler</h3>
-          <button class="nxdt-modal-close" id="nxdt-req-close">✕</button>
+          <button class="nxdt-modal-close" id="nxdt-req-close" aria-label="Close">✕</button>
         </div>
         <div class="nxdt-modal-body">
           <p class="nxdt-modal-desc">
             Mod: <b>${modName}</b> (Game: <code>${gameDomain}</code>)
           </p>
-          <div class="nxdt-req-section-title">Requirements & Dependencies (${requirements.length}):</div>
           ${
-            requirements.length === 0
+            totalCount === 0
               ? `<div class="nxdt-empty-notice">No external requirements found on this page. Mod will be queued directly.</div>`
               : `
-              <div class="nxdt-req-list">
+              <div class="nxdt-modal-search-bar">
+                <input type="search" id="nxdt-req-search" class="nxdt-req-search" placeholder="Filter requirements..." />
+              </div>
+              <div class="nxdt-req-toolbar" style="display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap;">
+                <button type="button" class="nxdt-btn-sm" id="nxdt-req-select-all">Select All (${totalCount})</button>
+                <button type="button" class="nxdt-btn-sm" id="nxdt-req-select-nexus">Select Nexus Only (${nexusCount})</button>
+                <button type="button" class="nxdt-btn-sm" id="nxdt-req-deselect-all">Deselect All (0)</button>
+              </div>
+              <div class="nxdt-req-section-title">Requirements & Dependencies (<span id="nxdt-req-count">${totalCount}</span>):</div>
+              <div class="nxdt-req-list nxdt-modal-list">
                 ${requirements
                   .map(
                     (req, idx) => `
-                  <label class="nxdt-req-item ${req.isOffsite ? 'nxdt-offsite' : ''}">
-                    <input type="checkbox" data-idx="${idx}" ${req.selected ? 'checked' : ''} />
-                    <span class="nxdt-req-name">${req.name}</span>
-                    ${
-                      req.isOffsite
-                        ? `<span class="nxdt-pill-tag nxdt-pill-offsite">Off-Site ↗</span>`
-                        : `<span class="nxdt-pill-tag nxdt-pill-nexus">Nexus</span>`
-                    }
+                  <label class="nxdt-req-item nxdt-modal-row ${req.isOffsite ? 'nxdt-offsite' : ''}" data-idx="${idx}">
+                    <div class="nxdt-modal-row-left">
+                      <input type="checkbox" data-idx="${idx}" ${req.selected ? 'checked' : ''} />
+                      <span class="nxdt-req-name nxdt-modal-row-title">${req.name}</span>
+                    </div>
+                    <div class="nxdt-modal-row-right">
+                      ${
+                        req.isOffsite
+                          ? `<span class="nxdt-pill-tag nxdt-pill-offsite nxdt-tag-optional">Off-Site ↗</span>`
+                          : `<span class="nxdt-pill-tag nxdt-pill-nexus nxdt-tag-mandatory">Nexus</span>`
+                      }
+                    </div>
                   </label>
                 `
                   )
@@ -126,25 +154,88 @@ export class RequirementsBundler {
           }
         </div>
         <div class="nxdt-modal-footer">
-          <button class="nxdt-btn nxdt-btn-dark" id="nxdt-req-cancel">Cancel</button>
-          <button class="nxdt-btn nxdt-btn-amber" id="nxdt-req-enqueue">⚡ Queue Selected to Background</button>
+          <button class="nxdt-btn nxdt-btn-dark nxdt-btn-secondary" id="nxdt-req-cancel">Cancel</button>
+          <button class="nxdt-btn nxdt-btn-amber nxdt-btn-primary" id="nxdt-req-enqueue">⚡ Queue Selected to Background</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(this.modal);
 
-    const close = () => {
-      if (this.modal) {
-        this.modal.remove();
-        this.modal = null;
+    const close = () => this.closeModal();
+
+    this._keyDownHandler = (e) => {
+      if (e.key === 'Escape') {
+        close();
       }
     };
+    document.addEventListener('keydown', this._keyDownHandler);
+
+    this.modal.addEventListener('click', (e) => {
+      if (e.target === this.modal) {
+        close();
+      }
+    });
 
     this.modal.querySelector('#nxdt-req-close')?.addEventListener('click', close);
     this.modal.querySelector('#nxdt-req-cancel')?.addEventListener('click', close);
 
-    this.modal.querySelector('#nxdt-req-enqueue')?.addEventListener('click', async () => {
+    const updateCountBadge = () => {
+      const countSpan = this.modal?.querySelector('#nxdt-req-count');
+      if (!countSpan) return;
+      const checked = this.modal.querySelectorAll('.nxdt-req-item input[type="checkbox"]:checked').length;
+      countSpan.textContent = String(checked);
+    };
+
+    this.modal.querySelectorAll('.nxdt-req-item input[type="checkbox"]').forEach((cb) => {
+      cb.addEventListener('change', updateCountBadge);
+    });
+
+    // Search filter input
+    const searchInput = this.modal.querySelector('#nxdt-req-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase().trim();
+        const items = this.modal.querySelectorAll('.nxdt-req-item');
+        items.forEach((item) => {
+          const name = item.querySelector('.nxdt-req-name')?.textContent || '';
+          if (!q || name.toLowerCase().includes(q)) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    }
+
+    // Quick-select toolbar buttons
+    this.modal.querySelector('#nxdt-req-select-all')?.addEventListener('click', () => {
+      this.modal.querySelectorAll('.nxdt-req-item input[type="checkbox"]').forEach((cb) => {
+        cb.checked = true;
+      });
+      updateCountBadge();
+    });
+
+    this.modal.querySelector('#nxdt-req-select-nexus')?.addEventListener('click', () => {
+      requirements.forEach((req, idx) => {
+        const cb = this.modal.querySelector(`input[data-idx="${idx}"]`);
+        if (cb) {
+          cb.checked = !req.isOffsite;
+        }
+      });
+      updateCountBadge();
+    });
+
+    this.modal.querySelector('#nxdt-req-deselect-all')?.addEventListener('click', () => {
+      this.modal.querySelectorAll('.nxdt-req-item input[type="checkbox"]').forEach((cb) => {
+        cb.checked = false;
+      });
+      updateCountBadge();
+    });
+    const enqueueBtn = this.modal.querySelector('#nxdt-req-enqueue');
+    const cancelBtn = this.modal.querySelector('#nxdt-req-cancel');
+
+    enqueueBtn?.addEventListener('click', async () => {
       const itemsToQueue = [];
 
       // Main mod
@@ -174,14 +265,27 @@ export class RequirementsBundler {
         }
       });
 
+      if (enqueueBtn) {
+        enqueueBtn.disabled = true;
+        enqueueBtn.textContent = '⚡ Enqueuing...';
+      }
+      if (cancelBtn) {
+        cancelBtn.disabled = true;
+      }
+
       try {
         await chrome.runtime.sendMessage({
           type: MESSAGE_TYPES.ENQUEUE_ITEMS,
           payload: { items: itemsToQueue },
         });
         log.info('Queued requirements bundle', { count: itemsToQueue.length });
+        showToast(
+          `Queued ${itemsToQueue.length} ${itemsToQueue.length === 1 ? 'mod' : 'mods'} to background download`,
+          'success'
+        );
       } catch (err) {
         log.warn('Failed to enqueue requirements', { error: err?.message });
+        showToast('Failed to queue requirements', 'warning');
       }
 
       close();

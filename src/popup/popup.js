@@ -61,7 +61,10 @@ function renderDot(alive, settings) {
   const el = document.getElementById('status-dot');
   if (!el) return;
   const enabled = settings.enabled !== false;
-  el.classList.toggle('inactive', !alive || !enabled);
+  const active = alive && enabled;
+  el.classList.toggle('inactive', !active);
+  el.setAttribute('title', active ? 'Service Worker Active' : 'Service Worker Inactive');
+  el.setAttribute('aria-label', active ? 'Service Worker Active' : 'Service Worker Inactive');
 }
 
 function renderSite(tab) {
