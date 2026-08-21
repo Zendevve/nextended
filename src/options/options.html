@@ -93,13 +93,10 @@
     <!-- Category Tab Bar -->
     <nav class="tabs-nav" aria-label="Settings Categories">
       <div class="tabs-bar" role="tablist" aria-label="Settings Categories">
-        <button type="button" role="tab" id="tab-all" class="tab-btn active" aria-selected="true" aria-controls="section-general section-automation section-queue section-inpage section-organize section-inventory section-advanced" tabindex="0">All Settings</button>
+        <button type="button" role="tab" id="tab-all" class="tab-btn active" aria-selected="true" aria-controls="section-general section-collections section-nowait section-advanced" tabindex="0">All Settings</button>
         <button type="button" role="tab" id="tab-general" class="tab-btn" aria-selected="false" aria-controls="section-general" tabindex="-1">General</button>
-        <button type="button" role="tab" id="tab-automation" class="tab-btn" aria-selected="false" aria-controls="section-automation" tabindex="-1">Automation</button>
-        <button type="button" role="tab" id="tab-queue" class="tab-btn" aria-selected="false" aria-controls="section-queue" tabindex="-1">Queue & Limits</button>
-        <button type="button" role="tab" id="tab-inpage" class="tab-btn" aria-selected="false" aria-controls="section-inpage" tabindex="-1">In-Page UX</button>
-        <button type="button" role="tab" id="tab-organize" class="tab-btn" aria-selected="false" aria-controls="section-organize" tabindex="-1">Organization</button>
-        <button type="button" role="tab" id="tab-inventory" class="tab-btn" aria-selected="false" aria-controls="section-inventory" tabindex="-1">Load Order & Inventory</button>
+        <button type="button" role="tab" id="tab-collections" class="tab-btn" aria-selected="false" aria-controls="section-collections" tabindex="-1">Collections</button>
+        <button type="button" role="tab" id="tab-nowait" class="tab-btn" aria-selected="false" aria-controls="section-nowait" tabindex="-1">No-Wait & Downloads</button>
         <button type="button" role="tab" id="tab-advanced" class="tab-btn" aria-selected="false" aria-controls="section-advanced" tabindex="-1">Advanced</button>
       </div>
     </nav>
@@ -116,20 +113,78 @@
             <span class="control-hint">Master switch for all download tools and enhancements</span>
           </div>
         </label>
+      </div>
+    </section>
+
+    <!-- Section 2: Collection Downloader -->
+    <section id="section-collections" class="settings-section" role="tabpanel" aria-labelledby="tab-collections" tabindex="0">
+      <h2>Collection Downloader</h2>
+      <div class="section-card">
         <label class="switch">
           <input type="checkbox" name="handleCollections" />
           <span class="slider"></span>
           <div class="control-text">
             <span class="control-title">Handle Collection Downloads</span>
-            <span class="control-hint">Injects the collection bulk download suite on collection pages</span>
+            <span class="control-hint">Injects the 1-click collection download suite on collection pages</span>
           </div>
         </label>
+        <label class="switch">
+          <input type="checkbox" name="collectionSafetyPause" />
+          <span class="slider"></span>
+          <div class="control-text">
+            <span class="control-title">Rate Limiter Safety Pause</span>
+            <span class="control-hint">Pauses 5 minutes if 200 downloads are reached in 5 minutes to prevent Nexus temporary suspension</span>
+          </div>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="collectionAutoSkipDownloaded" />
+          <span class="slider"></span>
+          <div class="control-text">
+            <span class="control-title">Auto-Skip Already Downloaded Mods</span>
+            <span class="control-hint">Automatically bypasses downloading files recorded in collection history</span>
+          </div>
+        </label>
+        <label class="input-row">
+          <div class="control-text">
+            <span class="control-title">Extra pause between downloads (seconds)</span>
+            <span class="control-hint">Base waiting delay before starting the next collection file</span>
+          </div>
+          <input type="number" name="collectionPauseBetweenDownload" min="0" max="60" />
+        </label>
+        <label class="input-row">
+          <div class="control-text">
+            <span class="control-title">Download speed reference (MB/s)</span>
+            <span class="control-hint">Used to calculate dynamic pacing pauses based on mod file size</span>
+          </div>
+          <input type="number" name="collectionDownloadSpeed" step="0.1" min="0.1" max="100" />
+        </label>
+        <div class="input-group-vertical">
+          <span class="group-label">Default Collection Download Method</span>
+          <div class="radio-group-container">
+            <div class="radio-options">
+              <label class="radio-option">
+                <input type="radio" name="collectionDownloadMethod" value="0" />
+                <div class="control-text">
+                  <span class="control-title">Send to Vortex / Mod Organizer 2 (NXM Protocol)</span>
+                  <span class="control-hint">Dispatches downloads straight to your mod manager</span>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="collectionDownloadMethod" value="1" />
+                <div class="control-text">
+                  <span class="control-title">Browser Direct Download</span>
+                  <span class="control-hint">Downloads archives directly via your browser</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Section 2: Automation -->
-    <section id="section-automation" class="settings-section" role="tabpanel" aria-labelledby="tab-automation" tabindex="0">
-      <h2>Automation</h2>
+    <!-- Section 3: No-Wait & Auto-Downloads -->
+    <section id="section-nowait" class="settings-section" role="tabpanel" aria-labelledby="tab-nowait" tabindex="0">
+      <h2>No-Wait & Auto-Downloads</h2>
       <div class="section-card">
         <label class="switch">
           <input type="checkbox" name="autoStartDownload" />
@@ -159,8 +214,24 @@
           <input type="checkbox" name="handleArchivedFiles" />
           <span class="slider"></span>
           <div class="control-text">
-            <span class="control-title">Inject Buttons for Archived Files</span>
-            <span class="control-hint">Generates direct download links for archived/legacy file versions</span>
+            <span class="control-title">Inject Download Buttons for Archived Files</span>
+            <span class="control-hint">Restores direct Mod Manager and Manual download buttons on archived file listings</span>
+          </div>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="downloadButtonColor" />
+          <span class="slider"></span>
+          <div class="control-text">
+            <span class="control-title">Color Download Buttons by Status</span>
+            <span class="control-hint">Tints buttons orange (waiting), green (downloading), or red (error)</span>
+          </div>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="vpnMode" />
+          <span class="slider"></span>
+          <div class="control-text">
+            <span class="control-title">VPN / Cloudflare Fallback Mode</span>
+            <span class="control-hint">Directly redirects browser tab to solve Cloudflare challenge if background request is blocked</span>
           </div>
         </label>
         <label class="switch">
@@ -181,139 +252,7 @@
       </div>
     </section>
 
-    <!-- Section 3: Bulk Queue & Concurrency -->
-    <section id="section-queue" class="settings-section" role="tabpanel" aria-labelledby="tab-queue" tabindex="0">
-      <h2>Bulk Queue & Concurrency</h2>
-      <div class="section-card">
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Max concurrent downloads (1-5 slots)</span>
-            <span class="control-hint">Number of simultaneous downloads allowed</span>
-          </div>
-          <input type="number" name="maxConcurrentDownloads" min="1" max="5" />
-        </label>
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Auto-retry attempts on failure</span>
-            <span class="control-hint">Retries failed downloads before reporting error</span>
-          </div>
-          <input type="number" name="retryAttempts" min="0" max="10" />
-        </label>
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Retry backoff base delay (ms)</span>
-            <span class="control-hint">Base waiting time before retrying a failed download</span>
-          </div>
-          <input type="number" name="retryBackoffBaseMs" min="500" max="30000" />
-        </label>
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Pause between downloads (seconds)</span>
-            <span class="control-hint">Delay between consecutive queue items</span>
-          </div>
-          <input type="number" name="collectionPauseBetweenDownload" min="0" max="60" />
-        </label>
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Download speed pacing (MB/s)</span>
-            <span class="control-hint">Speed pacing benchmark (0 for unrestricted)</span>
-          </div>
-          <input type="number" name="collectionDownloadSpeed" step="0.1" min="0" max="100" />
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="notifyOnQueueCompletion" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Desktop notification on queue complete</span>
-            <span class="control-hint">Shows browser notification when all queued items finish</span>
-          </div>
-        </label>
-        <div class="input-group-vertical">
-          <span class="group-label">Collection download method</span>
-          <div class="radio-group-container">
-            <div class="radio-options">
-              <label class="radio-option">
-                <input type="radio" name="collectionDownloadMethod" value="0" />
-                <div class="control-text">
-                  <span class="control-title">Send to Vortex / MO2 (NXM Protocol)</span>
-                  <span class="control-hint">Dispatches downloads straight to your mod manager</span>
-                </div>
-              </label>
-              <label class="radio-option">
-                <input type="radio" name="collectionDownloadMethod" value="1" />
-                <div class="control-text">
-                  <span class="control-title">Browser Direct Download</span>
-                  <span class="control-hint">Downloads archives directly via your browser</span>
-                </div>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section 4: In-Page Features & Browsing -->
-    <section id="section-inpage" class="settings-section" role="tabpanel" aria-labelledby="tab-inpage" tabindex="0">
-      <h2>In-Page Features & Browsing</h2>
-      <div class="section-card">
-        <label class="switch">
-          <input type="checkbox" name="enableSearchCardButtons" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Inject Quick-Download buttons on search/browse cards</span>
-            <span class="control-hint">Download main files directly from search result cards</span>
-          </div>
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="enableRequirementsBundler" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Enable Smart Requirements Bundler on mod pages</span>
-            <span class="control-hint">Batch download all required mods with a single action</span>
-          </div>
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="enableArchiveInspector" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Enable Inline Archive Inspector</span>
-            <span class="control-hint">Preview zip/7z archive contents without leaving the page</span>
-          </div>
-        </label>
-      </div>
-    </section>
-
-    <!-- Section 5: File Organization & Mod Manager -->
-    <section id="section-organize" class="settings-section" role="tabpanel" aria-labelledby="tab-organize" tabindex="0">
-      <h2>File Organization & MO2</h2>
-      <div class="section-card">
-        <label class="switch">
-          <input type="checkbox" name="organizedDownloads" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Organize downloads into game & mod subfolders</span>
-            <span class="control-hint">Automatically saves files into organized directories</span>
-          </div>
-        </label>
-        <label class="input-row">
-          <div class="control-text">
-            <span class="control-title">Folder template</span>
-            <span class="control-hint">Available tags: {game}, {mod_name}, {mod_id}, {file_id}</span>
-          </div>
-          <input type="text" name="downloadFolderTemplate" style="width: 240px;" placeholder="NexusMods/{game}/{mod_name}" />
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="generateMo2Meta" />
-          <span class="slider"></span>
-          <div class="control-text">
-            <span class="control-title">Generate MO2-compatible .meta files alongside archives</span>
-            <span class="control-hint">Creates Mod Organizer 2 metadata files for direct mod manager imports</span>
-          </div>
-        </label>
-      </div>
-    </section>
-
-    <!-- Section 6: Advanced -->
+    <!-- Section 4: Advanced -->
     <section id="section-advanced" class="settings-section" role="tabpanel" aria-labelledby="tab-advanced" tabindex="0">
       <h2>Advanced</h2>
       <div class="section-card">
@@ -335,42 +274,6 @@
       </div>
     </section>
 
-    <!-- Section 7: Load Order & Local Inventory -->
-    <section id="section-inventory" class="settings-section" role="tabpanel" aria-labelledby="tab-inventory" tabindex="0">
-      <h2>Load Order & Mod Inventory Sync</h2>
-      <div class="section-card">
-        <div class="input-row">
-          <div class="control-text">
-            <span class="control-title">Game Domain</span>
-            <span class="control-hint">Nexus game domain name (e.g. skyrimspecialedition, fallout4, starfield)</span>
-          </div>
-          <input type="text" id="inv-game-domain" style="width: 200px;" placeholder="skyrimspecialedition" value="skyrimspecialedition" />
-        </div>
-
-        <div class="input-row">
-          <div class="control-text">
-            <span class="control-title">Mod Manager Format</span>
-            <span class="control-hint">Select the format of the modlist or export you are pasting</span>
-          </div>
-          <select id="inv-manager-type" style="background: var(--nexus-bg-input); border: 1px solid var(--nexus-border-medium); color: var(--nexus-text-bright); padding: 6px 10px; border-radius: var(--nexus-radius); font-family: var(--nexus-font);">
-            <option value="mo2">Mod Organizer 2 (modlist.txt)</option>
-            <option value="vortex">Vortex (Export JSON)</option>
-            <option value="custom">Generic List (1 per line)</option>
-          </select>
-        </div>
-
-        <div class="input-group-vertical">
-          <span class="group-label">Paste Mod List Content</span>
-          <textarea id="inv-paste-area" rows="6" placeholder="Paste lines from MO2 modlist.txt (+ModName) or Vortex export JSON..." style="width: 100%; background: var(--nexus-bg-input); border: 1px solid var(--nexus-border-medium); border-radius: var(--nexus-radius); color: var(--nexus-text-bright); font-family: monospace; font-size: 11.5px; padding: 8px 10px; box-sizing: border-box; resize: vertical;"></textarea>
-        </div>
-
-        <div style="display: flex; gap: 8px; margin: 12px 0 6px 0; align-items: center; flex-wrap: wrap;">
-          <button id="import-inv-btn" type="button" class="btn-primary" style="font-size: 11px; padding: 6px 14px;">Import & Index Inventory</button>
-          <button id="clear-inv-btn" type="button" class="btn-secondary" style="font-size: 11px; padding: 6px 14px;">Clear Game Inventory</button>
-          <span id="inv-status-msg" style="font-size: 11.5px; color: var(--nexus-orange); font-weight: 600;"></span>
-        </div>
-      </div>
-    </section>
 
     <!-- Support & Donation Card -->
     <section class="support-card" aria-labelledby="support-heading">

@@ -2,12 +2,6 @@ import { extractCollectionDetails } from './collection-detector.js';
 import { CollectionManager } from './collection-ui.js';
 import { createPageObserver } from './page-observer.js';
 import { applyNoWaitFeatures, resetNoWaitState, triggerDownload } from './no-wait.js';
-import { FloatingDrawer } from './floating-drawer.js';
-import { RequirementsBundler } from './requirements-bundler.js';
-import { SearchCardActions } from './search-card-actions.js';
-import { ArchiveInspector } from './archive-inspector.js';
-import { InventoryAnnotator } from './inventory-sync.js';
-import { CompatibilityRadar } from './compatibility-radar.js';
 import { getSettings } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
 import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../shared/constants.js';
@@ -22,12 +16,6 @@ const log = createLogger('content');
 
 const NEXUS_HOST_REGEX = /^https:\/\/(?:www\.)?nexusmods\.com\//i;
 
-const floatingDrawer = new FloatingDrawer();
-const requirementsBundler = new RequirementsBundler();
-const searchCardActions = new SearchCardActions();
-const archiveInspector = new ArchiveInspector();
-const inventoryAnnotator = new InventoryAnnotator();
-const compatibilityRadar = new CompatibilityRadar();
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message && message.type === MESSAGE_TYPES.FOCUS_COLLECTION_PANEL) {
     const panel = document.querySelector(COLLECTION_PANEL_SELECTOR);
@@ -41,11 +29,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     } else {
       sendResponse({ ok: false });
     }
-  } else if (message && message.type === 'NXDT_TRIGGER_NXM' && message.url) {
+  } else if (message && message.type === 'NXDT_TRIGGER_NXM' && typeof message.url === 'string' && message.url.startsWith('nxm://')) {
     triggerDownload(message.url);
-    sendResponse({ ok: true });
-  } else if (message && message.type === MESSAGE_TYPES.TOGGLE_DRAWER) {
-    floatingDrawer.toggle();
     sendResponse({ ok: true });
   }
   return false;
@@ -94,20 +79,7 @@ function processCollectionPage() {
 function processInPageFeatures() {
   if (!currentSettings || currentSettings.enabled === false) return;
   applyNoWaitFeatures(currentSettings);
-
-  if (currentSettings.enableRequirementsBundler) {
-    requirementsBundler.injectBundleButton();
-  }
-  if (currentSettings.enableSearchCardButtons) {
-    searchCardActions.processCards();
-  }
-  if (currentSettings.enableArchiveInspector) {
-    archiveInspector.processFiles();
-  }
-  inventoryAnnotator.run().catch(() => {});
-  compatibilityRadar.renderRadar().catch(() => {});
 }
-
 async function init() {
   if (!NEXUS_HOST_REGEX.test(window.location.href)) return;
 
@@ -119,15 +91,30 @@ async function init() {
       handleCollections: true,
       autoStartDownload: true,
       skipRequirements: true,
-      enableRequirementsBundler: true,
-      enableSearchCardButtons: true,
-      enableArchiveInspector: true,
+      handleArchivedFiles: true,
+      forceModManagerDownload: true,
     };
   }
 
-  floatingDrawer.init();
   processInPageFeatures();
   processCollectionPage();
+
+  const onUrlChange = () => {
+    processCollectionPage();
+    processInPageFeatures();
+  };
+
+  window.addEventListener('popstate', onUrlChange);
+  const originalPush = history.pushState;
+  const originalReplace = history.replaceState;
+  history.pushState = function (...args) {
+    originalPush.apply(this, args);
+    onUrlChange();
+  };
+  history.replaceState = function (...args) {
+    originalReplace.apply(this, args);
+    onUrlChange();
+  };
 
   observer = createPageObserver(() => {
     processCollectionPage();
@@ -145,7 +132,6 @@ async function init() {
     });
     oo.observe(document.documentElement, { childList: true, subtree: true });
   }
-
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
       currentSettings = {

@@ -12,19 +12,20 @@ describe('Presets', () => {
 
   it('configures Collection Hoarder for high throughput', () => {
     const hoarder = PRESETS[PRESET_PROFILES.COLLECTION_HOARDER];
-    expect(hoarder.settings.maxConcurrentDownloads).toBe(4);
-    expect(hoarder.settings.retryAttempts).toBe(5);
     expect(hoarder.settings.collectionDownloadMethod).toBe(1);
+    expect(hoarder.settings.collectionPauseBetweenDownload).toBe(1.0);
+    expect(hoarder.settings.collectionSafetyPause).toBe(true);
   });
 
   it('configures Free-Tier for gentle safety', () => {
     const free = PRESETS[PRESET_PROFILES.FREE_TIER];
-    expect(free.settings.maxConcurrentDownloads).toBe(1);
-    expect(free.settings.collectionPauseBetweenDownload).toBe(3.0);
+    expect(free.settings.collectionPauseBetweenDownload).toBe(5.0);
+    expect(free.settings.collectionSafetyPause).toBe(true);
   });
 
-  it('configures MO2 Power User for .meta generation', () => {
+  it('configures MO2 Power User for NXM dispatch', () => {
     const mo2 = PRESETS[PRESET_PROFILES.MO2_POWER_USER];
-    expect(mo2.settings.generateMo2Meta).toBe(true);
+    expect(mo2.settings.forceModManagerDownload).toBe(true);
+    expect(mo2.settings.collectionDownloadMethod).toBe(0);
   });
 });

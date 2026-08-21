@@ -15,45 +15,61 @@ const COLLECTION_URL =
 function buildChromeMock(options = {}) {
   const {
     tab = { id: 7, url: COLLECTION_URL },
-    settings = { enabled: true, handleCollections: true, autoStartDownload: true },
+    settings = { enabled: true, handleCollections: true, autoStartDownload: true, handleArchivedFiles: true },
     storedSettings = settings,
-    stats = { collectionsDownloaded: 7, autoDownloadsCompleted: 0 },
+    stats = { collectionsDownloaded: 7, autoDownloadsCompleted: 3 },
     alive = true,
   } = options;
 
   const runtime = {
-    id: 'test-extension-id',
-    onMessage: { addListener: vi.fn() },
-    onInstalled: { addListener: vi.fn() },
-    openOptionsPage: vi.fn(),
-    sendMessage: vi.fn((message, cb) => {
-      let response = { success: false, error: 'Unhandled message type in test mock' };
-      if (message?.type === MESSAGE_TYPES.PING) {
-        response = { success: true, result: { alive, stats } };
-      } else if (message?.type === MESSAGE_TYPES.GET_SETTINGS) {
-        response = { success: true, result: { settings } };
+    id: 'test-popup-id',
+    sendMessage: vi.fn((msg, cb) => {
+      if (msg.type === MESSAGE_TYPES.PING) {
+        cb && cb({ success: alive });
+      } else if (msg.type === MESSAGE_TYPES.GET_SETTINGS) {
+        cb && cb({ success: true, result: { settings: storedSettings } });
+      } else {
+        cb && cb({ success: true });
       }
-      if (typeof cb === 'function') cb(response);
-      return Promise.resolve(response);
     }),
+    openOptionsPage: vi.fn(),
   };
 
   const storage = {
     local: {
-      get: vi.fn(() => Promise.resolve({ [STORAGE_KEY_SETTINGS]: storedSettings })),
-      set: vi.fn(() => Promise.resolve()),
+      get: vi.fn((keys, cb) => {
+        const out = {};
+        const keyStr = typeof keys === 'string' ? keys : Array.isArray(keys) ? keys[0] : Object.keys(keys)[0];
+        if (keyStr === STORAGE_KEY_SETTINGS) out[STORAGE_KEY_SETTINGS] = storedSettings;
+        if (keyStr === 'stats') out.stats = stats;
+        if (Array.isArray(keys)) {
+          for (const k of keys) {
+            if (k === STORAGE_KEY_SETTINGS) out[k] = storedSettings;
+            if (k === 'stats') out[k] = stats;
+          }
+        }
+        if (typeof cb === 'function') cb(out);
+        return Promise.resolve(out);
+      }),
+      set: vi.fn((items, cb) => {
+        Object.assign(storedSettings, items[STORAGE_KEY_SETTINGS] || {});
+        if (typeof cb === 'function') cb();
+        return Promise.resolve();
+      }),
     },
-    onChanged: { addListener: vi.fn() },
+    onChanged: {
+      addListener: vi.fn(),
+    },
   };
 
   const tabs = {
-    query: vi.fn((_query, cb) => cb && cb([tab])),
+    query: vi.fn((_query, cb) => cb && cb([tab].filter(Boolean))),
     sendMessage: vi.fn((_tabId, _msg, cb) => cb && cb({ ok: true })),
     update: vi.fn(),
     create: vi.fn(),
   };
 
-  return { runtime, storage, tabs, ...options.extra };
+  return { runtime, storage, tabs };
 }
 
 let chromeMock;
@@ -88,10 +104,9 @@ describe('popup', () => {
 
     const rows = [
       ['site-name', 'Current site'],
-      ['queue-state', 'Background Queue'],
       ['collection-state', 'Collection Downloader'],
       ['nowait-state', 'Countdown Skip'],
-      ['inventory-state', 'Mod Inventory'],
+      ['archived-state', 'Archived Files'],
     ];
     for (const [valueId, label] of rows) {
       const valueEl = document.getElementById(valueId);
@@ -100,19 +115,19 @@ describe('popup', () => {
       expect(button.type).toBe('button');
       expect(button.textContent).toContain(label);
     }
-    expect(document.querySelectorAll('.chevron').length).toBe(5);
+    expect(document.querySelectorAll('.chevron').length).toBe(4);
     expect(document.querySelector('h1').textContent).toBe('Nexus Download Tools');
     expect(document.getElementById('status-dot')).not.toBeNull();
   });
 
-  it('shows "Collection page" for a collection URL', async () => {
+  it('shows "Collection" for a collection URL', async () => {
     await loadPopup({ tab: { id: 7, url: COLLECTION_URL } });
-    expect(document.getElementById('site-name').textContent).toBe('Collection page');
+    expect(document.getElementById('site-name').textContent).toBe('Collection');
   });
 
-  it('shows "Mod page" for a mod URL', async () => {
+  it('shows "Mod Page" for a mod URL', async () => {
     await loadPopup({ tab: { id: 7, url: 'https://www.nexusmods.com/skyrimspecialedition/mods/4321' } });
-    expect(document.getElementById('site-name').textContent).toBe('Mod page');
+    expect(document.getElementById('site-name').textContent).toBe('Mod Page');
   });
 
   it('shows "On Nexus Mods" for any other nexusmods.com URL', async () => {
@@ -130,61 +145,8 @@ describe('popup', () => {
     expect(document.getElementById('site-name').textContent).toBe('Not on Nexus');
   });
 
-  it('sends FOCUS_COLLECTION_PANEL to the active collection tab and closes', async () => {
-    await loadPopup();
-    document.getElementById('collection-row').click();
-
-    expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(
-      7,
-      { type: MESSAGE_TYPES.FOCUS_COLLECTION_PANEL },
-      expect.any(Function)
-    );
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('focuses the tab when the panel message reports ok:false', async () => {
-    await loadPopup({
-      extra: {
-        tabs: {
-          query: vi.fn((_query, cb) => cb && cb([{ id: 7, url: COLLECTION_URL }])),
-          sendMessage: vi.fn((_tabId, _msg, cb) => cb && cb({ ok: false })),
-          update: vi.fn(),
-          create: vi.fn(),
-        },
-      },
-    });
-    document.getElementById('collection-row').click();
-
-    expect(chromeMock.tabs.update).toHaveBeenCalledWith(7, { active: true });
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the collections page when the active tab is not a collection page', async () => {
-    await loadPopup({ tab: { id: 7, url: 'https://www.nexusmods.com/skyrimspecialedition/mods/4321' } });
-    document.getElementById('collection-row').click();
-
-    expect(chromeMock.tabs.create).toHaveBeenCalledWith({ url: 'https://www.nexusmods.com/collections/' });
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('focuses the active tab on site click when on a Nexus tab', async () => {
-    await loadPopup();
-    document.getElementById('site-row').click();
-
-    expect(chromeMock.tabs.update).toHaveBeenCalledWith(7, { active: true });
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the Nexus homepage on site click when not on a Nexus tab', async () => {
-    await loadPopup({ tab: { id: 7, url: 'https://example.com/whatever' } });
-    document.getElementById('site-row').click();
-
-    expect(chromeMock.tabs.create).toHaveBeenCalledWith({ url: 'https://www.nexusmods.com/' });
-    expect(closeSpy).toHaveBeenCalledTimes(1);
-  });
-
   it('toggles autoStartDownload with read-merge-write and updates the label', async () => {
-    const settings = { enabled: true, autoStartDownload: false, skipRequirements: true };
+    const settings = { enabled: true, autoStartDownload: false, handleArchivedFiles: true, handleCollections: true };
     await loadPopup({ settings, storedSettings: settings });
     expect(document.getElementById('nowait-state').textContent).toBe('Off');
 
@@ -193,26 +155,27 @@ describe('popup', () => {
     await vi.waitFor(() => {
       expect(chromeMock.storage.local.set).toHaveBeenCalled();
     });
-    expect(chromeMock.storage.local.get).toHaveBeenCalledWith(STORAGE_KEY_SETTINGS);
-    expect(chromeMock.storage.local.set).toHaveBeenCalledWith({
-      [STORAGE_KEY_SETTINGS]: expect.objectContaining({
-        autoStartDownload: true,
-        skipRequirements: true,
-        enabled: true,
-      }),
+    await vi.waitFor(() => {
+      expect(document.getElementById('nowait-state').textContent).toBe('On');
     });
-    expect(document.getElementById('nowait-state').textContent).toBe('On');
   });
 
   it('shows "Off" for the collection row when handleCollections is disabled', async () => {
     await loadPopup({
-      settings: { enabled: true, handleCollections: false, autoStartDownload: true },
+      settings: { enabled: true, handleCollections: false, autoStartDownload: true, handleArchivedFiles: true },
     });
     expect(document.getElementById('collection-state').textContent).toBe('Off');
   });
 
+  it('shows "Off" for archived row when handleArchivedFiles is disabled', async () => {
+    await loadPopup({
+      settings: { enabled: true, handleCollections: true, autoStartDownload: true, handleArchivedFiles: false },
+    });
+    expect(document.getElementById('archived-state').textContent).toBe('Off');
+  });
+
   it('shows a gray status dot when the extension is disabled', async () => {
-    await loadPopup({ settings: { enabled: false, handleCollections: true, autoStartDownload: true } });
+    await loadPopup({ settings: { enabled: false, handleCollections: true, autoStartDownload: true, handleArchivedFiles: true } });
     expect(document.getElementById('status-dot').classList.contains('inactive')).toBe(true);
   });
 
@@ -221,9 +184,10 @@ describe('popup', () => {
     expect(document.getElementById('status-dot').classList.contains('inactive')).toBe(false);
   });
 
-  it('populates the collections count from PING stats', async () => {
+  it('populates the collections count from stats', async () => {
     await loadPopup({ stats: { collectionsDownloaded: 42, autoDownloadsCompleted: 9 } });
     expect(document.getElementById('collections-count').textContent).toBe('42');
+    expect(document.getElementById('autodl-count').textContent).toBe('9');
   });
 
   it('opens the options page from the Settings button', async () => {

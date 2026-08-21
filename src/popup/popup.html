@@ -42,24 +42,6 @@
         </span>
       </button>
 
-      <button type="button" id="queue-row" class="row" title="Open background download queue drawer">
-        <div class="row-icon-wrap">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="8 17 12 21 16 17"></polyline>
-            <line x1="12" y1="12" x2="12" y2="21"></line>
-            <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
-          </svg>
-        </div>
-        <div class="row-text">
-          <span class="row-label">Background Queue</span>
-          <span class="row-hint">Batch downloads & drawer</span>
-        </div>
-        <span class="row-meta">
-          <span class="row-value" id="queue-state">—</span>
-          <span class="chevron" aria-hidden="true">›</span>
-        </span>
-      </button>
-
       <button type="button" id="collection-row" class="row" title="Focus collection panel or open collections">
         <div class="row-icon-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -70,7 +52,7 @@
         </div>
         <div class="row-text">
           <span class="row-label">Collection Downloader</span>
-          <span class="row-hint">In-page 1-click suite</span>
+          <span class="row-hint">1-click bulk suite</span>
         </div>
         <span class="row-meta">
           <span class="row-value" id="collection-state">—</span>
@@ -86,7 +68,7 @@
         </div>
         <div class="row-text">
           <span class="row-label">Countdown Skip</span>
-          <span class="row-hint">Instant direct & NXM triggers</span>
+          <span class="row-hint">Instant direct & NXM</span>
         </div>
         <span class="row-meta">
           <span class="row-value" id="nowait-state">—</span>
@@ -94,18 +76,22 @@
         </span>
       </button>
 
-      <button type="button" id="inventory-row" class="row" title="Open Mod Organizer 2 / Vortex inventory manager">
+      <button type="button" id="archived-row" class="row" title="Click to toggle archived file button restoration">
         <div class="row-icon-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
         </div>
         <div class="row-text">
-          <span class="row-label">Mod Inventory</span>
-          <span class="row-hint">Load order & sync badges</span>
+          <span class="row-label">Archived Files</span>
+          <span class="row-hint">Restore download buttons</span>
         </div>
         <span class="row-meta">
-          <span class="row-value" id="inventory-state">—</span>
+          <span class="row-value" id="archived-state">—</span>
           <span class="chevron" aria-hidden="true">›</span>
         </span>
       </button>
@@ -117,8 +103,8 @@
         <b id="collections-count" class="stat-value">0</b>
       </div>
       <div class="stat-card">
-        <span class="stat-label">Queue Items</span>
-        <b id="queue-items-count" class="stat-value">0</b>
+        <span class="stat-label">Auto-downloads</span>
+        <b id="autodl-count" class="stat-value">0</b>
       </div>
     </section>
 

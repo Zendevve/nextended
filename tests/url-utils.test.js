@@ -10,8 +10,12 @@ import {
   isIntString,
   extractFileIdFromUrl,
   extractSlugAndModId,
+  setNexusAdBypassCookie,
+  isCloudflareChallenge,
+  isAccountSuspended,
+  isLoginRequired,
+  sanitizeFilename,
 } from '../src/nexus/url-utils.js';
-
 describe('url-utils', () => {
   it('parses valid URLs and rejects invalid ones', () => {
     expect(parseUrlSafe('https://example.com/a').hostname).toBe('example.com');
@@ -115,5 +119,36 @@ describe('url-utils', () => {
     expect(extractSlugAndModId('')).toEqual({ slug: null, modId: null });
     expect(extractSlugAndModId(null)).toEqual({ slug: null, modId: null });
     expect(extractSlugAndModId(123)).toEqual({ slug: null, modId: null });
+  });
+
+  it('sets ad bypass cookie on document', () => {
+    setNexusAdBypassCookie();
+    expect(document.cookie).toContain('ab=0|');
+  });
+
+  it('detects Cloudflare challenges accurately', () => {
+    expect(isCloudflareChallenge('<html><title>Just a moment...</title></html>')).toBe(true);
+    expect(isCloudflareChallenge('challenges.cloudflare.com turnstile')).toBe(true);
+    expect(isCloudflareChallenge('Attention Required! Cloudflare', 403, 'server: cloudflare')).toBe(true);
+    expect(isCloudflareChallenge('Normal mod page content', 200, '')).toBe(false);
+  });
+
+  it('detects account suspension messages', () => {
+    expect(isAccountSuspended('Your access to Nexus Mods has been temporarily suspended')).toBe(true);
+    expect(isAccountSuspended('Welcome to Nexus Mods')).toBe(false);
+  });
+
+  it('detects login required markers', () => {
+    expect(isLoginRequired('<a class="replaced-login-link">Login</a>')).toBe(true);
+    expect(isLoginRequired('users.nexusmods.com/auth/continue?client_id=nexus')).toBe(true);
+    expect(isLoginRequired('Logged in as User')).toBe(false);
+  });
+
+  it('sanitizes filenames safely', () => {
+    expect(sanitizeFilename('path/to/my-mod.zip')).toBe('my-mod.zip');
+    expect(sanitizeFilename('..\\windows\\nested\\file.7z')).toBe('file.7z');
+    expect(sanitizeFilename('...mod.rar')).toBe('mod.rar');
+    expect(sanitizeFilename('')).toBe('nexus_download');
+    expect(sanitizeFilename(null)).toBe('nexus_download');
   });
 });

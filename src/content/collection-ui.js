@@ -4,9 +4,9 @@ import {
   DOWNLOAD_METHOD_BROWSER,
 } from '../shared/constants.js';
 import { createLogger } from '../shared/logger.js';
+import { setNexusAdBypassCookie, isCloudflareChallenge, isAccountSuspended, isLoginRequired } from '../nexus/url-utils.js';
 
 const log = createLogger('collection-ui');
-
 const ICONS = {
   vortex: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
   browser: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
@@ -92,6 +92,7 @@ export class CollectionManager {
   }
 
   async init() {
+    setNexusAdBypassCookie();
     this.element.innerHTML = `
       <div class="nxdt-loading-btn">
         Fetching Collection Mods...
@@ -221,6 +222,7 @@ export class CollectionManager {
     this.aborted = false;
     const runToken = ++this.runToken;
     const downloadMethod = this.downloadMethod;
+    setNexusAdBypassCookie();
 
     try {
       this.startDownload(modsList.length);
@@ -229,6 +231,9 @@ export class CollectionManager {
       const failedDownloads = [];
       let completedCount = 0;
       let skippedCount = 0;
+      let forceStop = false;
+
+      this.launchedDownloads = this.launchedDownloads || { count: 0, date: Date.now() };
 
       for (let index = 0; index < modsList.length; index++) {
         const mod = modsList[index];
@@ -238,7 +243,37 @@ export class CollectionManager {
 
         if (this.aborted || runToken !== this.runToken) break;
 
-        this.progressBar.setCurrentMod(modName);
+        // Safety Rate Limiter: 200 downloads in 5 minutes
+        if (this.launchedDownloads.date < Date.now() - 300000) {
+          this.launchedDownloads.count = 0;
+          this.launchedDownloads.date = Date.now();
+        }
+
+        if (this.launchedDownloads.count >= 200) {
+          this.console.log(
+            'Started 200 downloads in 5 minutes. Waiting 5 minutes safety pause before continuing to avoid temporary suspension...',
+            'INFO'
+          );
+          let safetyRemaining = 300;
+          await new Promise((resolve) => {
+            const safetyTimer = setInterval(() => {
+              safetyRemaining--;
+              if (
+                safetyRemaining <= 0 ||
+                this.aborted ||
+                runToken !== this.runToken ||
+                this.progressBar.skipPause
+              ) {
+                this.progressBar.skipPause = false;
+                clearInterval(safetyTimer);
+                this.launchedDownloads.count = 0;
+                this.launchedDownloads.date = Date.now();
+                return resolve();
+              }
+            }, 1000);
+          });
+          if (this.aborted || runToken !== this.runToken) break;
+        }
 
         if (downloadedHistory.includes(fileId)) {
           this.console.log(`[${modNumber}] Skipped (already downloaded): ${modName}`);
@@ -247,12 +282,46 @@ export class CollectionManager {
           continue;
         }
 
+        if (this.progressBar.skipTo) {
+          if (this.progressBar.skipToIndex - 1 > index) {
+            this.console.log(`[${modNumber}] Skipping: ${modName}`);
+            this.progressBar.incrementProgress();
+            if (this.progressBar.skipToIndex - 1 === index + 1) {
+              this.progressBar.skipTo = false;
+            }
+            continue;
+          }
+          this.progressBar.skipTo = false;
+        }
+
+        this.progressBar.setCurrentMod(modName);
+
         const { downloadUrl, error } = await this.fetchDownloadUrl(mod, downloadMethod);
         if (this.aborted || runToken !== this.runToken) break;
 
         if (!downloadUrl) {
           this.console.log(`[${modNumber}] Error resolving ${modName}: ${error}`, 'ERROR');
-          failedDownloads.push(mod);
+          if (isLoginRequired(error)) {
+            this.console.log(
+              'You are not connected on NexusMods. Please login and try again.',
+              'ERROR'
+            );
+            forceStop = true;
+          } else if (isCloudflareChallenge(error)) {
+            this.console.log(
+              'You are rate limited by Cloudflare challenge. Please solve captcha in browser.',
+              'ERROR'
+            );
+            forceStop = true;
+          } else if (isAccountSuspended(error)) {
+            this.console.log(
+              'Nexus Mods temporarily suspended your account for 10 minutes due to request rate. Please wait.',
+              'ERROR'
+            );
+            forceStop = true;
+          } else {
+            failedDownloads.push(mod);
+          }
         } else if (downloadUrl.startsWith('nxm://')) {
           this.console.log(`[${modNumber}] Sent to Mod Manager: ${modName} (${convertSize(mod.file?.size)})`);
           triggerDownloadViaIframe(downloadUrl);
@@ -260,6 +329,8 @@ export class CollectionManager {
           if (this.aborted || runToken !== this.runToken) break;
           this.progressBar.incrementProgress();
           completedCount++;
+          this.launchedDownloads.count++;
+          this.launchedDownloads.date = Date.now();
         } else {
           this.console.log(`[${modNumber}] Downloading: ${modName} (${convertSize(mod.file?.size)})`);
           let started = false;
@@ -279,7 +350,15 @@ export class CollectionManager {
           if (this.aborted || runToken !== this.runToken) break;
           this.progressBar.incrementProgress();
           completedCount++;
+          this.launchedDownloads.count++;
+          this.launchedDownloads.date = Date.now();
         }
+
+        if (forceStop) {
+          this.console.log('Download stopped due to authentication or Cloudflare error.', 'ERROR');
+          break;
+        }
+
         // Pause calculation between downloads
         if (index < modsList.length - 1) {
           const fileSizeKB = mod.file?.size || 1024;
@@ -296,6 +375,7 @@ export class CollectionManager {
                 this.aborted ||
                 runToken !== this.runToken ||
                 this.progressBar.skipPause ||
+                this.progressBar.skipTo ||
                 this.progressBar.status === CollectionProgressBar.STATUS_STOPPED
               ) {
                 this.progressBar.skipPause = false;
@@ -417,10 +497,6 @@ class CollectionDownloadButton {
           </label>
         </div>
         <div class="nxdt-queue-row">
-          <button id="nxdtQueueBackground" class="nxdt-btn-util nxdt-btn-util-amber" title="Add all collection mods to background persistent queue">
-            ${ICONS.queue}
-            <span>Queue to BG</span>
-          </button>
           <button id="nxdtVerifyDownloads" class="nxdt-btn-util nxdt-btn-util-blue" title="Scan downloads and check for missing files">
             ${ICONS.verify}
             <span>Verify</span>
@@ -430,6 +506,7 @@ class CollectionDownloadButton {
             <span>Config</span>
           </button>
         </div>
+      </div>
       </div>
       <button id="nxdtDownloadAll" class="nxdt-btn-hero" title="Download All Mods">
         <div class="nxdt-btn-hero-left">
@@ -499,35 +576,6 @@ class CollectionDownloadButton {
         sendMessage(MESSAGE_TYPES.OPEN_OPTIONS);
       }
     });
-
-    this.element.querySelector('#nxdtQueueBackground')?.addEventListener('click', async () => {
-      const queueBtn = this.element.querySelector('#nxdtQueueBackground');
-      const isVortex = this.manager.downloadMethod === DOWNLOAD_METHOD_VORTEX;
-      const items = this.manager.mods.all.map((m) => ({
-        fileId: m.fileId || m.file?.fileId,
-        modId: m.file?.mod?.modId || '0',
-        gameDomain: m.file?.mod?.game?.domainName || this.manager.gameDomain,
-        modName: m.file?.mod?.name || m.file?.name || 'Collection Mod',
-        fileName: m.file?.name || `${m.fileId}.zip`,
-        fileSize: m.file?.size || 0,
-        fileVersion: m.file?.version || '',
-        isNMM: isVortex,
-        isOptional: !!m.optional,
-        sourceUrl: window.location.href,
-      }));
-
-      try {
-        await sendMessage(MESSAGE_TYPES.ENQUEUE_ITEMS, { items });
-        if (queueBtn) {
-          queueBtn.innerHTML = `${ICONS.check} <span>Queued!</span>`;
-          setTimeout(() => {
-            queueBtn.innerHTML = `${ICONS.queue} <span>Queue to BG</span>`;
-          }, 2000);
-        }
-      } catch (err) {
-        log.warn('Failed to enqueue collection', { error: err?.message });
-      }
-    });
   }
 
   setRadiosDisabled(disabled) {
@@ -551,21 +599,28 @@ class CollectionDownloadButton {
       summaryEl.style.marginTop = '8px';
       summaryEl.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap;">
-          <span style="font-weight:600;">${failed.length} mod download(s) failed</span>
+          <span style="font-weight:600;" id="nxdtFailedCountTitle"></span>
           <div style="display:flex;gap:6px;align-items:center;">
             <button type="button" id="nxdtOpenFailedExternal" class="nxdt-btn-sm" style="background:#292e36;color:#58a6ff;border:1px solid #444c56;cursor:pointer;" title="Open pages for failed items">Open External Links</button>
-            <button type="button" id="nxdtRetryFailed" class="nxdt-btn-sm" style="background:#da8e35;color:#fff;border:none;cursor:pointer;font-weight:600;">Retry Failed (${failed.length})</button>
+            <button type="button" id="nxdtRetryFailed" class="nxdt-btn-sm" style="background:#da8e35;color:#fff;border:none;cursor:pointer;font-weight:600;"></button>
           </div>
         </div>
-        <div class="nxdt-failed-list" style="font-size:11px;color:#f85149;max-height:80px;overflow-y:auto;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:4px;display:flex;flex-direction:column;gap:2px;">
-          ${failed
-            .map(
-              (m) =>
-                `<div>• ${m.file?.name || m.file?.mod?.name || 'Unknown Mod'}</div>`
-            )
-            .join('')}
-        </div>
+        <div id="nxdtFailedItemsList" class="nxdt-failed-list" style="font-size:11px;color:#f85149;max-height:80px;overflow-y:auto;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:4px;display:flex;flex-direction:column;gap:2px;"></div>
       `;
+
+      const countTitle = summaryEl.querySelector('#nxdtFailedCountTitle');
+      if (countTitle) countTitle.textContent = `${failed.length} mod download(s) failed`;
+      const retryBtn = summaryEl.querySelector('#nxdtRetryFailed');
+      if (retryBtn) retryBtn.textContent = `Retry Failed (${failed.length})`;
+
+      const listEl = summaryEl.querySelector('#nxdtFailedItemsList');
+      if (listEl) {
+        failed.forEach((m) => {
+          const itemEl = document.createElement('div');
+          itemEl.textContent = `• ${m.file?.name || m.file?.mod?.name || 'Unknown Mod'}`;
+          listEl.appendChild(itemEl);
+        });
+      }
       summaryEl.querySelector('#nxdtRetryFailed')?.addEventListener('click', () => {
         this.manager.downloadMods(failed, type);
       });
@@ -609,6 +664,8 @@ export class CollectionProgressBar {
     this.modsCount = 0;
     this.progress = 0;
     this.skipPause = false;
+    this.skipTo = false;
+    this.skipToIndex = 0;
     this.status = CollectionProgressBar.STATUS_DOWNLOADING;
     this.startTime = null;
     this.currentModName = '';
@@ -674,6 +731,22 @@ export class CollectionProgressBar {
             ${ICONS.skip}
             <span>Skip Wait</span>
           </button>
+          <div class="nxdt-skip-to-wrap" style="display:inline-flex;align-items:center;gap:4px;">
+            <input type="number" id="nxdtSkipToIndexInput" min="1" placeholder="Index" class="nxdt-input-number" style="width:58px;padding:2px 6px;border-radius:4px;border:1px solid #444c56;background:#22272e;color:#e6edf3;font-size:11px;" />
+            <button id="nxdtSkipToIndexBtn" class="nxdt-progress-btn" style="padding:2px 8px;font-size:11px;">
+              <span>Skip to #</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="nxdt-progress-throttle" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);font-size:11px;color:#8b949e;">
+        <div style="display:inline-flex;align-items:center;gap:6px;">
+          <label for="nxdtDlSpeedInput">Speed (MB/s):</label>
+          <input type="number" id="nxdtDlSpeedInput" min="0.1" step="0.5" value="${this.manager.downloadSpeed}" style="width:52px;padding:2px 4px;border-radius:3px;border:1px solid #444c56;background:#22272e;color:#e6edf3;font-size:11px;" />
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;">
+          <label for="nxdtExtraPauseInput">Extra pause (s):</label>
+          <input type="number" id="nxdtExtraPauseInput" min="0" step="1" value="${this.manager.pauseBetweenDownload}" style="width:48px;padding:2px 4px;border-radius:3px;border:1px solid #444c56;background:#22272e;color:#e6edf3;font-size:11px;" />
         </div>
       </div>
     `;
@@ -696,8 +769,33 @@ export class CollectionProgressBar {
     this.element.querySelector('#nxdtSkipPause').addEventListener('click', () => {
       this.skipPause = true;
     });
-  }
 
+    const skipToIndexInput = this.element.querySelector('#nxdtSkipToIndexInput');
+    this.element.querySelector('#nxdtSkipToIndexBtn')?.addEventListener('click', () => {
+      const target = parseInt(skipToIndexInput.value, 10);
+      if (target > this.progress && target <= this.modsCount) {
+        this.skipTo = true;
+        this.skipToIndex = target;
+        this.setStatus(CollectionProgressBar.STATUS_DOWNLOADING);
+      }
+    });
+
+    const speedInput = this.element.querySelector('#nxdtDlSpeedInput');
+    speedInput?.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      if (Number.isFinite(val) && val > 0) {
+        this.manager.downloadSpeed = val;
+      }
+    });
+
+    const pauseInput = this.element.querySelector('#nxdtExtraPauseInput');
+    pauseInput?.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      if (Number.isFinite(val) && val >= 0) {
+        this.manager.pauseBetweenDownload = val;
+      }
+    });
+  }
   update() {
     const pct = this.modsCount > 0 ? ((this.progress / this.modsCount) * 100).toFixed(1) : 0;
     const fill = this.element.querySelector('#nxdtProgressFill');
@@ -800,6 +898,7 @@ export class CollectionSelectModal {
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
     this.element.setAttribute('data-nxdt-modal', 'true');
+    this.lastCheckedIndex = null;
     this._handleKeydown = (e) => {
       if (e.key === 'Escape') {
         this.close();
@@ -827,11 +926,27 @@ export class CollectionSelectModal {
           <h3>Select Mods to Download</h3>
           <span id="nxdtSelCount" class="nxdt-badge">0 selected</span>
         </div>
-        <div class="nxdt-modal-search-bar">
-          <input type="search" id="nxdtSearch" placeholder="Search mods..." />
+        <div class="nxdt-modal-search-bar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+          <input type="search" id="nxdtSearch" placeholder="Search mods..." style="flex:1;min-width:140px;" />
+          <select id="nxdtSort" class="nxdt-select-rev" style="max-width:180px;">
+            <option value="mod_name_asc">Mod name (A-Z)</option>
+            <option value="mod_name_desc">Mod name (Z-A)</option>
+            <option value="file_name_asc">File name (A-Z)</option>
+            <option value="file_name_desc">File name (Z-A)</option>
+            <option value="size_asc">Size (Smallest)</option>
+            <option value="size_desc">Size (Largest)</option>
+          </select>
           <button id="nxdtSelAll" class="nxdt-btn-sm">Select All</button>
-          <button id="nxdtSelMandatory" class="nxdt-btn-sm">Mandatory Only</button>
-          <button id="nxdtDeselAll" class="nxdt-btn-sm">Deselect All</button>
+          <button id="nxdtSelMandatory" class="nxdt-btn-sm">Mandatory</button>
+          <button id="nxdtInvertSel" class="nxdt-btn-sm">Invert</button>
+          <button id="nxdtDeselAll" class="nxdt-btn-sm">Clear</button>
+        </div>
+        <div class="nxdt-modal-tools" style="display:flex;gap:6px;margin:4px 0 8px 0;font-size:11px;">
+          <button id="nxdtExportJson" class="nxdt-btn-sm" style="padding:2px 8px;">Export Selection (.json)</button>
+          <button id="nxdtImportJson" class="nxdt-btn-sm" style="padding:2px 8px;">Import Selection (.json)</button>
+          <button id="nxdtImportDownloaded" class="nxdt-btn-sm" style="padding:2px 8px;">Scan Downloaded Folder</button>
+          <input type="file" id="nxdtJsonFileInput" accept=".json" style="display:none;" />
+          <input type="file" id="nxdtFolderFileInput" multiple style="display:none;" />
         </div>
         <div id="nxdtModList" class="nxdt-modal-list"></div>
         <div class="nxdt-modal-footer">
@@ -843,17 +958,42 @@ export class CollectionSelectModal {
 
     const listContainer = this.element.querySelector('#nxdtModList');
     const searchInput = this.element.querySelector('#nxdtSearch');
+    const sortSelect = this.element.querySelector('#nxdtSort');
     const countBadge = this.element.querySelector('#nxdtSelCount');
 
-    // Tracks selection across list rebuilds (search filtering re-creates rows).
     const checkedIds = new Set();
 
     const updateCount = () => {
       countBadge.textContent = `${checkedIds.size} selected`;
     };
 
+    const getSortedMods = () => {
+      const mods = [...this.manager.mods.all];
+      const sort = sortSelect?.value || 'mod_name_asc';
+      switch (sort) {
+        case 'mod_name_asc':
+          mods.sort((a, b) => (a.file?.mod?.name || '').localeCompare(b.file?.mod?.name || ''));
+          break;
+        case 'mod_name_desc':
+          mods.sort((a, b) => (b.file?.mod?.name || '').localeCompare(a.file?.mod?.name || ''));
+          break;
+        case 'file_name_asc':
+          mods.sort((a, b) => (a.file?.name || '').localeCompare(b.file?.name || ''));
+          break;
+        case 'file_name_desc':
+          mods.sort((a, b) => (b.file?.name || '').localeCompare(a.file?.name || ''));
+          break;
+        case 'size_asc':
+          mods.sort((a, b) => (a.file?.size || 0) - (b.file?.size || 0));
+          break;
+        case 'size_desc':
+          mods.sort((a, b) => (b.file?.size || 0) - (a.file?.size || 0));
+          break;
+      }
+      return mods;
+    };
+
     const renderList = (filter = '') => {
-      // Persist the current DOM selection before rows are destroyed.
       listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
         if (cb.checked) checkedIds.add(cb.getAttribute('data-file-id'));
         else checkedIds.delete(cb.getAttribute('data-file-id'));
@@ -861,13 +1001,17 @@ export class CollectionSelectModal {
 
       listContainer.innerHTML = '';
       const filterLower = filter.toLowerCase();
-      this.manager.mods.all.forEach((mod) => {
+      const sortedMods = getSortedMods();
+      sortedMods.forEach((mod, rowIndex) => {
         const fileId = getModFileId(mod);
         const name = mod.file?.name || mod.file?.mod?.name || 'Unknown Mod';
-        if (filterLower && !name.toLowerCase().includes(filterLower)) return;
+        if (filterLower && !name.toLowerCase().includes(filterLower)) {
+          return;
+        }
 
         const row = document.createElement('label');
         row.className = 'nxdt-modal-row';
+        row.setAttribute('data-row-index', String(rowIndex));
 
         const left = document.createElement('div');
         left.className = 'nxdt-modal-row-left';
@@ -901,8 +1045,36 @@ export class CollectionSelectModal {
         row.appendChild(right);
 
         checkbox.addEventListener('change', () => {
-          if (checkbox.checked) checkedIds.add(checkbox.getAttribute('data-file-id'));
-          else checkedIds.delete(checkbox.getAttribute('data-file-id'));
+          if (checkbox.checked) checkedIds.add(fileId);
+          else checkedIds.delete(fileId);
+          updateCount();
+        });
+
+        row.addEventListener('click', (e) => {
+          if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) checkedIds.add(fileId);
+            else checkedIds.delete(fileId);
+          }
+
+          if (e.shiftKey && this.lastCheckedIndex !== null) {
+            const allCheckboxes = Array.from(listContainer.querySelectorAll('input[type="checkbox"]'));
+            const currentIdx = allCheckboxes.indexOf(checkbox);
+            const start = Math.min(this.lastCheckedIndex, currentIdx);
+            const end = Math.max(this.lastCheckedIndex, currentIdx);
+            const targetState = checkbox.checked;
+
+            for (let i = start; i <= end; i++) {
+              const cb = allCheckboxes[i];
+              if (cb) {
+                cb.checked = targetState;
+                const fid = cb.getAttribute('data-file-id');
+                if (targetState) checkedIds.add(fid);
+                else checkedIds.delete(fid);
+              }
+            }
+          }
+          this.lastCheckedIndex = Array.from(listContainer.querySelectorAll('input[type="checkbox"]')).indexOf(checkbox);
           updateCount();
         });
 
@@ -915,6 +1087,7 @@ export class CollectionSelectModal {
     renderList();
 
     searchInput.addEventListener('input', (e) => renderList(e.target.value));
+    sortSelect.addEventListener('change', () => renderList(searchInput.value));
 
     this.element.querySelector('#nxdtSelAll').addEventListener('click', () => {
       listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
@@ -923,14 +1096,12 @@ export class CollectionSelectModal {
       });
       updateCount();
     });
+
     this.element.querySelector('#nxdtSelMandatory')?.addEventListener('click', () => {
       this.manager.mods.all.forEach((mod) => {
         const fileId = getModFileId(mod);
-        if (!mod.optional) {
-          checkedIds.add(fileId);
-        } else {
-          checkedIds.delete(fileId);
-        }
+        if (!mod.optional) checkedIds.add(fileId);
+        else checkedIds.delete(fileId);
       });
       listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
         const fileId = cb.getAttribute('data-file-id');
@@ -939,6 +1110,15 @@ export class CollectionSelectModal {
       updateCount();
     });
 
+    this.element.querySelector('#nxdtInvertSel')?.addEventListener('click', () => {
+      listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+        const fileId = cb.getAttribute('data-file-id');
+        cb.checked = !cb.checked;
+        if (cb.checked) checkedIds.add(fileId);
+        else checkedIds.delete(fileId);
+      });
+      updateCount();
+    });
 
     this.element.querySelector('#nxdtDeselAll').addEventListener('click', () => {
       listContainer.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
@@ -946,6 +1126,81 @@ export class CollectionSelectModal {
         checkedIds.delete(cb.getAttribute('data-file-id'));
       });
       updateCount();
+    });
+
+    // Export JSON
+    this.element.querySelector('#nxdtExportJson')?.addEventListener('click', () => {
+      const selectedMods = this.manager.mods.all.filter((m) => checkedIds.has(getModFileId(m)));
+      if (!selectedMods.length) {
+        alert('Please select at least one mod to export.');
+        return;
+      }
+      const blob = new Blob([JSON.stringify(selectedMods, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ndc_selected_mods_${this.manager.gameDomain}_${this.manager.collectionSlug}_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Import JSON
+    const jsonFileInput = this.element.querySelector('#nxdtJsonFileInput');
+    this.element.querySelector('#nxdtImportJson')?.addEventListener('click', () => {
+      jsonFileInput?.click();
+    });
+    jsonFileInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        if (Array.isArray(imported)) {
+          imported.forEach((m) => {
+            const fid = getModFileId(m);
+            if (fid) checkedIds.add(fid);
+          });
+          renderList(searchInput.value);
+        }
+      } catch (err) {
+        log.warn('Failed to parse selection JSON', err);
+      }
+    });
+
+    // Scan Downloaded Folder
+    const folderFileInput = this.element.querySelector('#nxdtFolderFileInput');
+    this.element.querySelector('#nxdtImportDownloaded')?.addEventListener('click', () => {
+      folderFileInput?.click();
+    });
+    folderFileInput?.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      const downloadedFileIds = new Set();
+      this.manager.mods.all.forEach((mod) => {
+        const uri = mod.file?.uri || '';
+        const name = mod.file?.name || '';
+        const modId = String(mod.file?.mod?.modId || '');
+        const isFound = files.some((f) => {
+          if (uri && f.name.includes(uri)) return true;
+          if (name && modId && f.name.includes(modId) && f.name.includes(name)) return true;
+          return false;
+        });
+        if (isFound) {
+          downloadedFileIds.add(getModFileId(mod));
+        }
+      });
+
+      // Select ONLY un-downloaded mods
+      this.manager.mods.all.forEach((mod) => {
+        const fid = getModFileId(mod);
+        if (!downloadedFileIds.has(fid)) {
+          checkedIds.add(fid);
+        } else {
+          checkedIds.delete(fid);
+        }
+      });
+      renderList(searchInput.value);
     });
 
     this.element.querySelector('#nxdtCloseSel').addEventListener('click', () => this.close());
@@ -964,6 +1219,7 @@ export class CollectionUpdateModal {
     this.element = document.createElement('div');
     this.element.className = 'nxdt-modal-overlay';
     this.element.setAttribute('data-nxdt-modal', 'true');
+    this.modsToDownload = [];
     this._handleKeydown = (e) => {
       if (e.key === 'Escape') {
         this.close();
@@ -986,24 +1242,38 @@ export class CollectionUpdateModal {
     });
 
     this.element.innerHTML = `
-      <div class="nxdt-modal-box">
+      <div class="nxdt-modal-box" style="max-width:850px;width:95%;">
         <div class="nxdt-modal-header">
-          <h3>Compare Collection Revisions</h3>
+          <h3>Update Collection Revisions</h3>
         </div>
-        <div class="nxdt-modal-search-bar">
-          <select id="nxdtRevFrom" class="nxdt-select-rev"></select>
-          <select id="nxdtRevTo" class="nxdt-select-rev"></select>
+        <div class="nxdt-modal-search-bar" style="display:flex;gap:10px;">
+          <div style="flex:1;">
+            <label style="display:block;font-size:11px;color:#8b949e;margin-bottom:4px;">Current Revision</label>
+            <select id="nxdtRevFrom" class="nxdt-select-rev" style="width:100%;"></select>
+          </div>
+          <div style="flex:1;">
+            <label style="display:block;font-size:11px;color:#8b949e;margin-bottom:4px;">Target Revision to Update To</label>
+            <select id="nxdtRevTo" class="nxdt-select-rev" style="width:100%;"></select>
+          </div>
         </div>
-        <div id="nxdtDiffOutput" class="nxdt-modal-list nxdt-diff-output">
+        <div id="nxdtDiffOutput" class="nxdt-modal-list nxdt-diff-output" style="max-height:420px;overflow-y:auto;">
           Select revisions above to compare differences.
         </div>
         <div class="nxdt-modal-footer">
-          <button id="nxdtCloseDiff" class="nxdt-btn-sm">Close</button>
+          <button id="nxdtCloseDiff" class="nxdt-btn-sm">Cancel</button>
+          <button id="nxdtUpdateBtn" class="nxdt-btn-primary" style="display:none;">Update Collection</button>
         </div>
       </div>
     `;
 
+    const updateBtn = this.element.querySelector('#nxdtUpdateBtn');
     this.element.querySelector('#nxdtCloseDiff').addEventListener('click', () => this.close());
+    updateBtn?.addEventListener('click', () => {
+      if (this.modsToDownload.length > 0) {
+        this.close();
+        this.manager.downloadMods(this.modsToDownload, 'update');
+      }
+    });
 
     try {
       const res = await sendMessage(MESSAGE_TYPES.FETCH_COLLECTION_REVISIONS, {
@@ -1014,10 +1284,13 @@ export class CollectionUpdateModal {
       const selFrom = this.element.querySelector('#nxdtRevFrom');
       const selTo = this.element.querySelector('#nxdtRevTo');
 
+      selFrom.innerHTML = `<option value="">Select current revision</option>`;
+      selTo.innerHTML = `<option value="">Select revision to update to</option>`;
+
       revisions.forEach((r) => {
         const opt = document.createElement('option');
         opt.value = r.revisionNumber;
-        opt.textContent = `Revision ${r.revisionNumber} (${(r.totalSize / (1024 * 1024)).toFixed(1)} MB)`;
+        opt.textContent = `Revision ${r.revisionNumber} (${(r.totalSize / (1024 * 1024)).toFixed(1)} MB) - ${new Date(r.createdAt || Date.now()).toLocaleDateString()}`;
         selFrom.appendChild(opt.cloneNode(true));
         selTo.appendChild(opt);
       });
@@ -1025,10 +1298,13 @@ export class CollectionUpdateModal {
       const compare = async () => {
         const revA = parseInt(selFrom.value, 10);
         const revB = parseInt(selTo.value, 10);
-        if (!revA || !revB) return;
+        if (!revA || !revB) {
+          updateBtn.style.display = 'none';
+          return;
+        }
 
         const diffOutput = this.element.querySelector('#nxdtDiffOutput');
-        diffOutput.textContent = 'Comparing revisions...';
+        diffOutput.innerHTML = '<div style="padding:16px;text-align:center;color:#8b949e;">Comparing revisions...</div>';
 
         const [resA, resB] = await Promise.all([
           sendMessage(MESSAGE_TYPES.FETCH_COLLECTION_MODS, {
@@ -1046,58 +1322,101 @@ export class CollectionUpdateModal {
         const modsA = resA?.collectionRevision?.modFiles || [];
         const modsB = resB?.collectionRevision?.modFiles || [];
 
-        const idsA = new Set(modsA.map((m) => String(m.fileId)));
-        const idsB = new Set(modsB.map((m) => String(m.fileId)));
+        // Group current and new by modId or fileId
+        const currentByModId = {};
+        modsA.forEach((m) => {
+          const mid = String(m.file?.mod?.modId || m.modId || m.fileId || m.file?.fileId || '');
+          if (mid) {
+            currentByModId[mid] = currentByModId[mid] || [];
+            currentByModId[mid].push(m);
+          }
+        });
 
-        const added = modsB.filter((m) => !idsA.has(String(m.fileId)));
-        const removed = modsA.filter((m) => !idsB.has(String(m.fileId)));
+        const newByModId = {};
+        modsB.forEach((m) => {
+          const mid = String(m.file?.mod?.modId || m.modId || m.fileId || m.file?.fileId || '');
+          if (mid) {
+            newByModId[mid] = newByModId[mid] || [];
+            newByModId[mid].push(m);
+          }
+        });
 
-        const nameOf = (m) => m.file?.name || m.file?.mod?.name;
+        const addedMods = [];
+        const updatedMods = [];
+        const removedMods = [];
+
+        for (const [mid, newFiles] of Object.entries(newByModId)) {
+          const currentFiles = currentByModId[mid] || [];
+          newFiles.forEach((newFile) => {
+            const match = currentFiles.find(
+              (cf) => cf.fileId === newFile.fileId || cf.file?.name === newFile.file?.name
+            );
+            if (!match) {
+              addedMods.push(newFile);
+            } else if (match.file?.version !== newFile.file?.version) {
+              updatedMods.push(newFile);
+            }
+          });
+
+          const remaining = currentFiles.filter(
+            (cf) => !newFiles.some((nf) => nf.fileId === cf.fileId || nf.file?.name === cf.file?.name)
+          );
+          removedMods.push(...remaining);
+        }
+
+        for (const [mid, currentFiles] of Object.entries(currentByModId)) {
+          if (!newByModId[mid]) {
+            currentFiles.forEach((cf) => {
+              if (!removedMods.includes(cf)) removedMods.push(cf);
+            });
+          }
+        }
+
+        this.modsToDownload = [...addedMods, ...updatedMods];
+        const nameOf = (m) => m.file?.name || m.file?.mod?.name || 'Unknown Mod';
 
         const wrap = document.createElement('div');
-        wrap.className = 'space-y-2';
+        wrap.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;';
 
-        const addHeader = document.createElement('div');
-        addHeader.className = 'text-green-400 font-semibold';
-        addHeader.textContent = `Added in Rev ${revB} (${added.length}):`;
-        const addList = document.createElement('ul');
-        addList.className = 'list-disc list-inside space-y-0.5 text-gray-300';
-        if (added.length === 0) {
-          const li = document.createElement('li');
-          li.textContent = 'None';
-          addList.appendChild(li);
-        } else {
-          added.forEach((m) => {
-            const li = document.createElement('li');
-            li.textContent = nameOf(m);
-            addList.appendChild(li);
-          });
-        }
+        const createCol = (title, color, items) => {
+          const col = document.createElement('div');
+          const h = document.createElement('div');
+          h.style.cssText = `font-weight:600;color:${color};font-size:13px;margin-bottom:6px;`;
+          h.textContent = `${title} (${items.length})`;
+          col.appendChild(h);
 
-        const remHeader = document.createElement('div');
-        remHeader.className = 'text-red-400 font-semibold mt-2';
-        remHeader.textContent = `Removed in Rev ${revB} (${removed.length}):`;
-        const remList = document.createElement('ul');
-        remList.className = 'list-disc list-inside space-y-0.5 text-gray-300';
-        if (removed.length === 0) {
-          const li = document.createElement('li');
-          li.textContent = 'None';
-          remList.appendChild(li);
-        } else {
-          removed.forEach((m) => {
-            const li = document.createElement('li');
-            li.textContent = nameOf(m);
-            remList.appendChild(li);
-          });
-        }
+          const list = document.createElement('div');
+          list.className = 'nxdt-diff-col-list';
+          list.style.cssText = 'font-size:12px;color:#e6edf3;display:flex;flex-direction:column;gap:4px;';
+          if (items.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.color = '#8b949e';
+            empty.textContent = 'None';
+            list.appendChild(empty);
+          } else {
+            items.forEach((m) => {
+              const row = document.createElement('div');
+              row.textContent = `• ${nameOf(m)}`;
+              list.appendChild(row);
+            });
+          }
+          col.appendChild(list);
+          return col;
+        };
 
-        wrap.appendChild(addHeader);
-        wrap.appendChild(addList);
-        wrap.appendChild(remHeader);
-        wrap.appendChild(remList);
+        wrap.appendChild(createCol('Updated Mods', '#3fb950', updatedMods));
+        wrap.appendChild(createCol('Added Mods', '#58a6ff', addedMods));
+        wrap.appendChild(createCol('Removed Mods', '#f85149', removedMods));
 
-        diffOutput.textContent = '';
+        diffOutput.innerHTML = '';
         diffOutput.appendChild(wrap);
+
+        if (this.modsToDownload.length > 0) {
+          updateBtn.style.display = 'inline-flex';
+          updateBtn.textContent = `Update (${this.modsToDownload.length} mods)`;
+        } else {
+          updateBtn.style.display = 'none';
+        }
       };
 
       selFrom.addEventListener('change', compare);
@@ -1256,13 +1575,23 @@ export class CollectionVerificationModal {
 
         const left = document.createElement('div');
         left.className = 'nxdt-modal-row-left';
-        left.innerHTML = `
-          <span class="nxdt-pill-tag ${item.confirmed ? 'nxdt-pill-nexus' : 'nxdt-pill-offsite'}">${item.confirmed ? 'OK' : 'FAIL'}</span>
-          <div>
-            <div class="nxdt-modal-row-title">${item.modName}</div>
-            <div style="font-size:11px;color:#8b949e;">${item.fileName} • ${convertSize(item.fileSize)}</div>
-          </div>
-        `;
+
+        const statusPill = document.createElement('span');
+        statusPill.className = `nxdt-pill-tag ${item.confirmed ? 'nxdt-pill-nexus' : 'nxdt-pill-offsite'}`;
+        statusPill.textContent = item.confirmed ? 'OK' : 'FAIL';
+
+        const textGroup = document.createElement('div');
+        const titleEl = document.createElement('div');
+        titleEl.className = 'nxdt-modal-row-title';
+        titleEl.textContent = item.modName;
+        const subEl = document.createElement('div');
+        subEl.style.cssText = 'font-size:11px;color:#8b949e;';
+        subEl.textContent = `${item.fileName} • ${convertSize(item.fileSize)}`;
+
+        textGroup.appendChild(titleEl);
+        textGroup.appendChild(subEl);
+        left.appendChild(statusPill);
+        left.appendChild(textGroup);
 
         const right = document.createElement('div');
         right.className = 'nxdt-modal-row-right';

@@ -1,4 +1,4 @@
-import { STORAGE_KEY_SETTINGS, STORAGE_KEY_QUEUE, MESSAGE_TYPES, QUEUE_STATUS } from '../shared/constants.js';
+import { STORAGE_KEY_SETTINGS, MESSAGE_TYPES } from '../shared/constants.js';
 
 export const DONATE_URL = 'https://buymeacoffee.com/zendevve';
 
@@ -7,8 +7,8 @@ const COLLECTION_PATH_RE = /^\/games\/[^/]+\/collections\/[^/]+(?:\/revisions\/\
 const MOD_PATH_RE = /^\/[^/]+\/mods\/\d+/i;
 
 const SITE_LABELS = {
-  collection: 'Collection page',
-  mod: 'Mod page',
+  collection: 'Collection',
+  mod: 'Mod Page',
   nexus: 'On Nexus Mods',
   'not-nexus': 'Not on Nexus',
 };
@@ -28,10 +28,6 @@ function classifyUrl(url) {
   if (COLLECTION_PATH_RE.test(parsed.pathname)) return 'collection';
   if (MOD_PATH_RE.test(parsed.pathname)) return 'mod';
   return 'nexus';
-}
-
-function isNexusTab(category) {
-  return category === 'collection' || category === 'mod' || category === 'nexus';
 }
 
 function sendMessage(message) {
@@ -92,49 +88,12 @@ function renderNowaitState(settings) {
   el.textContent = enabled && autoStart ? 'On' : 'Off';
 }
 
-function renderQueueState(queueState) {
-  const el = document.getElementById('queue-state');
+function renderArchivedState(settings) {
+  const el = document.getElementById('archived-state');
   if (!el) return;
-  const status = queueState?.status || QUEUE_STATUS.IDLE;
-  const counts = queueState?.counts || {};
-  const total = counts.total || queueState?.items?.length || 0;
-  const completed = counts.completed || 0;
-
-  if (status === QUEUE_STATUS.RUNNING) {
-    el.textContent = `Active (${completed}/${total})`;
-  } else if (status === QUEUE_STATUS.PAUSED) {
-    el.textContent = `Paused (${completed}/${total})`;
-  } else if (status === QUEUE_STATUS.COMPLETED) {
-    el.textContent = `Done (${completed})`;
-  } else if (status === QUEUE_STATUS.FAILED) {
-    el.textContent = 'Needs Attention';
-  } else {
-    el.textContent = total > 0 ? `${total} items` : 'Idle';
-  }
-}
-
-function renderInventoryState(inventory, tab) {
-  const el = document.getElementById('inventory-state');
-  if (!el) return;
-  if (!inventory || !inventory.games) {
-    el.textContent = 'Not Synced';
-    return;
-  }
-  let gameDomain = '';
-  try {
-    const parts = tab?.url ? new URL(tab.url).pathname.split('/') : [];
-    gameDomain = parts[1] || '';
-  } catch {
-    gameDomain = '';
-  }
-
-  const game = inventory.games[gameDomain];
-  if (game && game.modCount) {
-    el.textContent = `${game.modCount} Mods (${inventory.managerType ? inventory.managerType.toUpperCase() : 'MO2'})`;
-  } else {
-    const totalMods = Object.values(inventory.games).reduce((acc, g) => acc + (g.modCount || 0), 0);
-    el.textContent = totalMods > 0 ? `${totalMods} Mods Sync` : 'Not Synced';
-  }
+  const enabled = settings.enabled !== false;
+  const handleArchived = settings.handleArchivedFiles !== false;
+  el.textContent = enabled && handleArchived ? 'On' : 'Off';
 }
 
 function renderStats(stats) {
@@ -142,116 +101,83 @@ function renderStats(stats) {
   if (collectionsEl) {
     collectionsEl.textContent = (stats && stats.collectionsDownloaded) || '0';
   }
-  const queueItemsEl = document.getElementById('queue-items-count');
-  if (queueItemsEl) {
-    queueItemsEl.textContent = (stats && stats.queueItemsDownloaded) || '0';
+  const autoEl = document.getElementById('autodl-count');
+  if (autoEl) {
+    autoEl.textContent = (stats && stats.autoDownloadsCompleted) || '0';
   }
 }
 
 export async function refresh() {
-  const [pingRes, settingsRes, queueRes, invRes] = await Promise.all([
+  const [pingRes, settingsRes] = await Promise.all([
     sendMessage({ type: MESSAGE_TYPES.PING }),
     sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS }),
-    sendMessage({ type: MESSAGE_TYPES.GET_QUEUE_STATE }),
-    sendMessage({ type: MESSAGE_TYPES.GET_INVENTORY }),
   ]);
-  const ping = pingRes.result || pingRes || {};
-  const alive = ping.alive === true;
-  const stats = ping.stats || {};
 
-  const settings = settingsRes.result?.settings || settingsRes.settings || {};
+  const alive = pingRes && pingRes.success !== false;
+  const settings = (settingsRes && settingsRes.result && settingsRes.result.settings) || settingsRes.settings || {};
   currentSettings = { ...settings };
-
-  const queueState = queueRes.result || queueRes || {};
-  const inventory = invRes.result?.inventory || invRes.inventory || {};
-
-  renderDot(alive, settings);
-  renderCollectionState(settings);
-  renderNowaitState(settings);
-  renderQueueState(queueState);
-  renderStats(stats);
-
   activeTab = await getActiveTab();
+
+  renderDot(alive, currentSettings);
   renderSite(activeTab);
-  renderInventoryState(inventory, activeTab);
+  renderCollectionState(currentSettings);
+  renderNowaitState(currentSettings);
+  renderArchivedState(currentSettings);
+
+  // Stats from storage directly
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    chrome.storage.local.get(['stats'], (res) => {
+      void chrome.runtime?.lastError;
+      renderStats(res && res.stats);
+    });
+  }
+}
+
+async function toggleSetting(key) {
+  const next = { ...currentSettings, [key]: !currentSettings[key] };
+  currentSettings = next;
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    chrome.storage.local.set({ [STORAGE_KEY_SETTINGS]: next }, () => {
+      void chrome.runtime?.lastError;
+      refresh();
+    });
+  }
 }
 
 async function toggleNowait() {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
-  let stored = {};
-  try {
-    const raw = await chrome.storage.local.get(STORAGE_KEY_SETTINGS);
-    stored = (raw && raw[STORAGE_KEY_SETTINGS]) || {};
-  } catch {
-    stored = {};
-  }
-  const base =
-    typeof stored.autoStartDownload === 'boolean'
-      ? stored.autoStartDownload
-      : currentSettings.autoStartDownload !== false;
-  const next = { ...stored, autoStartDownload: !base };
-  try {
-    await chrome.storage.local.set({ [STORAGE_KEY_SETTINGS]: next });
-  } catch {
-    /* storage errors surface via onChanged in real use */
-  }
-  currentSettings = { ...currentSettings, ...next };
-  renderNowaitState(currentSettings);
+  await toggleSetting('autoStartDownload');
+}
+
+async function toggleArchived() {
+  await toggleSetting('handleArchivedFiles');
 }
 
 function onSiteRowClick() {
-  const category = activeTab && activeTab.url ? classifyUrl(activeTab.url) : null;
-  if (activeTab && activeTab.id != null && isNexusTab(category)) {
-    if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
-  } else if (chrome.tabs?.create) {
-    chrome.tabs.create({ url: 'https://www.nexusmods.com/' });
-  }
-  window.close?.();
-}
-
-function onQueueRowClick() {
-  if (activeTab && activeTab.id != null) {
-    chrome.tabs?.sendMessage?.(activeTab.id, { type: MESSAGE_TYPES.TOGGLE_DRAWER }, () => {
-      void chrome.runtime?.lastError;
-      window.close?.();
-    });
+  if (activeTab && activeTab.url && NEXUS_HOST_RE.test(new URL(activeTab.url).hostname)) {
+    if (typeof chrome !== 'undefined' && chrome.tabs?.update) {
+      chrome.tabs.update(activeTab.id, { active: true });
+      window.close();
+    }
   } else {
-    window.close?.();
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: 'https://www.nexusmods.com' });
+    }
   }
 }
 
 function onCollectionRowClick() {
-  const category = activeTab && activeTab.url ? classifyUrl(activeTab.url) : null;
-  if (activeTab && activeTab.id != null && category === 'collection') {
-    if (!chrome.tabs?.sendMessage) {
-      if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
-      window.close?.();
-      return;
-    }
-    chrome.tabs.sendMessage(
-      activeTab.id,
-      { type: MESSAGE_TYPES.FOCUS_COLLECTION_PANEL },
-      (response) => {
-        void chrome.runtime?.lastError;
-        if (response && response.ok === true) {
-          window.close?.();
-        } else {
-          if (chrome.tabs?.update) chrome.tabs.update(activeTab.id, { active: true });
-          window.close?.();
-        }
-      }
-    );
+  if (activeTab && activeTab.url && classifyUrl(activeTab.url) === 'collection') {
+    sendMessage({ type: MESSAGE_TYPES.FOCUS_COLLECTION_PANEL });
+    window.close();
   } else {
-    if (chrome.tabs?.create) chrome.tabs.create({ url: 'https://www.nexusmods.com/collections/' });
-    window.close?.();
+    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+      chrome.tabs.create({ url: 'https://www.nexusmods.com/games' });
+    }
   }
 }
 
 const siteRow = document.getElementById('site-row');
 if (siteRow) siteRow.addEventListener('click', onSiteRowClick);
-
-const queueRow = document.getElementById('queue-row');
-if (queueRow) queueRow.addEventListener('click', onQueueRowClick);
 
 const collectionRow = document.getElementById('collection-row');
 if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick);
@@ -259,35 +185,35 @@ if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick)
 const nowaitRow = document.getElementById('nowait-row');
 if (nowaitRow) nowaitRow.addEventListener('click', () => toggleNowait());
 
-const inventoryRow = document.getElementById('inventory-row');
-if (inventoryRow) {
-  inventoryRow.addEventListener('click', () => {
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    }
-    window.close?.();
-  });
-}
+const archivedRow = document.getElementById('archived-row');
+if (archivedRow) archivedRow.addEventListener('click', () => toggleArchived());
+
 const openSettingsBtn = document.getElementById('open-settings');
 if (openSettingsBtn) {
   openSettingsBtn.addEventListener('click', () => {
-    if (chrome.runtime?.openOptionsPage) chrome.runtime.openOptionsPage();
+    if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    } else {
+      sendMessage({ type: MESSAGE_TYPES.OPEN_OPTIONS });
+    }
   });
 }
 
 const openDonateBtn = document.getElementById('open-donate');
 if (openDonateBtn) {
   openDonateBtn.addEventListener('click', () => {
+    const url = DONATE_URL;
     if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url: DONATE_URL });
-    } else if (typeof window !== 'undefined' && window.open) {
-      window.open(DONATE_URL, '_blank', 'noopener,noreferrer');
+      chrome.tabs.create({ url });
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   });
 }
+
 if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
   chrome.runtime.onMessage.addListener((message) => {
-    if (message && message.type === MESSAGE_TYPES.SETTINGS_CHANGED) {
+    if (message && message.type === MESSAGE_TYPES.PING) {
       refresh();
     }
   });
@@ -295,8 +221,15 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
 
 if (typeof chrome !== 'undefined' && chrome.storage?.onChanged?.addListener) {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes && (changes[STORAGE_KEY_SETTINGS] || changes[STORAGE_KEY_QUEUE])) {
-      refresh();
+    if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
+      currentSettings = { ...currentSettings, ...changes[STORAGE_KEY_SETTINGS].newValue };
+      renderCollectionState(currentSettings);
+      renderNowaitState(currentSettings);
+      renderArchivedState(currentSettings);
+      renderDot(true, currentSettings);
+    }
+    if (area === 'local' && changes.stats) {
+      renderStats(changes.stats.newValue);
     }
   });
 }

@@ -76,6 +76,37 @@ export function appendNmmParam(href) {
   if (!href || href.includes('nmm=1')) return href;
   return `${href}${href.includes('?') ? '&' : '?'}nmm=1`;
 }
+export function setButtonState(btn, state, msg) {
+  if (!btn) return;
+  const txtEl = btn.querySelector('.flex-label, span') || btn;
+  const sc = {
+    waiting: { text: 'Please Wait...', color: '#d98f40' },
+    downloading: { text: 'Downloading!', color: '#3fb950' },
+    error: { text: msg || 'Error', color: '#f85149' },
+  };
+  if (txtEl && btn.dataset?.nxdtOrigText === undefined) {
+    btn.dataset.nxdtOrigText = txtEl.innerText || txtEl.textContent || '';
+    btn.dataset.nxdtOrigColor = btn.style.color || '';
+  }
+  const conf = sc[state] || sc.error;
+  if (txtEl) txtEl.textContent = conf.text;
+  btn.style.color = conf.color;
+}
+
+export function restoreButtonState(btn, delay = 4000) {
+  if (!btn?.dataset?.nxdtOrigText) return;
+  setTimeout(() => {
+    try {
+      const txtEl = btn.querySelector('.flex-label, span') || btn;
+      if (txtEl && btn.dataset.nxdtOrigText) txtEl.textContent = btn.dataset.nxdtOrigText;
+      btn.style.color = btn.dataset.nxdtOrigColor || '';
+      delete btn.dataset.nxdtOrigText;
+      delete btn.dataset.nxdtOrigColor;
+    } catch {
+      /* element removed */
+    }
+  }, delay);
+}
 
 export function renderDownloadFallback(url) {
   if (typeof document === 'undefined' || !url) return null;
@@ -88,13 +119,25 @@ export function renderDownloadFallback(url) {
   notice.setAttribute('data-nxdt-fallback-notice', 'true');
   notice.style.cssText =
     'display: inline-flex; align-items: center; gap: 8px; margin: 8px 0; padding: 6px 14px; background: rgba(32, 35, 39, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #444c56; border-radius: 20px; font-size: 12px; color: #e6edf3; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);';
-  notice.innerHTML = `
-    <span style="display:inline-flex;align-items:center;gap:6px;">
-      <span class="nxdt-pulse-dot" style="display:inline-block;width:6px;height:6px;background:#3fb950;border-radius:50%;"></span>
-      <span><b>Auto-Download:</b> Countdown skipped.</span>
-    </span>
-    <a href="${url}" class="nxdt-fallback-link" ${isNmm ? '' : 'download'} style="color:#58a6ff;text-decoration:underline;cursor:pointer;margin-left:4px;">Click here if download didn't start</a>
-  `;
+
+  const textSpan = document.createElement('span');
+  textSpan.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+  const dot = document.createElement('span');
+  dot.className = 'nxdt-pulse-dot';
+  dot.style.cssText = 'display:inline-block;width:6px;height:6px;background:#3fb950;border-radius:50%;';
+  const label = document.createElement('span');
+  label.innerHTML = '<b>Auto-Download:</b> Countdown skipped.';
+  textSpan.appendChild(dot);
+  textSpan.appendChild(label);
+  notice.appendChild(textSpan);
+
+  const link = document.createElement('a');
+  link.className = 'nxdt-fallback-link';
+  link.href = url;
+  if (!isNmm) link.setAttribute('download', '');
+  link.style.cssText = 'color:#58a6ff;text-decoration:underline;cursor:pointer;margin-left:4px;';
+  link.textContent = "Click here if download didn't start";
+  notice.appendChild(link);
 
   const slowBtn =
     document.querySelector('#slowDownloadButton') ||
@@ -114,7 +157,6 @@ export function renderDownloadFallback(url) {
   }
   return notice;
 }
-
 export function triggerDownload(url) {
   if (!url) return;
   if (url.startsWith('nxm://')) {
@@ -213,7 +255,7 @@ export function resolveAndStartDownload(fileId, isNMM, href) {
 export function autoStartDownload(settings = {}) {
   if (!settings.autoStartDownload || !isModPage()) return;
   const loc = window.location;
-  if (loc.search.includes('tab=files') && !loc.pathname.includes('/files/')) return;
+  if (loc.search.includes('tab=files') && !loc.search.includes('file_id=') && !loc.pathname.includes('/files/')) return;
 
   const fileId = new URLSearchParams(loc.search).get('file_id') || extractFileId(loc.href);
   if (!fileId || autoFiredIds.has(fileId)) return;
@@ -300,16 +342,54 @@ export function setupSlowDownloadIntercept(settings = {}) {
 export function interceptRequirements(settings = {}) {
   if (settings.skipRequirements) {
     if (!requirementsListener) {
-      requirementsListener = (e) => {
+      requirementsListener = async (e) => {
         if (!e.isTrusted || e.defaultPrevented) return;
-        const link = e.composedPath
-          ? e.composedPath().find((n) => n && n.tagName === 'A')
-          : e.target.closest('a');
-        if (!link || !link.href || !link.href.includes('tab=requirements')) return;
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        log.info('Bypassing requirements tab redirect');
-        window.location.replace(link.href.replace('tab=requirements', 'tab=files'));
+        const path = e.composedPath ? e.composedPath() : [e.target];
+        const link = path.find((n) => n && (n.tagName === 'A' || n.tagName === 'BUTTON')) || e.target.closest('a, button');
+        if (!link) return;
+
+        const href = link.getAttribute('href') || link.href || '';
+
+        // 1. Requirements tab link redirect
+        if (href && href.includes('tab=requirements')) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          log.info('Bypassing requirements tab redirect');
+          window.location.replace(href.replace('tab=requirements', 'tab=files'));
+          return;
+        }
+
+        // 2. Mod page download click handling
+        if (!isModPage() || link.closest('.pagination, .comment-container, .forum-post, #nxdt-panel, .nxdt-modal-box')) return;
+        const isDownloadAction =
+          href.includes('tab=files&file_id=') ||
+          href.includes('file_id=') ||
+          href.includes('/api/files/') ||
+          href.startsWith('nxm://') ||
+          link.classList.contains('popup-btn-ajax');
+
+        if (!isDownloadAction) return;
+
+        const fid = extractFileId(href);
+        if (!fid) return;
+
+        const isNMM = isNMMDownload(link, href);
+        if (settings.downloadButtonColor !== false) {
+          setButtonState(link, 'waiting');
+        }
+
+        try {
+          const success = await resolveAndStartDownload(fid, isNMM, href);
+          if (success) {
+            if (settings.downloadButtonColor !== false) setButtonState(link, 'downloading');
+          } else {
+            if (settings.downloadButtonColor !== false) setButtonState(link, 'error');
+          }
+        } catch {
+          if (settings.downloadButtonColor !== false) setButtonState(link, 'error');
+        } finally {
+          restoreButtonState(link, 4000);
+        }
       };
       document.body.addEventListener('click', requirementsListener, REQUIREMENTS_LISTENER_OPTIONS);
     }

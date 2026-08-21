@@ -8,15 +8,7 @@ import { createLogger } from '../shared/logger.js';
 import { parseUrlSafe, isSafeDownloadUrl, buildGenerateDownloadUrl } from '../nexus/url-utils.js';
 import { registerHandler } from './message-router.js';
 import { PRESETS } from '../options/presets.js';
-import { downloadMo2MetaFile } from './mo2-meta-generator.js';
-import {
-  handleImportInventory,
-  handleGetInventory,
-  handleClearInventory,
-  handleCheckModInventory,
-  handleCrawlDependencyTree,
-  handleGetModHealthRadar,
-} from './inventory-handler.js';
+
 const log = createLogger('handlers');
 
 const NXM_SCHEME = 'nxm:';
@@ -84,10 +76,19 @@ async function extractValidatedUrl(response) {
     throw new NexusDownloadError(ERROR_CODES.FILE_NOT_FOUND, 'File not found');
   }
   if (/cloudflare|cf-/i.test(text)) {
-    throw new NexusDownloadError(ERROR_CODES.CLOUDFLARE, 'Blocked by Cloudflare');
+    throw new NexusDownloadError(ERROR_CODES.CLOUDFLARE, 'Blocked by Cloudflare challenge');
   }
-  if (response.status === 403) {
-    throw new NexusDownloadError(ERROR_CODES.AUTH_ERROR, 'Authentication required');
+  if (response.status === 429) {
+    throw new NexusDownloadError(ERROR_CODES.RATE_LIMITED, 'Rate limited by Nexus Mods');
+  }
+  if (/Your access to Nexus Mods has been temporarily suspended/i.test(text)) {
+    throw new NexusDownloadError(
+      ERROR_CODES.ACCOUNT_SUSPENDED,
+      'Account temporarily suspended by Nexus Mods (10-minute cooldown)'
+    );
+  }
+  if (response.status === 403 || /class="replaced-login-link"/i.test(text)) {
+    throw new NexusDownloadError(ERROR_CODES.AUTH_ERROR, 'Authentication required on Nexus Mods');
   }
   if (response.status >= 400) {
     throw new NexusDownloadError(
@@ -105,9 +106,29 @@ async function extractValidatedUrl(response) {
 
   let url = extractUrlFromData(json);
   if (!url && text) {
-    const unescapedText = text.replace(/\\\//g, '/');
-    const match = unescapedText.match(/nxm:\/\/[^\s"'<>]+/i) || unescapedText.match(/https?:\/\/[^\s"'<>]+/i);
-    if (match) url = match[0];
+    const unescapedText = text.replace(/\\\//g, '/').replace(/&amp;/g, '&');
+    // Regex patterns from NDC & NNW++
+    const patterns = [
+      /const downloadUrl = '([^']+)'/i,
+      /id="slowDownloadButton"[^>]*data-download-url="([^"]+)"/i,
+      /data-download-url="([^"]+)"/i,
+      /download-url="([^"]+)"/i,
+      /"(?:url|downloadUrl|URI|src)"\s*:\s*"([^"]+)"/i,
+      /nxm:\/\/[^\s"'<>]+/i,
+      /https?:\/\/[a-zA-Z0-9-]+\.nexus-cdn\.com[^\s"'<>]+/i,
+      /https?:\/\/[^\s"'<>]+/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = unescapedText.match(pattern);
+      if (match) {
+        const cand = (match[1] || match[0]).trim();
+        if (isValidDownloadUrl(cand)) {
+          url = cand;
+          break;
+        }
+      }
+    }
   }
   if (!url) return null;
 
@@ -117,7 +138,6 @@ async function extractValidatedUrl(response) {
   }
   return cleaned;
 }
-
 function resolveFailure(error) {
   if (error && error.name === 'AbortError') {
     return { url: null, error: 'Request timed out', code: ERROR_CODES.TIMEOUT };
@@ -257,7 +277,7 @@ export function resetHistoryCache() {
   historyWriteChain = Promise.resolve();
 }
 
-export async function startDownload(payload, deps = {}) {
+export async function startDownload(payload) {
   if (!payload?.url) {
     return { success: false, error: 'Missing download URL', code: ERROR_CODES.INVALID_INPUT };
   }
@@ -281,27 +301,10 @@ export async function startDownload(payload, deps = {}) {
         /* stats are best-effort */
       }
 
-      if (payload.item && deps.fileOrganizer) {
-        deps.fileOrganizer.registerDownload(downloadId, payload.item);
-      }
-
-      const settings = await getSettings();
-      if (settings.generateMo2Meta && payload.item) {
-        try {
-          await downloadMo2MetaFile(
-            payload.item,
-            payload.item.fileName || 'mod_download',
-            chrome.downloads
-          );
-        } catch {
-          /* ignore */
-        }
-      }
-
       log.info('chrome.downloads started', {
         dlId: downloadId,
         host: parsed?.hostname || null,
-        fileId: parsed?.searchParams.get('file_id') || null,
+        fileId: parsed?.searchParams?.get('file_id') || null,
       });
       resolve({ success: true, downloadId });
     });
@@ -419,6 +422,26 @@ export async function resolveArchivedDownload(payload, _deps = {}) {
   }
 }
 
+export async function resolveModDownload(payload, deps = {}) {
+  const { fileId, gameDomain, modId, isNMM, href, gameId } = payload || {};
+  if (!fileId && !href) {
+    return { url: null, error: 'Missing fileId or href', code: ERROR_CODES.INVALID_INPUT };
+  }
+  if (href && href.startsWith('nxm://')) {
+    return { url: href, fileId };
+  }
+  return resolveCollectionDownload(
+    {
+      fileId: String(fileId || ''),
+      gameId: String(gameId || '0'),
+      gameDomain: gameDomain || '',
+      isNMM: !!isNMM,
+      modId: String(modId || ''),
+    },
+    deps
+  );
+}
+
 export async function collectionFinished() {
   try {
     await incrementStat('collectionsDownloaded', 1);
@@ -523,9 +546,6 @@ export function registerHandlers(deps = {}) {
   registerHandler(MESSAGE_TYPES.FETCH_COLLECTION_MODS, (payload) =>
     fetchCollectionMods(payload, deps)
   );
-  registerHandler(MESSAGE_TYPES.FETCH_MOD_REQUIREMENTS, (payload) =>
-    fetchModRequirements(payload, deps)
-  );
   registerHandler(MESSAGE_TYPES.GET_COLLECTION_HISTORY, () => getCollectionHistory());
   registerHandler(MESSAGE_TYPES.SET_COLLECTION_HISTORY, (payload) => setCollectionHistory(payload));
   registerHandler(MESSAGE_TYPES.START_DOWNLOAD, (payload) => startDownload(payload, deps));
@@ -534,6 +554,9 @@ export function registerHandlers(deps = {}) {
   );
   registerHandler(MESSAGE_TYPES.RESOLVE_ARCHIVED_DOWNLOAD, (payload) =>
     resolveArchivedDownload(payload, deps)
+  );
+  registerHandler(MESSAGE_TYPES.RESOLVE_MOD_DOWNLOAD, (payload) =>
+    resolveModDownload(payload, deps)
   );
   registerHandler(MESSAGE_TYPES.COLLECTION_FINISHED, () => collectionFinished());
   registerHandler(MESSAGE_TYPES.APPLY_PRESET, (payload) => applyPresetHandler(payload));
@@ -546,46 +569,4 @@ export function registerHandlers(deps = {}) {
     }
     return { ok: true };
   });
-
-  // Queue Manager Handlers
-  registerHandler(MESSAGE_TYPES.ENQUEUE_ITEMS, async (payload) => {
-    if (!deps.queueManager) return { success: false, error: 'Queue manager unavailable' };
-    return deps.queueManager.enqueueItems(payload?.items, payload?.options);
-  });
-  registerHandler(MESSAGE_TYPES.QUEUE_PAUSE, async () => {
-    deps.queueManager?.pause();
-    return { ok: true };
-  });
-  registerHandler(MESSAGE_TYPES.QUEUE_RESUME, async () => {
-    deps.queueManager?.resume();
-    return { ok: true };
-  });
-  registerHandler(MESSAGE_TYPES.QUEUE_CLEAR, async () => {
-    deps.queueManager?.clear();
-    return { ok: true };
-  });
-  registerHandler(MESSAGE_TYPES.QUEUE_SKIP_ITEM, async (payload) => {
-    deps.queueManager?.skipItem(payload?.itemId);
-    return { ok: true };
-  });
-  registerHandler(MESSAGE_TYPES.QUEUE_RETRY_FAILED, async () => {
-    return deps.queueManager?.retryFailed() || { retriedCount: 0 };
-  });
-  registerHandler(MESSAGE_TYPES.GET_QUEUE_STATE, async () => {
-    return deps.queueManager?.getState() || { status: 'idle', items: [] };
-  });
-
-  // Local Inventory & Load Order Handlers
-  registerHandler(MESSAGE_TYPES.IMPORT_INVENTORY, (payload) => handleImportInventory(payload));
-  registerHandler(MESSAGE_TYPES.GET_INVENTORY, () => handleGetInventory());
-  registerHandler(MESSAGE_TYPES.CLEAR_INVENTORY, (payload) => handleClearInventory(payload));
-  registerHandler(MESSAGE_TYPES.CHECK_MOD_INVENTORY, (payload) => handleCheckModInventory(payload));
-
-  // Deep Dependency Tree & Health Radar
-  registerHandler(MESSAGE_TYPES.CRAWL_DEPENDENCY_TREE, (payload) =>
-    handleCrawlDependencyTree(payload, deps)
-  );
-  registerHandler(MESSAGE_TYPES.GET_MOD_HEALTH_RADAR, (payload) =>
-    handleGetModHealthRadar(payload)
-  );
 }

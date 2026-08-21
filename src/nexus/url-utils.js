@@ -103,3 +103,59 @@ export function buildGenerateDownloadUrl(slug, fileId, gameId) {
   return `${base}/Core/Downloads/GenerateDownloadUrl?${params.toString()}`;
 }
 
+export function setNexusAdBypassCookie(doc = typeof document !== 'undefined' ? document : null) {
+  if (!doc) return;
+  try {
+    const now = Math.round(Date.now() / 1000);
+    const expirySeconds = 5 * 60;
+    const expiryTimestamp = now + expirySeconds;
+    const expiryDate = new Date(Date.now() + expirySeconds * 1000).toUTCString();
+    const isNexus = typeof window !== 'undefined' && window.location?.hostname?.includes('nexusmods.com');
+    const domainPart = isNexus ? ';domain=nexusmods.com' : '';
+    doc.cookie = `ab=0|${expiryTimestamp};expires=${expiryDate}${domainPart};path=/`;
+  } catch {
+    // Ignore in sandboxed contexts
+  }
+}
+export function isCloudflareChallenge(text = '', status = 200, headers = '') {
+  if (!text && status !== 403 && status !== 503) return false;
+  const str = String(text);
+  if (
+    /cf-turnstile|challenges\.cloudflare\.com|Just a moment\.\.\.|Attention Required!|cf-error-details|id="challenge-form"|cf-browser-verification|window\._cf_chl_opt/i.test(
+      str
+    )
+  ) {
+    return true;
+  }
+  const headerStr = typeof headers === 'string' ? headers : JSON.stringify(headers || '');
+  if (
+    (status === 403 || status === 503) &&
+    /cf-ray|cloudflare/i.test(headerStr) &&
+    str.trim().startsWith('<')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function isAccountSuspended(text = '') {
+  return /Your access to Nexus Mods has been temporarily suspended/i.test(String(text));
+}
+
+export function isLoginRequired(text = '') {
+  return (
+    /class="replaced-login-link"/i.test(String(text)) ||
+    /users\.nexusmods\.com\/auth\/continue/i.test(String(text))
+  );
+}
+
+export function sanitizeFilename(name) {
+  if (!name) return 'nexus_download';
+  return String(name)
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    .replace(/^\.+/, '')
+    .trim() || 'nexus_download';
+}
+
