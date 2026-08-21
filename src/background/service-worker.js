@@ -2,7 +2,7 @@ import { LOG_LEVELS } from '../shared/constants.js';
 import { ERROR_CODES } from '../shared/errors.js';
 import { dispatch } from './message-router.js';
 import { registerHandlers, isTrustedSender } from './handlers.js';
-import { getSettings } from '../storage/settings.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { CollectionClient } from '../nexus/collection-client.js';
 import { createLogger } from '../shared/logger.js';
 
@@ -10,10 +10,9 @@ const log = createLogger('service-worker');
 
 let collectionClient = new CollectionClient();
 
-async function refreshClients() {
-  const settings = await getSettings();
-  log.setLevel(settings.debugLogging ? LOG_LEVELS.DEBUG : LOG_LEVELS.INFO);
-  collectionClient = new CollectionClient({ timeout: settings.requestTimeout });
+function refreshClients() {
+  log.setLevel(DEFAULT_SETTINGS.debugLogging ? LOG_LEVELS.DEBUG : LOG_LEVELS.INFO);
+  collectionClient = new CollectionClient({ timeout: DEFAULT_SETTINGS.requestTimeout });
 }
 
 self.addEventListener('install', (_event) => {

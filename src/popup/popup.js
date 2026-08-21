@@ -1,4 +1,5 @@
-import { STORAGE_KEY_SETTINGS, MESSAGE_TYPES } from '../shared/constants.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 
 export const DONATE_URL = 'https://buymeacoffee.com/zendevve';
 
@@ -13,7 +14,7 @@ const SITE_LABELS = {
   'not-nexus': 'Not on Nexus',
 };
 
-let currentSettings = {};
+let currentSettings = DEFAULT_SETTINGS;
 let activeTab = null;
 
 function classifyUrl(url) {
@@ -55,10 +56,10 @@ function getActiveTab() {
   });
 }
 
-function renderDot(alive, settings) {
+function renderDot(alive, _settings) {
   const el = document.getElementById('status-dot');
   if (!el) return;
-  const enabled = settings.enabled !== false;
+  const enabled = DEFAULT_SETTINGS.enabled !== false;
   const active = alive && enabled;
   el.classList.toggle('inactive', !active);
   el.setAttribute('title', active ? 'Service Worker Active' : 'Service Worker Inactive');
@@ -72,27 +73,27 @@ function renderSite(tab) {
   el.textContent = category ? SITE_LABELS[category] : SITE_LABELS['not-nexus'];
 }
 
-function renderCollectionState(settings) {
+function renderCollectionState(_settings) {
   const el = document.getElementById('collection-state');
   if (!el) return;
-  const enabled = settings.enabled !== false;
-  const handleCollections = settings.handleCollections !== false;
+  const enabled = DEFAULT_SETTINGS.enabled !== false;
+  const handleCollections = DEFAULT_SETTINGS.handleCollections !== false;
   el.textContent = enabled && handleCollections ? 'On' : 'Off';
 }
 
-function renderNowaitState(settings) {
+function renderNowaitState(_settings) {
   const el = document.getElementById('nowait-state');
   if (!el) return;
-  const enabled = settings.enabled !== false;
-  const autoStart = settings.autoStartDownload !== false;
+  const enabled = DEFAULT_SETTINGS.enabled !== false;
+  const autoStart = DEFAULT_SETTINGS.autoStartDownload !== false;
   el.textContent = enabled && autoStart ? 'On' : 'Off';
 }
 
-function renderArchivedState(settings) {
+function renderArchivedState(_settings) {
   const el = document.getElementById('archived-state');
   if (!el) return;
-  const enabled = settings.enabled !== false;
-  const handleArchived = settings.handleArchivedFiles !== false;
+  const enabled = DEFAULT_SETTINGS.enabled !== false;
+  const handleArchived = DEFAULT_SETTINGS.handleArchivedFiles !== false;
   el.textContent = enabled && handleArchived ? 'On' : 'Off';
 }
 
@@ -108,14 +109,12 @@ function renderStats(stats) {
 }
 
 export async function refresh() {
-  const [pingRes, settingsRes] = await Promise.all([
+  const [pingRes] = await Promise.all([
     sendMessage({ type: MESSAGE_TYPES.PING }),
-    sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS }),
   ]);
 
   const alive = pingRes && pingRes.success !== false;
-  const settings = (settingsRes && settingsRes.result && settingsRes.result.settings) || settingsRes.settings || {};
-  currentSettings = { ...settings };
+  currentSettings = DEFAULT_SETTINGS;
   activeTab = await getActiveTab();
 
   renderDot(alive, currentSettings);
@@ -131,25 +130,6 @@ export async function refresh() {
       renderStats(res && res.stats);
     });
   }
-}
-
-async function toggleSetting(key) {
-  const next = { ...currentSettings, [key]: !currentSettings[key] };
-  currentSettings = next;
-  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-    chrome.storage.local.set({ [STORAGE_KEY_SETTINGS]: next }, () => {
-      void chrome.runtime?.lastError;
-      refresh();
-    });
-  }
-}
-
-async function toggleNowait() {
-  await toggleSetting('autoStartDownload');
-}
-
-async function toggleArchived() {
-  await toggleSetting('handleArchivedFiles');
 }
 
 function onSiteRowClick() {
@@ -182,22 +162,6 @@ if (siteRow) siteRow.addEventListener('click', onSiteRowClick);
 const collectionRow = document.getElementById('collection-row');
 if (collectionRow) collectionRow.addEventListener('click', onCollectionRowClick);
 
-const nowaitRow = document.getElementById('nowait-row');
-if (nowaitRow) nowaitRow.addEventListener('click', () => toggleNowait());
-
-const archivedRow = document.getElementById('archived-row');
-if (archivedRow) archivedRow.addEventListener('click', () => toggleArchived());
-
-const openSettingsBtn = document.getElementById('open-settings');
-if (openSettingsBtn) {
-  openSettingsBtn.addEventListener('click', () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    } else {
-      sendMessage({ type: MESSAGE_TYPES.OPEN_OPTIONS });
-    }
-  });
-}
 
 const openDonateBtn = document.getElementById('open-donate');
 if (openDonateBtn) {
@@ -221,13 +185,6 @@ if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
 
 if (typeof chrome !== 'undefined' && chrome.storage?.onChanged?.addListener) {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
-      currentSettings = { ...currentSettings, ...changes[STORAGE_KEY_SETTINGS].newValue };
-      renderCollectionState(currentSettings);
-      renderNowaitState(currentSettings);
-      renderArchivedState(currentSettings);
-      renderDot(true, currentSettings);
-    }
     if (area === 'local' && changes.stats) {
       renderStats(changes.stats.newValue);
     }

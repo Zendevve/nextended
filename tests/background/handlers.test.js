@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as handlers from '../../src/background/handlers.js';
 import { ERROR_CODES } from '../../src/shared/errors.js';
+import { DEFAULT_SETTINGS } from '../../src/storage/defaults.js';
 
 function makeChromeMock() {
   const store = {};
@@ -252,22 +253,27 @@ describe('background handlers', () => {
     });
 
     it('returns TIMEOUT when the request is aborted', async () => {
-      store.settings = { requestTimeout: 30 };
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(
-          (_url, options) =>
-            new Promise((_resolve, reject) => {
-              options.signal.addEventListener('abort', () => {
-                const e = new Error('Aborted');
-                e.name = 'AbortError';
-                reject(e);
-              });
-            })
-        )
-      );
-      const res = await handlers.resolveArchivedDownload({ fileId: '123', slug: 's' });
-      expect(res).toMatchObject({ url: null, code: ERROR_CODES.TIMEOUT });
+      const prevTimeout = DEFAULT_SETTINGS.requestTimeout;
+      DEFAULT_SETTINGS.requestTimeout = 30;
+      try {
+        vi.stubGlobal(
+          'fetch',
+          vi.fn(
+            (_url, options) =>
+              new Promise((_resolve, reject) => {
+                options.signal.addEventListener('abort', () => {
+                  const e = new Error('Aborted');
+                  e.name = 'AbortError';
+                  reject(e);
+                });
+              })
+          )
+        );
+        const res = await handlers.resolveArchivedDownload({ fileId: '123', slug: 's' });
+        expect(res).toMatchObject({ url: null, code: ERROR_CODES.TIMEOUT });
+      } finally {
+        DEFAULT_SETTINGS.requestTimeout = prevTimeout;
+      }
     });
 
     it('rejects missing input', async () => {
@@ -551,17 +557,4 @@ describe('background handlers', () => {
     });
   });
 
-  describe('OPEN_OPTIONS message handler', () => {
-    it('registers OPEN_OPTIONS handler and invokes openOptionsPage', async () => {
-      const openSpy = vi.fn();
-      globalThis.chrome = {
-        runtime: { openOptionsPage: openSpy },
-      };
-      handlers.registerHandlers();
-      const router = await import('../../src/background/message-router.js');
-      const res = await router.dispatch({ type: 'NXDT_OPEN_OPTIONS' }, {});
-      expect(res).toEqual({ success: true, result: { ok: true } });
-      expect(openSpy).toHaveBeenCalled();
-    });
-  });
 });

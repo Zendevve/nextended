@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../src/shared/constants.js';
+import { MESSAGE_TYPES } from '../src/shared/constants.js';
 
 const html = readFileSync(join(process.cwd(), 'src', 'popup', 'popup.html'), 'utf8');
 const bodyHtml = (html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? html).replace(
@@ -15,8 +15,6 @@ const COLLECTION_URL =
 function buildChromeMock(options = {}) {
   const {
     tab = { id: 7, url: COLLECTION_URL },
-    settings = { enabled: true, handleCollections: true, autoStartDownload: true, handleArchivedFiles: true },
-    storedSettings = settings,
     stats = { collectionsDownloaded: 7, autoDownloadsCompleted: 3 },
     alive = true,
   } = options;
@@ -26,8 +24,6 @@ function buildChromeMock(options = {}) {
     sendMessage: vi.fn((msg, cb) => {
       if (msg.type === MESSAGE_TYPES.PING) {
         cb && cb({ success: alive });
-      } else if (msg.type === MESSAGE_TYPES.GET_SETTINGS) {
-        cb && cb({ success: true, result: { settings: storedSettings } });
       } else {
         cb && cb({ success: true });
       }
@@ -40,19 +36,12 @@ function buildChromeMock(options = {}) {
       get: vi.fn((keys, cb) => {
         const out = {};
         const keyStr = typeof keys === 'string' ? keys : Array.isArray(keys) ? keys[0] : Object.keys(keys)[0];
-        if (keyStr === STORAGE_KEY_SETTINGS) out[STORAGE_KEY_SETTINGS] = storedSettings;
         if (keyStr === 'stats') out.stats = stats;
-        if (Array.isArray(keys)) {
-          for (const k of keys) {
-            if (k === STORAGE_KEY_SETTINGS) out[k] = storedSettings;
-            if (k === 'stats') out[k] = stats;
-          }
-        }
+        if (Array.isArray(keys) && keys.includes('stats')) out.stats = stats;
         if (typeof cb === 'function') cb(out);
         return Promise.resolve(out);
       }),
-      set: vi.fn((items, cb) => {
-        Object.assign(storedSettings, items[STORAGE_KEY_SETTINGS] || {});
+      set: vi.fn((_items, cb) => {
         if (typeof cb === 'function') cb();
         return Promise.resolve();
       }),
@@ -145,40 +134,6 @@ describe('popup', () => {
     expect(document.getElementById('site-name').textContent).toBe('Not on Nexus');
   });
 
-  it('toggles autoStartDownload with read-merge-write and updates the label', async () => {
-    const settings = { enabled: true, autoStartDownload: false, handleArchivedFiles: true, handleCollections: true };
-    await loadPopup({ settings, storedSettings: settings });
-    expect(document.getElementById('nowait-state').textContent).toBe('Off');
-
-    document.getElementById('nowait-row').click();
-
-    await vi.waitFor(() => {
-      expect(chromeMock.storage.local.set).toHaveBeenCalled();
-    });
-    await vi.waitFor(() => {
-      expect(document.getElementById('nowait-state').textContent).toBe('On');
-    });
-  });
-
-  it('shows "Off" for the collection row when handleCollections is disabled', async () => {
-    await loadPopup({
-      settings: { enabled: true, handleCollections: false, autoStartDownload: true, handleArchivedFiles: true },
-    });
-    expect(document.getElementById('collection-state').textContent).toBe('Off');
-  });
-
-  it('shows "Off" for archived row when handleArchivedFiles is disabled', async () => {
-    await loadPopup({
-      settings: { enabled: true, handleCollections: true, autoStartDownload: true, handleArchivedFiles: false },
-    });
-    expect(document.getElementById('archived-state').textContent).toBe('Off');
-  });
-
-  it('shows a gray status dot when the extension is disabled', async () => {
-    await loadPopup({ settings: { enabled: false, handleCollections: true, autoStartDownload: true, handleArchivedFiles: true } });
-    expect(document.getElementById('status-dot').classList.contains('inactive')).toBe(true);
-  });
-
   it('shows a green status dot when the service worker is alive and enabled', async () => {
     await loadPopup();
     expect(document.getElementById('status-dot').classList.contains('inactive')).toBe(false);
@@ -190,11 +145,6 @@ describe('popup', () => {
     expect(document.getElementById('autodl-count').textContent).toBe('9');
   });
 
-  it('opens the options page from the Settings button', async () => {
-    await loadPopup();
-    document.getElementById('open-settings').click();
-    expect(chromeMock.runtime.openOptionsPage).toHaveBeenCalledTimes(1);
-  });
 
   it('renders the donate button in the DOM', async () => {
     await loadPopup();

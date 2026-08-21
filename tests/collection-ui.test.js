@@ -251,26 +251,6 @@ describe('CollectionManager download queue', () => {
     radios.forEach((rb) => expect(rb.disabled).toBe(false));
   });
 
-  it('renders settings cog button and opens options page on click', () => {
-    const manager = createManager();
-    manager.mods = { all: [], mandatory: [], optional: [] };
-    manager.downloadButton.render();
-
-    const settingsBtn = manager.downloadButton.element.querySelector('#nxdtOpenSettings');
-    expect(settingsBtn).not.toBeNull();
-    expect(settingsBtn.textContent).toContain('Config');
-
-    const openSpy = vi.fn();
-    window.chrome = {
-      runtime: {
-        openOptionsPage: openSpy,
-        sendMessage: vi.fn(),
-      },
-    };
-
-    settingsBtn.click();
-    expect(openSpy).toHaveBeenCalled();
-  });
 
   it('completes a 99-mod run: COLLECTION_FINISHED once, progress 99/99', async () => {
     vi.useFakeTimers();

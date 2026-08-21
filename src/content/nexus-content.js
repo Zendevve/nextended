@@ -2,9 +2,9 @@ import { extractCollectionDetails } from './collection-detector.js';
 import { CollectionManager } from './collection-ui.js';
 import { createPageObserver } from './page-observer.js';
 import { applyNoWaitFeatures, resetNoWaitState, triggerDownload } from './no-wait.js';
-import { getSettings } from '../storage/settings.js';
 import { createLogger } from '../shared/logger.js';
-import { MESSAGE_TYPES, STORAGE_KEY_SETTINGS } from '../shared/constants.js';
+import { MESSAGE_TYPES } from '../shared/constants.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import {
   MAIN_CONTENT_SELECTORS,
   COLLECTION_PANEL_SELECTOR,
@@ -83,18 +83,7 @@ function processInPageFeatures() {
 async function init() {
   if (!NEXUS_HOST_REGEX.test(window.location.href)) return;
 
-  try {
-    currentSettings = await getSettings();
-  } catch {
-    currentSettings = {
-      enabled: true,
-      handleCollections: true,
-      autoStartDownload: true,
-      skipRequirements: true,
-      handleArchivedFiles: true,
-      forceModManagerDownload: true,
-    };
-  }
+  currentSettings = DEFAULT_SETTINGS;
 
   processInPageFeatures();
   processCollectionPage();
@@ -132,16 +121,6 @@ async function init() {
     });
     oo.observe(document.documentElement, { childList: true, subtree: true });
   }
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes[STORAGE_KEY_SETTINGS]) {
-      currentSettings = {
-        ...currentSettings,
-        ...changes[STORAGE_KEY_SETTINGS].newValue,
-      };
-      processInPageFeatures();
-      processCollectionPage();
-    }
-  });
 }
 
 function onDomReady(fn) {

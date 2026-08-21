@@ -95,6 +95,21 @@ export class CollectionClient {
 
     const data = await this._postGraphql(query, variables, 'CollectionRevisionMods');
     if (!data?.collectionRevision) {
+      if (revision == null) {
+        const revisions = await this.fetchRevisions(gameDomain, collectionSlug).catch(() => []);
+        let latest = null;
+        for (const r of revisions) {
+          if (r.revisionStatus !== 'published' || r.discardedAt != null) continue;
+          const n = r.revisionNumber;
+          if (!Number.isInteger(n)) continue;
+          if (latest === null || n > latest.revisionNumber) {
+            latest = r;
+          }
+        }
+        if (latest) {
+          return this.fetchMods(gameDomain, collectionSlug, latest.revisionNumber);
+        }
+      }
       return null;
     }
 

@@ -28,7 +28,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.nexusmods.com/*"
+        "https://www.nexusmods.com/*",
+        "https://next.nexusmods.com/*"
       ],
       "js": [
         "content/nexus-content.js"
@@ -43,10 +44,6 @@
   "action": {
     "default_title": "Nexus Mods Download Tools",
     "default_popup": "popup/popup.html"
-  },
-  "options_ui": {
-    "page": "options/options.html",
-    "open_in_tab": true
   },
   "commands": {
     "_execute_action": {

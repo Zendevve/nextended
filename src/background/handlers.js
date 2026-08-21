@@ -2,12 +2,12 @@ import {
   MESSAGE_TYPES,
   STORAGE_KEY_COLLECTION_HISTORY,
 } from '../shared/constants.js';
-import { getSettings, setSettings, incrementStat } from '../storage/settings.js';
+import { incrementStat } from '../storage/stats.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { ERROR_CODES, NexusDownloadError } from '../shared/errors.js';
 import { createLogger } from '../shared/logger.js';
 import { parseUrlSafe, isSafeDownloadUrl, buildGenerateDownloadUrl } from '../nexus/url-utils.js';
 import { registerHandler } from './message-router.js';
-import { PRESETS } from '../options/presets.js';
 
 const log = createLogger('handlers');
 
@@ -316,8 +316,7 @@ export async function resolveCollectionDownload(payload, _deps = {}) {
   if (!fileId || typeof fileId !== 'string' || !FILE_ID_PATTERN.test(fileId.trim())) {
     return { url: null, error: 'Invalid fileId', code: ERROR_CODES.INVALID_INPUT };
   }
-  const settings = await getSettings();
-  const timeout = settings.requestTimeout || 30000;
+  const timeout = DEFAULT_SETTINGS.requestTimeout || 30000;
   const bodyParts = [`fid=${encodeURIComponent(fileId)}`];
   if (gameId && gameId !== '0' && gameId !== 0 && String(gameId).trim() !== '') {
     bodyParts.push(`game_id=${encodeURIComponent(gameId)}`);
@@ -401,8 +400,7 @@ export async function resolveArchivedDownload(payload, _deps = {}) {
   ) {
     return { url: null, error: 'Invalid fileId or slug', code: ERROR_CODES.INVALID_INPUT };
   }
-  const settings = await getSettings();
-  const timeout = settings.requestTimeout || 30000;
+  const timeout = DEFAULT_SETTINGS.requestTimeout || 30000;
   const endpoint = `${buildGenerateDownloadUrl(slug, fileId)}${isNMM ? '&nmm=1' : ''}`;
   try {
     const response = await fetchWithTimeout(
@@ -451,16 +449,6 @@ export async function collectionFinished() {
   return { ok: true };
 }
 
-export async function applyPresetHandler(payload) {
-  const { presetName } = payload || {};
-  const preset = PRESETS[presetName];
-  if (!preset) {
-    return { success: false, error: `Unknown preset: ${presetName}`, code: ERROR_CODES.INVALID_INPUT };
-  }
-  const current = await getSettings();
-  const updated = await setSettings({ ...current, ...preset.settings });
-  return { success: true, settings: updated, preset: preset.name };
-}
 
 export async function verifyCollectionDownloads(payload) {
   const { gameDomain, collectionSlug, modFiles = [] } = payload || {};
@@ -538,8 +526,6 @@ export async function verifyCollectionDownloads(payload) {
 }
 
 export function registerHandlers(deps = {}) {
-  registerHandler(MESSAGE_TYPES.GET_SETTINGS, () => getSettings().then((settings) => ({ settings })));
-  registerHandler(MESSAGE_TYPES.SETTINGS_CHANGED, () => settingsChanged(deps));
   registerHandler(MESSAGE_TYPES.FETCH_COLLECTION_REVISIONS, (payload) =>
     fetchCollectionRevisions(payload, deps)
   );
@@ -559,14 +545,7 @@ export function registerHandlers(deps = {}) {
     resolveModDownload(payload, deps)
   );
   registerHandler(MESSAGE_TYPES.COLLECTION_FINISHED, () => collectionFinished());
-  registerHandler(MESSAGE_TYPES.APPLY_PRESET, (payload) => applyPresetHandler(payload));
   registerHandler(MESSAGE_TYPES.VERIFY_COLLECTION_DOWNLOADS, (payload) =>
     verifyCollectionDownloads(payload)
   );
-  registerHandler(MESSAGE_TYPES.OPEN_OPTIONS, async () => {
-    if (chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    }
-    return { ok: true };
-  });
 }

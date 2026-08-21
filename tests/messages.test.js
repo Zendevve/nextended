@@ -15,9 +15,4 @@ describe('messages', () => {
     expect(msg.payload).toEqual({});
   });
 
-  it('builds settings changed message', () => {
-    const msg = MessageFactory.settingsChanged({ enabled: false });
-    expect(msg.type).toBe(MESSAGE_TYPES.SETTINGS_CHANGED);
-    expect(msg.payload.settings).toEqual({ enabled: false });
-  });
 });

@@ -3,6 +3,7 @@ import {
   DOWNLOAD_METHOD_VORTEX,
   DOWNLOAD_METHOD_BROWSER,
 } from '../shared/constants.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { createLogger } from '../shared/logger.js';
 import { setNexusAdBypassCookie, isCloudflareChallenge, isAccountSuspended, isLoginRequired } from '../nexus/url-utils.js';
 
@@ -99,16 +100,9 @@ export class CollectionManager {
       </div>
     `;
 
-    try {
-      const res = await sendMessage(MESSAGE_TYPES.GET_SETTINGS);
-      if (res?.settings) {
-        this.downloadMethod = res.settings.collectionDownloadMethod ?? DOWNLOAD_METHOD_VORTEX;
-        this.downloadSpeed = res.settings.collectionDownloadSpeed ?? 1.5;
-        this.pauseBetweenDownload = res.settings.collectionPauseBetweenDownload ?? 1.5;
-      }
-    } catch (e) {
-      log.warn('Failed to load settings', { error: e?.message });
-    }
+    this.downloadMethod = DEFAULT_SETTINGS.collectionDownloadMethod ?? DOWNLOAD_METHOD_VORTEX;
+    this.downloadSpeed = DEFAULT_SETTINGS.collectionDownloadSpeed ?? 1.5;
+    this.pauseBetweenDownload = DEFAULT_SETTINGS.collectionPauseBetweenDownload ?? 1.5;
 
     let revisionData;
     try {
@@ -501,10 +495,6 @@ class CollectionDownloadButton {
             ${ICONS.verify}
             <span>Verify</span>
           </button>
-          <button id="nxdtOpenSettings" class="nxdt-btn-util nxdt-btn-util-settings" title="Open extension configuration & options">
-            ${ICONS.cog}
-            <span>Config</span>
-          </button>
         </div>
       </div>
       </div>
@@ -565,17 +555,6 @@ class CollectionDownloadButton {
       modal.render();
     });
 
-    this.element.querySelector('#nxdtOpenSettings')?.addEventListener('click', () => {
-      try {
-        if (chrome.runtime?.openOptionsPage) {
-          chrome.runtime.openOptionsPage();
-        } else {
-          sendMessage(MESSAGE_TYPES.OPEN_OPTIONS);
-        }
-      } catch {
-        sendMessage(MESSAGE_TYPES.OPEN_OPTIONS);
-      }
-    });
   }
 
   setRadiosDisabled(disabled) {

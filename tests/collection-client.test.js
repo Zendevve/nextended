@@ -117,4 +117,72 @@ describe('CollectionClient', () => {
     });
     expect('revision' in body3.variables).toBe(false);
   });
+
+  it('fetchMods falls back to latest published revision when collectionRevision is null and no revision supplied', async () => {
+    const mockFetch = vi.fn().mockImplementation(async (_url, opts) => {
+      const variables = JSON.parse(opts.body).variables;
+      const revision = variables.revision;
+      if (revision == null) {
+        return {
+          ok: true,
+          json: async () => ({ data: { collectionRevision: null } }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            collectionRevision: {
+              modFiles: [
+                {
+                  fileId: 481,
+                  optional: false,
+                  file: {
+                    fileId: 481,
+                    name: 'Fallback Mod File',
+                    size: 500,
+                    mod: {
+                      modId: 50,
+                      name: 'Fallback Mod',
+                      game: { domainName: 'cyberpunk2077', id: 3333 },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      };
+    });
+
+    const client = new CollectionClient({ fetchImpl: mockFetch });
+    // Supply the revisions lookup directly so the fallback resolves without an
+    // extra fetchImpl call; 500 is discarded, 480/481 published, 479 draft.
+    client.fetchRevisions = vi.fn().mockResolvedValue([
+      { revisionNumber: 500, revisionStatus: 'published', discardedAt: '2024-01-01' },
+      { revisionNumber: 481, revisionStatus: 'published' },
+      { revisionNumber: 480, revisionStatus: 'published' },
+      { revisionNumber: 479, revisionStatus: 'draft' },
+    ]);
+
+    const res = await client.fetchMods('cyberpunk2077', 'iszwwe', null);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(res).not.toBeNull();
+    expect(res.modFiles).toHaveLength(1);
+    expect(res.modFiles[0].file.url).toBe(
+      'https://www.nexusmods.com/cyberpunk2077/mods/50?tab=files&file_id=481'
+    );
+  });
+
+  it('fetchMods returns null without fallback when explicit revision yields null collectionRevision', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { collectionRevision: null } }),
+    });
+
+    const client = new CollectionClient({ fetchImpl: mockFetch });
+    const res = await client.fetchMods('cyberpunk2077', 'iszwwe', 999);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(res).toBeNull();
+  });
 });

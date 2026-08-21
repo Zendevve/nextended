@@ -145,7 +145,6 @@ describe('Packaging & ZIP generation engine', () => {
 
       // Verify popup and options HTML
       expect(parsed.some((p) => p.filename === 'popup/popup.html')).toBe(true);
-      expect(parsed.some((p) => p.filename === 'options/options.html')).toBe(true);
       expect(parsed.some((p) => p.filename === 'styles/nexus.css')).toBe(true);
 
       // Ensure no source maps are packaged in release zips

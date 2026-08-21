@@ -12,15 +12,12 @@ const targets = [
   { entry: 'background/service-worker.js' },
   { entry: 'content/nexus-content.js' },
   { entry: 'popup/popup.js' },
-  { entry: 'options/options.js' },
 ];
 
 const copies = [
   ['styles/nexus.css', 'styles/nexus.css'],
   ['popup/popup.html', 'popup/popup.html'],
   ['popup/popup.css', 'popup/popup.css'],
-  ['options/options.html', 'options/options.html'],
-  ['options/options.css', 'options/options.css'],
 ];
 
 const staticSources = new Set([

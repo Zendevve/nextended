@@ -44,10 +44,6 @@
     "default_title": "Nexus Mods Download Tools",
     "default_popup": "popup/popup.html"
   },
-  "options_ui": {
-    "page": "options/options.html",
-    "open_in_tab": true
-  },
   "commands": {
     "_execute_action": {
       "suggested_key": {
