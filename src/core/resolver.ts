@@ -72,37 +72,43 @@ export async function resolve(
   input: ResolveInput,
   ctx: ResolveContext,
 ): Promise<ResolveResult> {
-  const attempts: ResolveAttempt[] = [];
+  // Fixed-size buffer pre-populated with every strategy. Filled in place as
+  // the chain runs; slots past the last-attempted index stay at elapsedMs=0.
+  // Avoids per-strategy object literal + array push allocations in the hot
+  // loop while preserving the public `attempts: ResolveAttempt[]` contract.
+  const attempts: ResolveAttempt[] = STRATEGY_ORDER.map((s) => ({
+    strategy: s,
+    elapsedMs: 0,
+  }));
 
-  for (const strategy of STRATEGY_ORDER) {
+  for (let i = 0; i < STRATEGY_ORDER.length; i++) {
+    const strategy = STRATEGY_ORDER[i] as Strategy;
+    const slot = attempts[i] as ResolveAttempt;
     const started = now();
     try {
       if (ctx.signal.aborted) {
+        slot.elapsedMs = now() - started;
         return finishFailed(attempts, "network", "aborted before strategy " + strategy);
       }
       const url = await runStrategy(strategy, input, ctx);
+      const elapsedMs = now() - started;
       if (url) {
-        return {
-          ok: true,
-          url,
-          strategy,
-          elapsedMs: now() - started,
-        };
+        return { ok: true, url, strategy, elapsedMs };
       }
-      attempts.push({ strategy, elapsedMs: now() - started });
+      slot.elapsedMs = elapsedMs;
     } catch (e: unknown) {
       const elapsedMs = now() - started;
       const err = e as { status?: number; message?: string };
       const status = typeof err.status === "number" ? err.status : undefined;
       const message = err instanceof Error ? err.message : String(e);
-      const attempt: ResolveAttempt = { strategy, elapsedMs, error: message };
-      if (status !== undefined) attempt.status = status;
-      attempts.push(attempt);
+      slot.elapsedMs = elapsedMs;
+      slot.error = message;
+      if (status !== undefined) slot.status = status;
       if (
         (strategy === "generate-nmm" || strategy === "generate-plain") &&
         status === 401
       ) {
-        return finishFailed(attempts, "login", evidence(message));
+        return finishFailed(attempts, "login", message);
       }
     }
   }
@@ -259,13 +265,12 @@ async function deepScrape(
   }
   return null;
 }
-
 function finishFailed(
   attempts: ResolveAttempt[],
   error: ErrorClass,
-  evidence: string,
+  message: string,
 ): ResolveErr {
-  return { ok: false, error, evidence, attempts };
+  return { ok: false, error, evidence: evidence(message), attempts };
 }
 
 function evidence(message: string): string {
