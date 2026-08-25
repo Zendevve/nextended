@@ -183,7 +183,7 @@ async function apiFiles(
     method: "GET",
     credentials: "include",
   };
-  if (ctx.signal) init.signal = ctx.signal;
+  init.signal = ctx.signal;
   const res = await ctx.client.fetch(init);
   if (!res.ok) {
     const err = new Error(`api-files HTTP ${res.status}`);
@@ -222,7 +222,7 @@ async function generate(
     headers: { "content-type": "application/x-www-form-urlencoded" },
     credentials: "include",
   };
-  if (ctx.signal) init.signal = ctx.signal;
+  init.signal = ctx.signal;
   const res = await ctx.client.fetch(init);
   if (!res.ok) {
     const err = new Error(`generate(${nmm ? "nmm" : "plain"}) HTTP ${res.status}`);
@@ -247,7 +247,7 @@ async function deepScrape(
     method: "GET",
     credentials: "include",
   };
-  if (ctx.signal) init.signal = ctx.signal;
+  init.signal = ctx.signal;
   const res = await ctx.client.fetch(init);
   if (!res.ok) {
     const err = new Error(`deep-scrape HTTP ${res.status}`);
