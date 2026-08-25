@@ -5,7 +5,7 @@ import {
   saveDedupe,
   type StorageLike,
 } from "../core/storage.js";
-import { dedupeHas, pruneDedupe } from "../core/keys.js";
+import { dedupeFind, pruneDedupe } from "../core/keys.js";
 import type { DedupeEntry } from "../core/types.js";
 import type { Settings } from "../core/settings.js";
 
@@ -22,12 +22,9 @@ export class DedupeManager {
     const ttlMs = s.dedupeTtlHours * 60 * 60 * 1000;
     const entries = (await loadDedupe(this.storage)) as DedupeEntry[];
     const now = Date.now();
-    const hit = dedupeHas(entries, key, now, ttlMs);
-    if (!hit) return { hit: false };
-    const entry = entries.find((e) => e.key === key);
-    const result: { hit: boolean; launchedAt?: number } = { hit: true };
-    if (entry) result.launchedAt = entry.launchedAt;
-    return result;
+    const entry = dedupeFind(entries, key, now, ttlMs);
+    if (!entry) return { hit: false };
+    return { hit: true, launchedAt: entry.launchedAt };
   }
 
   async record(key: string): Promise<{ ok: true }> {

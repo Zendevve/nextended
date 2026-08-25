@@ -67,6 +67,24 @@ export function dedupeHas(
   return false;
 }
 
+/**
+ * Like `dedupeHas` but returns the matching entry. Saves a second O(n) scan
+ * in callers that need the entry's `launchedAt`.
+ */
+export function dedupeFind(
+  entries: readonly DedupeEntry[],
+  key: string,
+  nowMs: number,
+  ttlMs: number,
+): DedupeEntry | null {
+  if (ttlMs <= 0) return null;
+  const cutoff = nowMs - ttlMs;
+  for (const e of entries) {
+    if (e.key === key && e.launchedAt >= cutoff) return e;
+  }
+  return null;
+}
+
 // ----- Storage keys (PRD §2.3) -----
 
 export const STORAGE_PREFIX = "nextended.v1";
