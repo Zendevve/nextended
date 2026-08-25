@@ -92,6 +92,7 @@ export async function resolve(
       }
       const url = await runStrategy(strategy, input, ctx);
       const elapsedMs = now() - started;
+
       if (url) {
         return { ok: true, url, strategy, elapsedMs };
       }
@@ -116,11 +117,11 @@ export async function resolve(
   return finishFailed(attempts, "unresolved", "all strategies exhausted");
 }
 
-async function runStrategy(
+function runStrategy(
   strategy: Strategy,
   input: ResolveInput,
   ctx: ResolveContext,
-): Promise<string | null> {
+): string | null | Promise<string | null> {
   switch (strategy) {
     case "nxm-passthrough":
       return nxmPassthrough(input);
