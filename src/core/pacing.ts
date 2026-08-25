@@ -36,6 +36,20 @@ export function pacingMs(
   return variableMs + extraPauseSeconds * 1000;
 }
 
+/**
+ * Like `pacingMs` but skips the input validation. Only call with values
+ * that have already been validated at the boundary (e.g. the engine, which
+ * gates on `pacingMs` first or reads from a validated Settings object).
+ */
+export function pacingMsTrusted(
+  sizeKB: number,
+  assumedSpeedMBps: number,
+  extraPauseSeconds: number,
+): number {
+  const variableMs = (sizeKB / (assumedSpeedMBps * 1024)) * 1000;
+  return variableMs + extraPauseSeconds * 1000;
+}
+
 /** Convenience: derive pacing from the live Settings object. */
 export function pacingFor(sizeKB: number, settings: Settings): number {
   return pacingMs(sizeKB, settings.assumedSpeedMBps, settings.extraPauseSeconds);
@@ -49,9 +63,15 @@ export function estimateRunDurationMs(
   sizesKB: readonly number[],
   settings: Settings,
 ): number {
+  // Inline trusted pacing: avoids the per-call validation in pacingMs and the
+  // pacingFor wrapper. Settings is already validated at the storage boundary.
+  const speed = settings.assumedSpeedMBps;
+  const pause = settings.extraPauseSeconds;
+  const denom = speed * 1024;
+  const pauseMs = pause * 1000;
   let total = 0;
-  for (const size of sizesKB) {
-    total += pacingFor(size, settings);
+  for (let i = 0; i < sizesKB.length; i++) {
+    total += (sizesKB[i]! / denom) * 1000 + pauseMs;
   }
   return total;
 }
