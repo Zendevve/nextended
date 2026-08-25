@@ -1,21 +1,27 @@
-# build output
-dist/
-
 # dependencies
 node_modules/
+.pnpm-store/
 
-# scratch / local
+# build output
+dist/
+*.tsbuildinfo
+
+# logs
 *.log
-*.tmp
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# editor / OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-tests-out.txt
-build-out.txt
-build-final.txt
-ls.txt
-ls2.txt
-fmt.txt
-fmt2.txt
-fmt3.txt
-pf.txt
-lint.txt
+
+# env
+.env
+.env.local
+.env.*.local
+
+# stray CLI tool output (left over from a curl invocation; safe to ignore)
+curl
