@@ -22,6 +22,7 @@ import type { DedupeEntry, QueueItem } from "../src/core/types.js";
 import { DEFAULT_SETTINGS, type Settings } from "../src/core/settings.js";
 
 const ITERATIONS = 4000;
+const RUNS = 5;
 
 // ---------- Fakes ----------
 
@@ -139,7 +140,6 @@ const classifierInputs: Array<Parameters<typeof classify>[0]> = [
 
 const pacingSizes: number[] = [];
 for (let i = 1; i <= 256; i++) pacingSizes.push(i * 1024);
-const PACING_PARAMS = { speed: DEFAULT_SETTINGS.assumedSpeedMBps, pause: DEFAULT_SETTINGS.extraPauseSeconds };
 
 // ---------- Keys workload ----------
 
@@ -190,8 +190,6 @@ function median(xs: number[]): number {
   const mid = Math.floor(s.length / 2);
   return s.length % 2 === 0 ? (s[mid - 1]! + s[mid]!) / 2 : s[mid]!;
 }
-
-// ---------- Workers ----------
 
 async function runResolverCohort(
   input: ResolveInput,
@@ -263,11 +261,16 @@ function runChunk(iters: number): number {
   return Number(process.hrtime.bigint() - t0);
 }
 
-// (duplicates removed)
-
 // ---------- Main ----------
 
-const RUNS = 5;
+interface CohortMetric {
+  name: string;
+  totalMs: number;
+  medianMs: number;
+  ok: number;
+  err: number;
+  iters: number;
+}
 
 interface RunSample {
   totalMs: number;
@@ -278,15 +281,6 @@ interface RunSample {
   keysMs: number;
   chunkMs: number;
   cohortTotals: CohortMetric[];
-}
-
-interface CohortMetric {
-  name: string;
-  totalMs: number;
-  medianMs: number;
-  ok: number;
-  err: number;
-  iters: number;
 }
 
 async function singleRun(): Promise<RunSample> {
@@ -350,21 +344,23 @@ async function main(): Promise<void> {
     totals.push(sample.totalMs);
   }
 
-  // Sanity invariants — only on the last sample.
-  const last = samples[samples.length - 1]!;
-  for (const c of last.cohortTotals) {
-    if (c.ok + c.err !== c.iters) {
-      throw new Error(`cohort ${c.name}: ok+err != iters`);
+  // Sanity invariants — check every pass.
+  for (let r = 0; r < samples.length; r++) {
+    const s = samples[r]!;
+    for (const c of s.cohortTotals) {
+      if (c.ok + c.err !== c.iters) {
+        throw new Error(`pass ${r} cohort ${c.name}: ok+err != iters (${c.ok + c.err} vs ${c.iters})`);
+      }
     }
-  }
-  const allFail = last.cohortTotals.find((c) => c.name === "all-fail");
-  if (!allFail || allFail.ok !== 0) {
-    throw new Error("all-fail cohort should have 0 ok");
-  }
-  for (const name of ["nxm-passthrough", "component-attr", "page-regex", "generate-nmm", "generate-plain", "deep-scrape"]) {
-    const c = last.cohortTotals.find((x) => x.name === name);
-    if (!c || c.ok !== c.iters) {
-      throw new Error(`${name} cohort should have all-ok`);
+    const allFail = s.cohortTotals.find((c) => c.name === "all-fail");
+    if (!allFail || allFail.ok !== 0) {
+      throw new Error(`pass ${r} all-fail cohort should have 0 ok`);
+    }
+    for (const name of ["nxm-passthrough", "component-attr", "page-regex", "generate-nmm", "generate-plain", "deep-scrape"]) {
+      const c = s.cohortTotals.find((x) => x.name === name);
+      if (!c || c.ok !== c.iters) {
+        throw new Error(`pass ${r} ${name} cohort should have all-ok`);
+      }
     }
   }
 
@@ -372,8 +368,8 @@ async function main(): Promise<void> {
   const totalMedian = totals[Math.floor(totals.length / 2)]!;
   const totalMin = totals[0]!;
   const totalMax = totals[totals.length - 1]!;
+  const last = samples[samples.length - 1]!;
 
-  // Aggregate secondary metrics using the last sample (representative).
   console.log(`METRIC harness_total_ms=${totalMedian.toFixed(3)}`);
   console.log(`ASI harness_total_ms_min=${totalMin.toFixed(3)}`);
   console.log(`ASI harness_total_ms_max=${totalMax.toFixed(3)}`);
