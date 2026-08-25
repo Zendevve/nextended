@@ -75,18 +75,23 @@ export class BudgetManager {
       const nowMs = Date.now();
       const cutoff = nowMs - s.budgetCooldownMs;
       const fresh = state.launches.filter((t) => t >= cutoff);
-      const derived = deriveBudget(
-        { launches: fresh, cooldownUntil: state.cooldownUntil },
-        nowMs,
-        s.budgetWindowLaunches,
-        s.budgetCooldownMs,
-      );
-      if (!derived.allowed) {
-        // Install a cooldown so other tabs see the same waitMs.
+      // Compute derived directly off `fresh` to avoid the redundant
+      // `state.launches.filter` inside deriveBudget. Same semantics.
+      const cooldownUntil = state.cooldownUntil ?? 0;
+      const inWindow = fresh.length;
+      if (cooldownUntil > nowMs) {
+        const next: BudgetState = { launches: fresh, cooldownUntil };
+        await saveBudget(this.storage, next);
+        this.lastKnown = next;
+        void key;
+        return { ok: false, waitMs: cooldownUntil - nowMs };
+      }
+      if (inWindow >= s.budgetWindowLaunches) {
         const until = nowMs + s.budgetCooldownMs;
         const next: BudgetState = { launches: fresh, cooldownUntil: until };
         await saveBudget(this.storage, next);
         this.lastKnown = next;
+        void key;
         return { ok: false, waitMs: s.budgetCooldownMs };
       }
       const next: BudgetState = {
@@ -95,8 +100,6 @@ export class BudgetManager {
       };
       await saveBudget(this.storage, next);
       this.lastKnown = next;
-      // key is the dedupe key for which the spend happened; accepted for
-      // log-side correlation only.
       void key;
       return { ok: true };
     });
