@@ -267,24 +267,32 @@ function runChunk(iters: number): number {
 
 // ---------- Main ----------
 
-async function main(): Promise<void> {
-  // Warmup — let V8 settle.
-  for (let i = 0; i < 200; i++) {
-    classify(classifierInputs[i % classifierInputs.length]!);
-    pacingMs(1024, DEFAULT_SETTINGS.assumedSpeedMBps, DEFAULT_SETTINGS.extraPauseSeconds);
-  }
-  await runResolverCohort(nxmInput, nxmCtx, 200);
+const RUNS = 5;
 
+interface RunSample {
+  totalMs: number;
+  resolverMs: number;
+  classifierMs: number;
+  pacingMs: number;
+  estimateMs: number;
+  keysMs: number;
+  chunkMs: number;
+  cohortTotals: CohortMetric[];
+}
+
+interface CohortMetric {
+  name: string;
+  totalMs: number;
+  medianMs: number;
+  ok: number;
+  err: number;
+  iters: number;
+}
+
+async function singleRun(): Promise<RunSample> {
   const tStart = process.hrtime.bigint();
   let resolverTotalNs = 0n;
-  const cohortMetrics: Array<{
-    name: string;
-    totalMs: number;
-    medianMs: number;
-    ok: number;
-    err: number;
-    iters: number;
-  }> = [];
+  const cohortMetrics: CohortMetric[] = [];
 
   for (const cohort of resolverCohorts) {
     const r = await runResolverCohort(cohort.input, cohort.ctx, ITERATIONS);
@@ -305,36 +313,79 @@ async function main(): Promise<void> {
   const chunkNs = BigInt(runChunk(2000));
   const totalNs = process.hrtime.bigint() - tStart;
 
-  // Sanity invariants.
-  for (const c of cohortMetrics) {
+  const toMs = (n: bigint): number => Number(n) / 1_000_000;
+  return {
+    totalMs: toMs(totalNs),
+    resolverMs: toMs(resolverTotalNs),
+    classifierMs: toMs(classifierNs),
+    pacingMs: toMs(pacingNs),
+    estimateMs: toMs(estimateNs),
+    keysMs: toMs(keysNs),
+    chunkMs: toMs(chunkNs),
+    cohortTotals: cohortMetrics,
+  };
+}
+
+function gcHint(): void {
+  const g = globalThis as { gc?: unknown };
+  if (typeof g.gc === "function") (g.gc as () => void)();
+}
+
+async function main(): Promise<void> {
+  // Warmup — let V8 settle.
+  for (let i = 0; i < 200; i++) {
+    classify(classifierInputs[i % classifierInputs.length]!);
+    pacingMs(1024, DEFAULT_SETTINGS.assumedSpeedMBps, DEFAULT_SETTINGS.extraPauseSeconds);
+  }
+  await runResolverCohort(nxmInput, nxmCtx, 200);
+
+  // Take RUNS full passes; report median as the primary metric and min/max
+  // for noise-floor visibility. Median-of-N reduces scheduler/GC jitter.
+  const totals: number[] = [];
+  const samples: RunSample[] = [];
+  for (let r = 0; r < RUNS; r++) {
+    gcHint();
+    const sample = await singleRun();
+    samples.push(sample);
+    totals.push(sample.totalMs);
+  }
+
+  // Sanity invariants — only on the last sample.
+  const last = samples[samples.length - 1]!;
+  for (const c of last.cohortTotals) {
     if (c.ok + c.err !== c.iters) {
       throw new Error(`cohort ${c.name}: ok+err != iters`);
     }
   }
-  const allFail = cohortMetrics.find((c) => c.name === "all-fail");
+  const allFail = last.cohortTotals.find((c) => c.name === "all-fail");
   if (!allFail || allFail.ok !== 0) {
     throw new Error("all-fail cohort should have 0 ok");
   }
   for (const name of ["nxm-passthrough", "component-attr", "page-regex", "generate-nmm", "generate-plain", "deep-scrape"]) {
-    const c = cohortMetrics.find((x) => x.name === name);
+    const c = last.cohortTotals.find((x) => x.name === name);
     if (!c || c.ok !== c.iters) {
       throw new Error(`${name} cohort should have all-ok`);
     }
   }
 
-  const totalMs = Number(totalNs) / 1_000_000;
-  const resolverMs = Number(resolverTotalNs) / 1_000_000;
-  const toMs = (n: bigint): number => Number(n) / 1_000_000;
+  totals.sort((a, b) => a - b);
+  const totalMedian = totals[Math.floor(totals.length / 2)]!;
+  const totalMin = totals[0]!;
+  const totalMax = totals[totals.length - 1]!;
 
-  console.log(`METRIC harness_total_ms=${totalMs.toFixed(3)}`);
-  console.log(`METRIC resolver_total_ms=${resolverMs.toFixed(3)}`);
-  console.log(`METRIC classifier_ms=${toMs(classifierNs).toFixed(3)}`);
-  console.log(`METRIC pacing_ms=${toMs(pacingNs).toFixed(3)}`);
-  console.log(`METRIC estimate_ms=${toMs(estimateNs).toFixed(3)}`);
-  console.log(`METRIC keys_ms=${toMs(keysNs).toFixed(3)}`);
-  console.log(`METRIC chunk_ms=${toMs(chunkNs).toFixed(3)}`);
+  // Aggregate secondary metrics using the last sample (representative).
+  console.log(`METRIC harness_total_ms=${totalMedian.toFixed(3)}`);
+  console.log(`ASI harness_total_ms_min=${totalMin.toFixed(3)}`);
+  console.log(`ASI harness_total_ms_max=${totalMax.toFixed(3)}`);
+  console.log(`ASI harness_total_ms_runs=${RUNS}`);
+  console.log(`METRIC resolver_total_ms=${last.resolverMs.toFixed(3)}`);
+  console.log(`METRIC classifier_ms=${last.classifierMs.toFixed(3)}`);
+  console.log(`METRIC pacing_ms=${last.pacingMs.toFixed(3)}`);
+  console.log(`METRIC estimate_ms=${last.estimateMs.toFixed(3)}`);
+  console.log(`METRIC keys_ms=${last.keysMs.toFixed(3)}`);
+  console.log(`METRIC chunk_ms=${last.chunkMs.toFixed(3)}`);
 
-  for (const c of cohortMetrics) {
+  for (const c of last.cohortTotals) {
     console.log(`METRIC resolver_${c.name}_median_ms=${c.medianMs.toFixed(4)}`);
     console.log(`METRIC resolver_${c.name}_total_ms=${c.totalMs.toFixed(3)}`);
   }

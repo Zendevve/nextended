@@ -20,5 +20,6 @@ export NODE_NO_WARNINGS=1
 exec "$NODE" \
   --no-warnings \
   --experimental-strip-types \
+  --expose-gc \
   --import "./scripts/bench-loader-register.mjs" \
   ./scripts/bench.ts
