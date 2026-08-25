@@ -32,9 +32,9 @@ export function parseDedupeKey(key: string): {
     throw new Error(`[Nextended] invalid dedupe key: ${key}`);
   }
   const [gameDomain, modId, fileId] = parts as [string, string, string];
-  if (!gameDomain || !modId || !fileId) {
-    throw new Error(`[Nextended] invalid dedupe key (empty part): ${key}`);
-  }
+
+
+
   return { gameDomain, modId, fileId };
 }
 
