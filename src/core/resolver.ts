@@ -218,7 +218,7 @@ async function generate(
   const init: Parameters<HttpClient["fetch"]>[0] = {
     url: ENDPOINT_GENERATE_DOWNLOAD_URL,
     method: "POST",
-    body: body.toString(),
+    body,
     headers: { "content-type": "application/x-www-form-urlencoded" },
     credentials: "include",
   };
