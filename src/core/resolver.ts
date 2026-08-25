@@ -174,10 +174,10 @@ async function apiFiles(
   input: ResolveInput,
   ctx: ResolveContext,
 ): Promise<string | null> {
-  const params = new URLSearchParams();
-  params.set("id", input.fileId);
-  if (ctx.isNMM) params.set("nmm", "1");
-  const url = `${ENDPOINT_API_FILES}?${params.toString()}`;
+  // fileId is constrained to digits by FILE_ID_RE in siteAdapters, so no
+  // encoding needed. Avoids new URLSearchParams() + .set() + .toString()
+  // allocations on the hot path.
+  const url = `${ENDPOINT_API_FILES}?id=${input.fileId}${ctx.isNMM ? "&nmm=1" : ""}`;
   const init: Parameters<HttpClient["fetch"]>[0] = {
     url,
     method: "GET",
@@ -208,11 +208,13 @@ async function generate(
   ctx: ResolveContext,
   nmm: boolean,
 ): Promise<string | null> {
-  const body = new URLSearchParams();
-  body.set("game_id", String(input.gameNumericId));
-  body.set("mod_id", input.modId);
-  body.set("file_id", input.fileId);
-  if (nmm) body.set("nmm", "1");
+  // gameNumericId is a number, modId/fileId are digits (MOD_ID_RE / FILE_ID_RE
+  // in siteAdapters), so no encoding needed. Saves URLSearchParams alloc.
+  const body =
+    `game_id=${input.gameNumericId}` +
+    `&mod_id=${input.modId}` +
+    `&file_id=${input.fileId}` +
+    (nmm ? "&nmm=1" : "");
   const init: Parameters<HttpClient["fetch"]>[0] = {
     url: ENDPOINT_GENERATE_DOWNLOAD_URL,
     method: "POST",
