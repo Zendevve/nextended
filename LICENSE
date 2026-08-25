@@ -1,15 +1,17 @@
-Nexus Mods Download Tools — COPYRIGHT NOTICE AND LIMITED PERSONAL USE TERMS
+nextended — COPYRIGHT NOTICE AND LIMITED PERSONAL USE TERMS
 
-Project: Nexus Mods Download Tools
-Description: A Manifest V3 browser extension that restores and improves download
-controls for archived Nexus Mods files.
-Copyright (c) 2026 Nexus Mods Download Tools contributors. All rights reserved.
+Project: nextended
+Description: A Manifest V3 browser extension that unifies three Nexus Mods
+userscripts (collections bulk download, no-wait single downloads, archived-file
+buttons) into one install.
+Copyright (c) 2026 nextended contributors. All rights reserved.
 
-Source: https://github.com/nexus-download-tools/nexus-download-tools
+Source: https://github.com/Zendevve/nextended
 
 1. OWNERSHIP
 
-Nexus Mods Download Tools is proprietary software owned by the copyright holder,
+
+nextended is proprietary software owned by the copyright holder,
 except for third-party components and Nexus/other asset references which remain the
 property of their respective owners.
 
