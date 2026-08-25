@@ -81,15 +81,11 @@ export async function resolve(
         return finishFailed(attempts, "network", "aborted before strategy " + strategy);
       }
       const url = await runStrategy(strategy, input, ctx);
+      const elapsedMs = now() - started;
       if (url) {
-        return {
-          ok: true,
-          url,
-          strategy,
-          elapsedMs: now() - started,
-        };
+        return { ok: true, url, strategy, elapsedMs };
       }
-      attempts.push({ strategy, elapsedMs: now() - started });
+      attempts.push({ strategy, elapsedMs });
     } catch (e: unknown) {
       const elapsedMs = now() - started;
       const err = e as { status?: number; message?: string };
