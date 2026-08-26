@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "nextended — Nexus Mods Power Suite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Unified power suite for Nexus Mods: instant single downloads, collections batch downloader, and archive unlocks.",
   "permissions": [
     "storage",
