@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import manifest from "./manifest.config.js";
 
 export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+    jsxImportSource: "preact",
+  },
   resolve: {
     alias: {
       "@core": resolve(__dirname, "src/core"),
