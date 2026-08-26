@@ -78,10 +78,10 @@ export class CollectionEngine {
     this.element.appendChild(this.console.element);
   }
 
-  private async delay(ms: number): Promise<void> {
-    const { promise, resolve } = Promise.withResolvers<void>();
-    setTimeout(resolve, ms);
-    return promise;
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
   }
 
   async startBatchDownload(mods: CollectionModFile[], typeKey: 'all' | 'mandatory' | 'optional') {

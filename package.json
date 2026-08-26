@@ -4,7 +4,7 @@
   "description": "Unified Manifest V3 extension for Nexus Mods bulk collections, instant downloads, and archive unlocks",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "node build.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

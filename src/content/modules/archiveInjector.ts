@@ -18,10 +18,13 @@ export class ArchiveInjector {
           (el) => el.textContent?.trim() === 'File archive'
         );
         if (!existingBtn) {
-          footer.insertAdjacentHTML(
-            'beforeend',
-            `<a class="btn inline-flex" data-archived-btn="true" href="${url}&category=archived" style="background:#da8e35;color:#fff;margin-left:8px;"><span class="flex-label">File archive</span></a>`
-          );
+          const btn = document.createElement('a');
+          btn.className = 'btn inline-flex';
+          btn.dataset.archivedBtn = 'true';
+          btn.href = `${url}&category=archived`;
+          btn.style.cssText = 'background:#da8e35;color:#fff;margin-left:8px;';
+          btn.innerHTML = '<span class="flex-label">File archive</span>';
+          footer.appendChild(btn);
         }
       }
     }
@@ -54,7 +57,10 @@ export class ArchiveInjector {
       this.handled.add(fileList);
 
       const dts = fileList.querySelectorAll('dt');
-      const gameId = (window as unknown as { current_game_id?: string }).current_game_id || '';
+      let gameId = '';
+      if ('current_game_id' in window && typeof window.current_game_id === 'string') {
+        gameId = window.current_game_id;
+      }
 
       dts.forEach((dt) => {
         const dataId = dt.getAttribute('data-id');
