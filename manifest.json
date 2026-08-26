@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "nextended — Nexus Mods Power Suite",
+  "version": "1.0.0",
+  "description": "Unified power suite for Nexus Mods: instant single downloads, collections batch downloader, and archive unlocks.",
+  "permissions": [
+    "storage",
+    "downloads",
+    "tabs",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://*.nexusmods.com/*",
+    "https://api-router.nexusmods.com/*",
+    "https://*.nexus-cdn.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.nexusmods.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  }
+}

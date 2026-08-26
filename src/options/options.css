@@ -1,0 +1,169 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #1a1a1a;
+  color: #dadada;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.options-container {
+  width: 100%;
+  max-width: 680px;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+  padding-bottom: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  font-size: 24px;
+  color: #da8e35;
+}
+
+h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #fff;
+}
+
+.tag {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card {
+  background-color: #242424;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #da8e35;
+  border-bottom: 1px solid #2f2f2f;
+  padding-bottom: 8px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: #da8e35;
+  margin-top: 3px;
+}
+
+.checkbox-label strong {
+  display: block;
+  font-size: 13px;
+  color: #fff;
+}
+
+.checkbox-label p {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: #888;
+}
+
+.sub-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding-left: 28px;
+}
+
+.num-input {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 4px;
+  padding: 6px 10px;
+  width: 90px;
+  font-size: 13px;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn {
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+
+.btn-primary {
+  background-color: #da8e35;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #e59a42;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border-color: #444;
+  color: #aaa;
+}
+
+.btn-secondary:hover {
+  border-color: #da8e35;
+  color: #da8e35;
+}
+
+.save-toast {
+  text-align: center;
+  background-color: #10b981;
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.3s;
+}
+
+.save-toast.hidden {
+  display: none;
+}

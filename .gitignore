@@ -1,27 +1,4 @@
-# dependencies
-node_modules/
-.pnpm-store/
-
-# build output
-dist/
-*.tsbuildinfo
-
-# logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-
-# editor / OS
-.vscode/
-.idea/
+node_modules
+dist
 .DS_Store
-Thumbs.db
-
-# env
-.env
-.env.local
-.env.*.local
-
-# stray CLI tool output (left over from a curl invocation; safe to ignore)
-curl
+*.log

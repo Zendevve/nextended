@@ -1,11 +1,49 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>nextended</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nextended</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">
+      <div class="title-group">
+        <span class="logo">⚡</span>
+        <h1>nextended</h1>
+      </div>
+      <span class="version">v1.0.0</span>
+    </div>
+    
+    <div class="status-card">
+      <div class="status-indicator active"></div>
+      <span>Active on Nexus Mods</span>
+    </div>
+
+    <div class="quick-settings">
+      <label class="toggle-row">
+        <span>Auto-start downloads</span>
+        <input type="checkbox" id="autoStartDownload">
+      </label>
+      <label class="toggle-row">
+        <span>Auto-close tab after start</span>
+        <input type="checkbox" id="autoCloseTab">
+      </label>
+      <label class="toggle-row">
+        <span>Skip requirements popup</span>
+        <input type="checkbox" id="skipRequirements">
+      </label>
+      <label class="toggle-row">
+        <span>Enable archive downloads</span>
+        <input type="checkbox" id="handleArchivedFiles">
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="openOptionsBtn" class="btn btn-secondary">Full Settings</button>
+    </div>
+  </div>
+  <script type="module" src="popup.ts"></script>
+</body>
 </html>

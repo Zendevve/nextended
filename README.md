@@ -1,87 +1,68 @@
-# nextended
+# nextended ⚡
 
-> A Chromium Manifest V3 extension that unifies three Nexus Mods userscripts into one install: bulk collection downloading, instant single-file downloading, and archived-file access.
+**nextended** is a high-performance Manifest V3 browser extension that unifies three essential Nexus Mods enhancement tools into a single, seamless, cross-browser suite:
 
-**Source:** [github.com/Zendevve/nextended](https://github.com/Zendevve/nextended)
-**Licence:** [Proprietary — see `LICENSE`](./LICENSE) (personal, non-commercial use only)
+1. **Nexus Download Collection (NDC)**: Automated batch and collection downloader via Nexus GraphQL with revision diffing, mod selection modals, local file matching, safety rate-limiting, and live progress console.
+2. **Nexus No Wait ++ (NNWPP)**: Instant single-click downloads (skips 5-second countdown), automatic requirements modal/tab bypass, Shadow DOM click capture, Cloudflare/VPN challenge fallback, and automated tab closure.
+3. **Allow Archive Downloads**: Restores and injects functional "Mod manager download" and "Manual download" buttons for archived/disabled file listings (`?tab=files&category=archived`).
 
 ---
 
-## What it does
+## 🚀 Features
 
-nextended replaces:
+- **⚡ Zero-Wait Single Downloads**: Bypasses countdown timers and requirement popups on mod pages to immediately trigger direct NXM (Vortex / MO2) or browser downloads.
+- **📦 Collections Bulk Downloader**:
+  - Direct GraphQL queries to fetch all collection files and metadata.
+  - Download all mods, mandatory only, optional only, or custom selections.
+  - Live progress bar with Pause, Resume, Stop, Skip Pause, and Skip to Index controls.
+  - **Revision Diffing**: Inspect differences between collection revisions (Added, Updated, Removed) and download only changes.
+  - **Local File Matcher**: Scan a folder of downloaded mods to automatically skip existing files.
+- **🛡️ Rate-Limit & Cooldown Protection**:
+  - Dynamically calculates pause durations based on mod file size and connection speed.
+  - Enforces a 5-minute safety cooldown after 200 downloads to prevent Nexus 10-minute temporary account suspensions.
+- **📂 Archive File Unlocks**: Automatically injects download buttons into archived mod tables where downloads were previously hidden or disabled.
+- **⚙️ Configurable Options & Popup**: Quick toggles for auto-start, auto-close delay, requirements bypass, and download speeds.
 
-- **Nexus Download Collection** (NDC) — bulk-download every mod in a collection with pacing, pause/resume, per-collection history, and a run log.
-- **Nexus No Wait ++** — kill the countdown on individual mod pages, auto-start on `file_id=` URLs, slow-download button intercept.
-- **Allow Archive Downloads** — inject Manual + Mod-manager buttons on every archived file row.
+---
 
-…with one install that shares:
+## 📥 Installation
 
-- A single 7-strategy link resolver (no duplicated URL patterns).
-- One Zod-validated storage layer with migration quarantine.
-- One background-owned rate budget (200 launches / 5-minute cooldown) shared by every tab.
-- One deduplication registry.
-- One error classifier (login / cloudflare / suspended / network / unresolved).
-- One navigation router (no second set of observers).
+### Load Unpacked Extension (Developer Mode)
 
-## Install (unpacked, Chromium)
+1. Clone or download this repository.
+2. Install dependencies and build the extension:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. Open your browser's extensions page:
+   - **Chrome / Brave / Edge**: Navigate to `chrome://extensions/`
+   - **Firefox**: Navigate to `about:debugging#/runtime/this-firefox`
+4. Enable **Developer mode** (top-right toggle in Chromium browsers).
+5. Click **Load unpacked** and select the `dist/` folder generated inside this directory.
 
-1. Clone the repo.
-2. `pnpm install`
-3. `pnpm build` → produces `dist/`.
-4. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, point at the `dist/` directory.
+---
 
-For Firefox / Web Store distribution, see [`docs/SPEC.md` §2.1](./docs/SPEC.md) (deferred to v1.1).
-
-## Permissions requested
-
-| Permission                     | Why                                                              |
-| ------------------------------ | ---------------------------------------------------------------- |
-| `storage`                      | Settings, budget, dedupe, run history, interrupted-run resume.   |
-| `downloads`                    | Browser-mode downloads (Vortex mode doesn't use this).           |
-| `*://*.nexusmods.com/*`        | Content script + page-aware fetch on the user's own session.     |
-| `*://*.nexus-cdn.com/*`        | Deep-scrape resolver strategy only.                              |
-
-No telemetry, no external CDNs, no update pings, no `webRequest`, no `tabs`. The list is exactly the four entries above.
-
-## Architecture (1-minute tour)
-
-```
-src/
-  core/          pure logic, no DOM — resolver, classifier, pacing, keys,
-                 storage, settings, messages, types, siteAdapters
-  background/    service-worker message router; budget + dedupe managers
-  content/       router + settings-bridge + 3 modules:
-                   collection/ (run engine + panel + selection modal)
-                   nowait/     (click intercept + auto-start)
-                   archive/    (idempotent button injection)
-  options/       Preact options page
-  popup/         Preact popup
-tests/           Vitest, 86 tests covering core/
-docs/            SPEC, BUILD_PROMPT, PARITY, PRD-RAW
-```
-
-Read [`docs/SPEC.md`](./docs/SPEC.md) for the full PRD (decision log, FR1–FR12, state machines, contracts), and [`docs/PARITY.md`](./docs/PARITY.md) for the userscript-feature → nextended-module parity map.
-
-## Development
+## 🛠️ Development & Testing
 
 ```bash
-pnpm install        # one-time
-pnpm test           # Vitest, 86 tests
-pnpm build          # tsc strict + vite build → dist/
-pnpm lint           # selector-quarantine rule (no regex literals outside
-                    # src/core/siteAdapters.ts)
+# Run unit tests with Vitest
+npm test
+
+# Build production bundle
+npm run build
 ```
 
-The quarantine rule is load-bearing: any new selector, URL pattern, regex, or GraphQL query must live in `src/core/siteAdapters.ts`. Lint fails otherwise.
+---
 
-## Project status
+## ☕ Support
 
-- v0.1.0 — MVP complete. Builds clean, 86/86 tests pass, selector quarantine enforced, full doc package.
-- Live-site T1–T10 acceptance tests (those requiring a logged-in Nexus session) are documented as a manual checklist in [`docs/PARITY.md`](./docs/PARITY.md); they were not run as part of the build.
-- v1.1 backlog (revision diff, disk import, filename override, error sound, VPN mode, Firefox build) is tracked in [`docs/SPEC.md` §2.1](./docs/SPEC.md).
-- Ad-cookie bypass, Cloudflare / login automation, and telemetry are explicitly out of scope (project licence + D16 in the decision log).
+If you find this extension helpful, you can support development here:
 
-## Licence
+👉 **[buymeacoffee.com/zendevve](https://buymeacoffee.com/zendevve)**
 
-[Proprietary](./LICENSE). Personal, non-commercial use only. See `LICENSE` for the full text.
+---
+
+## 📄 License
+
+See [LICENSE](LICENSE) for full copyright notice and limited personal use terms.
