@@ -1,18 +1,14 @@
 # nextended ⚡
 
-**nextended** is a high-performance Manifest V3 browser extension that unifies three essential Nexus Mods enhancement tools into a single, seamless, cross-browser suite:
-
-1. **Nexus Download Collection (NDC)**: Automated batch and collection downloader via Nexus GraphQL with revision diffing, mod selection modals, local file matching, safety rate-limiting, and live progress console.
-2. **Nexus No Wait ++ (NNWPP)**: Instant single-click downloads (skips 5-second countdown), automatic requirements modal/tab bypass, Shadow DOM click capture, Cloudflare/VPN challenge fallback, and automated tab closure.
-3. **Allow Archive Downloads**: Restores and injects functional "Mod manager download" and "Manual download" buttons for archived/disabled file listings (`?tab=files&category=archived`).
+**nextended** is a high-performance Manifest V3 browser extension providing an all-in-one power suite for Nexus Mods.
 
 ---
 
 ## 🚀 Features
 
-- **⚡ Zero-Wait Single Downloads**: Bypasses countdown timers and requirement popups on mod pages to immediately trigger direct NXM (Vortex / MO2) or browser downloads.
+- **⚡ Fast Single Downloads**: Bypasses countdown timers and requirement popups on mod pages to immediately trigger direct NXM (Vortex / MO2) or browser downloads.
 - **📦 Collections Bulk Downloader**:
-  - Direct GraphQL queries to fetch all collection files and metadata.
+  - Direct GraphQL queries to fetch collection files and metadata.
   - Download all mods, mandatory only, optional only, or custom selections.
   - Live progress bar with Pause, Resume, Stop, Skip Pause, and Skip to Index controls.
   - **Revision Diffing**: Inspect differences between collection revisions (Added, Updated, Removed) and download only changes.
@@ -25,9 +21,7 @@
 
 ---
 
-## 📥 Installation
-
-### Load Unpacked Extension (Developer Mode)
+## 📥 Installation from Source
 
 1. Clone or download this repository.
 2. Install dependencies and build the extension:
@@ -65,4 +59,4 @@ If you find this extension helpful, you can support development here:
 
 ## 📄 License
 
-See [LICENSE](LICENSE) for full copyright notice and limited personal use terms.
+See [LICENSE](LICENSE) for terms of use.

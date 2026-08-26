@@ -6,7 +6,6 @@ import { GraphQLClient } from '../graphQLClient';
 import { ProgressBarComponent, ProgressBarStatus } from './components/progressBar';
 import { LogConsoleComponent, LogType } from './components/logConsole';
 import { CollectionToolbarComponent } from './components/collectionToolbar';
-import { Logger } from '../../../common/logger';
 
 export class CollectionEngine {
   element: HTMLElement;
@@ -30,7 +29,7 @@ export class CollectionEngine {
     this.revisionNumber = revisionNumber;
 
     this.element = document.createElement('div');
-    this.element.id = 'ndc-container';
+    this.element.id = 'nextended-collection-container';
     this.element.className = 'bg-surface-low w-full space-y-3 rounded-lg p-4 mt-4 text-white';
 
     this.progressBar = new ProgressBarComponent();

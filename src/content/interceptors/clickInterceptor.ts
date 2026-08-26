@@ -12,7 +12,7 @@ export class ClickInterceptor {
       return true;
     }
     if (!el) return false;
-    if (el.dataset?.nnwppIsNmm !== undefined) return el.dataset.nnwppIsNmm === '1';
+    if (el.dataset?.nextendedIsNmm !== undefined) return el.dataset.nextendedIsNmm === '1';
     if (el.id === 'action-vortex' || el.id === 'action-nmm') return true;
     const text = (el.textContent || el.getAttribute('aria-label') || '').toLowerCase();
     return /vortex|mod manager|manager download/i.test(text);
@@ -71,14 +71,14 @@ export class ClickInterceptor {
           path.find((n) => n?.tagName === 'A' || n?.tagName === 'BUTTON') ||
           (event.target as HTMLElement).closest('a,button');
 
-        if (!el || el.closest('.pagination, .comment-container, .forum-post, .search-results, #ndc-container')) return;
+        if (!el || el.closest('.pagination, .comment-container, .forum-post, .search-results, #nextended-collection-container')) return;
 
         const href = el.getAttribute('href') || (el as HTMLAnchorElement).href || '';
         if (el.classList.contains('popup-btn-ajax') && !RequirementsBypass.isRequirementsUrl(href)) return;
         if (href.includes('tab=files') && !href.includes('file_id=')) return;
 
         const isNMM = this.isNMMDownload(el, href);
-        el.dataset.nnwppIsNmm = isNMM ? '1' : '0';
+        el.dataset.nextendedIsNmm = isNMM ? '1' : '0';
 
         let fileId = this.extractFileId(href);
         let secureApiUrl: string | null = null;

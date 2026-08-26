@@ -12,7 +12,7 @@ export class LogConsoleComponent {
 
   constructor() {
     this.element = document.createElement('div');
-    this.element.className = 'ndc-log-console flex flex-col w-full gap-2 mt-3';
+    this.element.className = 'nextended-log-console flex flex-col w-full gap-2 mt-3';
     this.renderInitialHTML();
   }
 

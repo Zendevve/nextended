@@ -26,7 +26,7 @@ export class ProgressBarComponent {
 
   constructor() {
     this.element = document.createElement('div');
-    this.element.className = 'ndc-progress-bar flex flex-wrap w-full';
+    this.element.className = 'nextended-progress-bar flex flex-wrap w-full';
     this.element.style.display = 'none';
     this.renderInitialHTML();
   }

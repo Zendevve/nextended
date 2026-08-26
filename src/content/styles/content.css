@@ -1,9 +1,9 @@
 /* nextended styles */
-.ndc-progress-bar #progressBar {
+.nextended-progress-bar #progressBar {
   background-color: #2b2b2b;
 }
 
-.ndc-progress-bar #progressBarFill {
+.nextended-progress-bar #progressBarFill {
   background-color: #da8e35;
 }
 
@@ -39,11 +39,11 @@
   color: #999 !important;
 }
 
-.ndc-modal {
-  animation: ndc-fade-in 0.15s ease-out forwards;
+.nextended-modal {
+  animation: nextended-fade-in 0.15s ease-out forwards;
 }
 
-@keyframes ndc-fade-in {
+@keyframes nextended-fade-in {
   from {
     opacity: 0;
     transform: scale(0.98);

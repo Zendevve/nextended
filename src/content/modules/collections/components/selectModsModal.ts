@@ -14,7 +14,7 @@ export class SelectModsModalComponent {
     this.onDownloadSelected = onDownloadSelected;
 
     this.element = document.createElement('div');
-    this.element.className = 'ndc-modal fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
+    this.element.className = 'nextended-modal fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
     this.renderInitialHTML();
   }
 

@@ -30,7 +30,7 @@ export class CollectionToolbarComponent {
     this.onStartDownload = onStartDownload;
 
     this.element = document.createElement('div');
-    this.element.className = 'ndc-toolbar flex flex-col gap-3 w-full';
+    this.element.className = 'nextended-toolbar flex flex-col gap-3 w-full';
     this.renderInitialHTML();
   }
 
@@ -39,11 +39,11 @@ export class CollectionToolbarComponent {
       <div class="flex flex-col sm:flex-row gap-3 justify-between items-center text-xs text-white">
         <div class="flex gap-4 items-center">
           <label class="flex items-center gap-1.5 cursor-pointer">
-            <input type="radio" name="ndcDownloadMethod" value="0" class="accent-primary-moderate" id="radioVortex">
+            <input type="radio" name="nextendedDownloadMethod" value="0" class="accent-primary-moderate" id="radioVortex">
             <span>Send to Vortex (NXM)</span>
           </label>
           <label class="flex items-center gap-1.5 cursor-pointer">
-            <input type="radio" name="ndcDownloadMethod" value="1" class="accent-primary-moderate" id="radioBrowser">
+            <input type="radio" name="nextendedDownloadMethod" value="1" class="accent-primary-moderate" id="radioBrowser">
             <span>Download via Browser</span>
           </label>
         </div>
