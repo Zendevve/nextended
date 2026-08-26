@@ -85,32 +85,37 @@ export interface ModFileDTO {
   description?: string;
 }
 
-export interface CollectionModDTO {
-  position: number;
+export interface CollectionRevisionModItemDTO {
   optional: boolean;
-  mod: {
-    id: string;
+  fileId: number;
+  file: {
     name: string;
-    modFiles: ModFileDTO[];
+    sizeInBytes: string;
+    uri: string;
+    mod: {
+      id: string;
+      name: string;
+    };
   };
 }
 
 export interface CollectionRevisionDTO {
-  id: string;
+  id: string | number;
+  revisionNumber: number;
   collection: {
-    id: string;
+    id: string | number;
     name: string;
     slug: string;
-    game: { id: string; domainName: string };
+    game: { id: string | number; domainName: string };
   };
-  mods: CollectionModDTO[];
+  modFiles: CollectionRevisionModItemDTO[];
 }
 
 export interface CollectionBySlugNode {
-  id: string;
+  id: string | number;
   name: string;
   slug: string;
-  latestPublishedRevision: { id: string; revisionNumber: number } | null;
+  latestPublishedRevision: { id: string | number; revisionNumber: number } | null;
 }
 
 interface GqlEnvelope<T> {
@@ -124,14 +129,22 @@ interface GqlEnvelope<T> {
 
 export async function fetchCollectionRevisionMods(
   gql: GraphQLClient,
-  args: { revisionId: string; viewAdultContent: boolean; signal?: AbortSignal },
+  args: {
+    slug: string;
+    domainName: string;
+    revision: number;
+    viewAdultContent: boolean;
+    signal?: AbortSignal;
+  },
 ): Promise<CollectionRevisionDTO> {
   const res = await gql.fetch<{
     collectionRevision: CollectionRevisionDTO | null;
   }>({
     query: GQL_COLLECTION_REVISION_MODS,
     variables: {
-      revisionId: args.revisionId,
+      slug: args.slug,
+      domainName: args.domainName,
+      revision: args.revision,
       viewAdultContent: args.viewAdultContent,
     },
   });
@@ -152,13 +165,13 @@ export async function fetchCollectionRevisionMods(
 
 export async function fetchCollectionBySlug(
   gql: GraphQLClient,
-  args: { slug: string; gameDomain: string; viewAdultContent: boolean },
+  args: { slug: string; domainName: string; viewAdultContent: boolean },
 ): Promise<CollectionBySlugNode | null> {
-  const res = await gql.fetch<{ collections: { nodes: CollectionBySlugNode[] } }>({
+  const res = await gql.fetch<{ collection: CollectionBySlugNode | null }>({
     query: GQL_COLLECTION_BY_SLUG,
     variables: {
       slug: args.slug,
-      gameDomain: args.gameDomain,
+      domainName: args.domainName,
       viewAdultContent: args.viewAdultContent,
     },
   });
@@ -166,11 +179,11 @@ export async function fetchCollectionBySlug(
     throw new Error(`GraphQL HTTP ${res.status}`);
   }
   const env = res.body as GqlEnvelope<{
-    collections: { nodes: CollectionBySlugNode[] };
+    collection: CollectionBySlugNode | null;
   }>;
   if (env.errors && env.errors.length > 0) {
     throw new Error(`GraphQL error: ${env.errors.map((e) => e.message).join("; ")}`);
   }
   if (!env.data) return null;
-  return env.data.collections.nodes[0] ?? null;
+  return env.data.collection ?? null;
 }

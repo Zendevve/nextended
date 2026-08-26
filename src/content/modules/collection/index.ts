@@ -29,40 +29,47 @@ async function buildItemsForCtx(
   ctx: Extract<PageContext, { kind: "collection" }>,
 ): Promise<QueueItem[]> {
   const gql = makeGraphQL(fetchHttpClient());
-  const collection = await fetchCollectionBySlug(gql, {
-    slug: ctx.slug,
-    gameDomain: ctx.gameDomain,
-    viewAdultContent: true,
-  });
-  const revisionId = collection?.latestPublishedRevision?.id ?? null;
-  if (!revisionId) {
+  let revisionNumber = ctx.revision;
+  if (revisionNumber === null) {
+    const collection = await fetchCollectionBySlug(gql, {
+      slug: ctx.slug,
+      domainName: ctx.gameDomain,
+      viewAdultContent: true,
+    });
+    revisionNumber = collection?.latestPublishedRevision?.revisionNumber ?? null;
+  }
+  if (revisionNumber === null) {
     showToast({ message: "Could not resolve collection revision.", variant: "error" });
     return [];
   }
   const dto = await fetchCollectionRevisionMods(gql, {
-    revisionId,
+    slug: ctx.slug,
+    domainName: ctx.gameDomain,
+    revision: revisionNumber,
     viewAdultContent: true,
   });
-  const gameNumericId = Number.parseInt(dto.collection.game.id, 10);
+  const gameNumericId = Number(dto.collection.game.id);
   const items: QueueItem[] = [];
-  for (const m of dto.mods) {
-    for (const f of m.mod.modFiles) {
-      items.push({
-        key: dedupeKey(ctx.gameDomain, m.mod.id, f.fileId),
-        fileId: f.fileId,
-        modId: m.mod.id,
-        gameDomain: ctx.gameDomain,
-        gameNumericId,
-        modName: m.mod.name,
-        fileName: f.name,
-        fileUri: f.uri,
-        sizeKB: f.sizeKB,
-        optional: m.optional,
-        modPageUrl: `https://www.nexusmods.com/${ctx.gameDomain}/mods/${m.mod.id}?tab=files&file_id=${f.fileId}`,
-        status: "pending",
-        updatedAt: Date.now(),
-      });
-    }
+  for (const m of dto.modFiles) {
+    const fileId = String(m.fileId);
+    const modId = String(m.file.mod.id);
+    const sizeBytes = Number(m.file.sizeInBytes) || 0;
+    const sizeKB = Math.round(sizeBytes / 1024);
+    items.push({
+      key: dedupeKey(ctx.gameDomain, modId, fileId),
+      fileId,
+      modId,
+      gameDomain: ctx.gameDomain,
+      gameNumericId,
+      modName: m.file.mod.name,
+      fileName: m.file.name,
+      fileUri: m.file.uri,
+      sizeKB,
+      optional: m.optional,
+      modPageUrl: `https://www.nexusmods.com/${ctx.gameDomain}/mods/${modId}?tab=files&file_id=${fileId}`,
+      status: "pending",
+      updatedAt: Date.now(),
+    });
   }
   return items;
 }

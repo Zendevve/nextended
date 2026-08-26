@@ -26,7 +26,7 @@ describe("GraphQL client", () => {
         return {
           status: 200,
           ok: true,
-          body: { data: { collections: { nodes: [] } } },
+          body: { data: { collection: { id: "1", name: "test", slug: "test", latestPublishedRevision: null } } },
           headers: {},
         };
       },
@@ -34,10 +34,10 @@ describe("GraphQL client", () => {
     const gql = makeGraphQL(client);
     await fetchCollectionBySlug(gql, {
       slug: "x",
-      gameDomain: "skyrim",
+      domainName: "skyrim",
       viewAdultContent: true,
     });
-    expect(capturedUrl).toContain("/api/graphql");
+    expect(capturedUrl).toContain("api.nexusmods.com/v2/graphql");
     expect(capturedBody).toContain("CollectionBySlug");
     expect(capturedBody).toContain("viewAdultContent");
   });
@@ -46,7 +46,9 @@ describe("GraphQL client", () => {
     const gql = makeGraphQL(jsonClient({}, 500));
     await expect(
       fetchCollectionRevisionMods(gql, {
-        revisionId: "r1",
+        slug: "cool-list",
+        domainName: "skyrim",
+        revision: 1,
         viewAdultContent: true,
       }),
     ).rejects.toThrow(/HTTP 500/);
@@ -58,7 +60,9 @@ describe("GraphQL client", () => {
     );
     await expect(
       fetchCollectionRevisionMods(gql, {
-        revisionId: "r1",
+        slug: "cool-list",
+        domainName: "skyrim",
+        revision: 1,
         viewAdultContent: true,
       }),
     ).rejects.toThrow(/boom/);
@@ -68,29 +72,26 @@ describe("GraphQL client", () => {
     const response = {
       data: {
         collectionRevision: {
-          id: "rev1",
+          id: 1,
+          revisionNumber: 1,
           collection: {
-            id: "c1",
+            id: 1,
             name: "Cool list",
             slug: "cool-list",
-            game: { id: "110", domainName: "skyrim" },
+            game: { id: 110, domainName: "skyrim" },
           },
-          mods: [
+          modFiles: [
             {
-              position: 0,
               optional: false,
-              mod: {
-                id: "1",
-                name: "Mod 1",
-                modFiles: [
-                  {
-                    fileId: "100",
-                    name: "file.zip",
-                    uri: "/files/file.zip",
-                    sizeKB: 4096,
-                    version: "1.0",
-                  },
-                ],
+              fileId: 100,
+              file: {
+                name: "file.zip",
+                sizeInBytes: "4194304",
+                uri: "/files/file.zip",
+                mod: {
+                  id: "1",
+                  name: "Mod 1",
+                },
               },
             },
           ],
@@ -99,11 +100,13 @@ describe("GraphQL client", () => {
     };
     const gql = makeGraphQL(jsonClient(response));
     const out = await fetchCollectionRevisionMods(gql, {
-      revisionId: "rev1",
+      slug: "cool-list",
+      domainName: "skyrim",
+      revision: 1,
       viewAdultContent: true,
     });
     expect(out.collection.slug).toBe("cool-list");
-    expect(out.mods).toHaveLength(1);
-    expect(out.mods[0]?.mod.modFiles[0]?.sizeKB).toBe(4096);
+    expect(out.modFiles).toHaveLength(1);
+    expect(out.modFiles[0]?.file.name).toBe("file.zip");
   });
 });

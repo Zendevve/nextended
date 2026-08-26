@@ -128,19 +128,27 @@ export const ENDPOINT_CDN_BASE = "https://www.nexus-cdn.com";
 
 export const ENDPOINT_GENERATE_DOWNLOAD_URL = `${ENDPOINT_NEXUS_BASE}/Core/Libs/Common/Managers/Downloads?GenerateDownloadUrl`;
 export const ENDPOINT_API_FILES = `${ENDPOINT_NEXUS_BASE}/api/files`;
-export const ENDPOINT_GRAPHQL = `${ENDPOINT_NEXUS_BASE}/api/graphql`;
+export const ENDPOINT_GRAPHQL = "https://api.nexusmods.com/v2/graphql";
 
 // =============================================================================
-// GraphQL — CollectionRevisionMods (FR2)
+// GraphQL — CollectionRevision (FR2)
 // =============================================================================
 
 export const GQL_COLLECTION_REVISION_MODS = /* GraphQL */ `
   query CollectionRevisionMods(
-    $revisionId: ID!
+    $slug: String!
+    $domainName: String!
+    $revision: Int!
     $viewAdultContent: Boolean!
   ) {
-    collectionRevision(revisionId: $revisionId) {
+    collectionRevision(
+      slug: $slug
+      domainName: $domainName
+      revision: $revision
+      viewAdultContent: $viewAdultContent
+    ) {
       id
+      revisionNumber
       collection {
         id
         name
@@ -150,19 +158,16 @@ export const GQL_COLLECTION_REVISION_MODS = /* GraphQL */ `
           domainName
         }
       }
-      mods {
-        position
+      modFiles {
         optional
-        mod {
-          id
+        fileId
+        file {
           name
-          modFiles {
-            fileId
+          sizeInBytes
+          uri
+          mod {
+            id
             name
-            uri
-            sizeKB
-            version
-            description
           }
         }
       }
@@ -173,18 +178,16 @@ export const GQL_COLLECTION_REVISION_MODS = /* GraphQL */ `
 export const GQL_COLLECTION_BY_SLUG = /* GraphQL */ `
   query CollectionBySlug(
     $slug: String!
-    $gameDomain: String!
+    $domainName: String!
     $viewAdultContent: Boolean!
   ) {
-    collections(filter: { slug: $slug, gameDomain: $gameDomain }) {
-      nodes {
+    collection(slug: $slug, domainName: $domainName, viewAdultContent: $viewAdultContent) {
+      id
+      name
+      slug
+      latestPublishedRevision {
         id
-        name
-        slug
-        latestPublishedRevision {
-          id
-          revisionNumber
-        }
+        revisionNumber
       }
     }
   }
