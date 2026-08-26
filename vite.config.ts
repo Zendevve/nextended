@@ -19,6 +19,7 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    modulePreload: false,
     sourcemap: true,
     emptyOutDir: true,
     rollupOptions: {
