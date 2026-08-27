@@ -9,18 +9,16 @@ body {
 }
 
 .popup-container {
-  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  padding: 12px;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #363636;
-  padding-bottom: 8px;
 }
 
 .title-group {
@@ -31,20 +29,20 @@ body {
 
 .logo {
   font-size: 16px;
-  color: #da8e35;
 }
 
 h1 {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
   margin: 0;
-  color: #fff;
-  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #da8e35;
 }
 
 .version {
   font-size: 10px;
   color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .status-card {
@@ -62,6 +60,16 @@ h1 {
   height: 8px;
   border-radius: 50%;
   background-color: #10b981;
+  transition: background-color 0.2s ease;
+}
+
+.status-indicator.idle {
+  background-color: #10b981;
+}
+
+.status-indicator:not(.idle) {
+  background-color: #0ea5e9;
+  box-shadow: 0 0 6px #0ea5e9aa;
 }
 
 .quick-settings {

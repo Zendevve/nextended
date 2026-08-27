@@ -16,6 +16,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const resetBtn = document.querySelector('#resetDefaultsBtn') as HTMLButtonElement;
   const toast = document.querySelector('#saveToast') as HTMLElement;
 
+  let toastTimer: number | undefined;
+
+  function showToast(message: string) {
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+    if (toastTimer) {
+      window.clearTimeout(toastTimer);
+    }
+    toastTimer = window.setTimeout(() => toast.classList.add('hidden'), 2500);
+  }
+
   function populate(config: ExtensionConfig) {
     autoStart.checked = config.autoStartDownload;
     autoClose.checked = config.autoCloseTab;
@@ -27,11 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     handleArch.checked = config.handleArchivedFiles;
   }
 
-  const initialConfig = await StorageManager.getConfig();
-  populate(initialConfig);
-
-  saveBtn.addEventListener('click', async () => {
-    const updated: Partial<ExtensionConfig> = {
+  function collectConfig(): Partial<ExtensionConfig> {
+    return {
       autoStartDownload: autoStart.checked,
       autoCloseTab: autoClose.checked,
       closeTabDelayMs: Number.parseInt(closeDelay.value, 10) || 2000,
@@ -41,19 +49,54 @@ document.addEventListener('DOMContentLoaded', async () => {
       pauseBetweenDownloadSec: Number.parseInt(pauseSec.value, 10) || 5,
       handleArchivedFiles: handleArch.checked
     };
+  }
 
-    await StorageManager.setConfig(updated);
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 2500);
+  const initialConfig = await StorageManager.getConfig();
+  populate(initialConfig);
+
+  let saveDebounce: number | undefined;
+  const debounceSave = () => {
+    if (saveDebounce) {
+      window.clearTimeout(saveDebounce);
+    }
+    saveDebounce = window.setTimeout(async () => {
+      await StorageManager.setConfig(collectConfig());
+      showToast('Settings saved automatically');
+    }, 400);
+  };
+
+  [
+    autoStart,
+    autoClose,
+    closeDelay,
+    skipReq,
+    vpnMode,
+    dlSpeed,
+    pauseSec,
+    handleArch
+  ].forEach((el) => {
+    const event = el.type === 'checkbox' ? 'change' : 'input';
+    el.addEventListener(event, debounceSave);
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    if (saveDebounce) {
+      window.clearTimeout(saveDebounce);
+      saveDebounce = undefined;
+    }
+    await StorageManager.setConfig(collectConfig());
+    showToast('Settings saved!');
   });
 
   resetBtn.addEventListener('click', async () => {
     if (confirm('Reset all settings to default values?')) {
+      if (saveDebounce) {
+        window.clearTimeout(saveDebounce);
+        saveDebounce = undefined;
+      }
       await StorageManager.setConfig(DEFAULT_CONFIG);
       populate(DEFAULT_CONFIG);
-      toast.textContent = 'Settings reset to defaults!';
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), 2500);
+      showToast('Settings reset to defaults!');
     }
   });
 });

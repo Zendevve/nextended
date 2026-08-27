@@ -138,12 +138,25 @@ export class UpdateRevisionModalComponent {
     this.downloadBtn.disabled = this.modsToDownload.length === 0;
   }
 
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      this.close();
+    }
+  };
+
   async open() {
     document.body.appendChild(this.element);
+    window.addEventListener('keydown', this.handleKeyDown);
+    this.element.addEventListener('click', (e) => {
+      if (e.target === this.element) {
+        this.close();
+      }
+    });
     await this.init();
   }
 
   close() {
+    window.removeEventListener('keydown', this.handleKeyDown);
     this.element.remove();
   }
 }

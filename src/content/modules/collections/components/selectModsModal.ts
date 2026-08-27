@@ -4,10 +4,8 @@ export class SelectModsModalComponent {
   element: HTMLElement;
   private mods: CollectionModFile[];
   private onDownloadSelected: (selected: CollectionModFile[]) => void;
-  private modsListContainer!: HTMLElement;
-  private selectedCountEl!: HTMLElement;
-  private searchInput!: HTMLInputElement;
-  private sortSelect!: HTMLSelectElement;
+  private totalSizeEl!: HTMLElement;
+
 
   constructor(mods: CollectionModFile[], onDownloadSelected: (selected: CollectionModFile[]) => void) {
     this.mods = mods;
@@ -30,8 +28,7 @@ export class SelectModsModalComponent {
           <h2 class="font-montserrat font-semibold text-base uppercase">Select Mods to Download</h2>
           <div class="flex items-center gap-2">
             <span class="px-2 py-1 bg-primary-moderate rounded-full text-xs" id="selectedModsCount">0 mods selected</span>
-            <button class="px-2 py-1 bg-surface-low border border-neutral-moderate rounded text-xs hover:text-white" id="selectAllBtn">Select All</button>
-            <button class="px-2 py-1 bg-surface-low border border-neutral-moderate rounded text-xs hover:text-white" id="deselectAllBtn">Deselect All</button>
+            <span class="px-2 py-1 bg-surface-low border border-neutral-moderate rounded-full text-xs" id="selectedModsSize">0.00 MB</span>
           </div>
         </div>
 
@@ -57,10 +54,8 @@ export class SelectModsModalComponent {
 
     this.modsListContainer = this.element.querySelector('#modsListContainer') as HTMLElement;
     this.selectedCountEl = this.element.querySelector('#selectedModsCount') as HTMLElement;
-    this.searchInput = this.element.querySelector('#searchModsInput') as HTMLInputElement;
-    this.sortSelect = this.element.querySelector('#sortModsSelect') as HTMLSelectElement;
+    this.totalSizeEl = this.element.querySelector('#selectedModsSize') as HTMLElement;
 
-    this.renderModList(this.mods);
 
     this.searchInput.addEventListener('input', () => this.filterAndSort());
     this.sortSelect.addEventListener('change', () => this.filterAndSort());
@@ -128,15 +123,31 @@ export class SelectModsModalComponent {
   }
 
   private updateSelectedCount() {
-    const checked = this.modsListContainer.querySelectorAll('input[type="checkbox"]:checked').length;
-    this.selectedCountEl.textContent = `${checked} mods selected`;
+    const checked = this.modsListContainer.querySelectorAll('input[type="checkbox"]:checked');
+    const count = checked.length;
+    let totalKb = 0;
+    checked.forEach((cb) => {
+      const fid = Number.parseInt((cb as HTMLElement).dataset.fileId || '0', 10);
+      const mod = this.mods.find((m) => m.fileId === fid);
+      if (mod) totalKb += mod.file.size;
+    });
+    this.selectedCountEl.textContent = `${count} mods selected`;
+    this.totalSizeEl.textContent = this.formatSize(totalKb);
   }
+
 
   open() {
     document.body.appendChild(this.element);
+    window.addEventListener('keydown', this.handleKeyDown);
+    this.element.addEventListener('click', (e) => {
+      if (e.target === this.element) {
+        this.close();
+      }
+    });
   }
 
   close() {
+    window.removeEventListener('keydown', this.handleKeyDown);
     this.element.remove();
   }
 }
