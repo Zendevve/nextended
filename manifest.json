@@ -32,6 +32,17 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://nexusmods.com/*",
+        "https://*.nexusmods.com/*",
+        "http://nexusmods.com/*",
+        "http://*.nexusmods.com/*"
+      ],
+      "js": ["pageShield.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "action": {

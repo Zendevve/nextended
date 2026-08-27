@@ -70,6 +70,21 @@ async function buildExtension() {
     }
   });
 
+  console.log('Building page shield (MAIN world IIFE)...');
+  await build({
+    configFile: false,
+    build: {
+      outDir: distDir,
+      emptyOutDir: false,
+      lib: {
+        entry: resolve(root, 'src/content/pageShield.ts'),
+        name: 'NexusPowerSuitePageShield',
+        formats: ['iife'],
+        fileName: () => 'pageShield.js'
+      }
+    }
+  });
+
   console.log('Copying static assets & manifest...');
   fs.copyFileSync(resolve(root, 'manifest.json'), resolve(distDir, 'manifest.json'));
   fs.copyFileSync(resolve(root, 'src/content/styles/content.css'), resolve(distDir, 'content.css'));
