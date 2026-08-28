@@ -8,6 +8,7 @@ import { Logger } from '../common/logger';
 
 let activeCollectionEngine: CollectionEngine | null = null;
 let lastRoute = '';
+let lastAutoStartedKey = '';
 let routeCheckTimer: number | undefined;
 
 export function extractCollectionRouteDetails(pathname: string) {
@@ -19,10 +20,11 @@ export function extractCollectionRouteDetails(pathname: string) {
   const regex = /^(?:\/games)?\/([^/]+)\/collections\/([^/?#]+)(?:\/revisions\/(\d+))?/i;
   const match = pathname.match(regex);
   if (match) {
-    const gameDomain = match[1];
-    const collectionSlug = match[2];
-    const revisionNumber = match[3] ? Number.parseInt(match[3], 10) : null;
-    return { gameDomain, collectionSlug, revisionNumber };
+    return {
+      gameDomain: match[1],
+      collectionSlug: match[2],
+      revisionNumber: match[3] ? parseInt(match[3], 10) : null
+    };
   }
   return null;
 }
@@ -34,12 +36,11 @@ function findCollectionMountTarget(): { element: Element; position: 'append' | '
     el.textContent?.trim().toLowerCase().includes('add collection')
   );
   if (addCollectionBtn) {
-    const card =
-      addCollectionBtn.closest('div[class*="rounded"], div[class*="bg-"], div[class*="card"], div.relative') ||
-      addCollectionBtn.parentElement;
-    if (card) {
-      return { element: card, position: 'after' };
+    const parentContainer = addCollectionBtn.closest('.flex.flex-col, .card, div');
+    if (parentContainer) {
+      return { element: parentContainer, position: 'after' };
     }
+    return { element: addCollectionBtn, position: 'after' };
   }
 
   // 2. Above Media section or tab navigation
@@ -48,8 +49,7 @@ function findCollectionMountTarget(): { element: Element; position: 'append' | '
     el.textContent?.trim().toLowerCase().includes('media')
   );
   if (mediaHeading) {
-    const mediaSection = mediaHeading.closest('section, div[class*="container"], div.space-y') || mediaHeading;
-    return { element: mediaSection, position: 'before' };
+    return { element: mediaHeading, position: 'before' };
   }
 
   const tabList = document.querySelector('[role="tablist"], nav.tabs, .tab-nav, .collection-header');
@@ -91,10 +91,14 @@ function runAfterHydration(callback: () => void | Promise<void>) {
 
 async function handleRoute() {
   const currentPath = location.pathname;
-  const routeChanged = currentPath !== lastRoute;
+  const currentSearch = location.search;
+  const currentUrl = location.href;
+  const currentRouteKey = `${currentPath}${currentSearch}`;
+  const routeChanged = currentRouteKey !== lastRoute;
+
   if (routeChanged) {
-    lastRoute = currentPath;
-    Logger.debug('Route changed to:', currentPath);
+    lastRoute = currentRouteKey;
+    Logger.debug('Route changed to:', currentRouteKey);
   }
 
   // Check if collection page
@@ -131,17 +135,26 @@ async function handleRoute() {
     activeCollectionEngine = null;
   }
 
-  // Check for auto-start single download URL
-  if (routeChanged) {
-    const config = await StorageManager.getConfig();
-    if (config.autoStartDownload && location.search.includes('file_id=')) {
-      const params = new URLSearchParams(location.search);
-      const fileId = params.get('file_id');
-      const isNMM = ClickInterceptor.isNMMDownload(null, location.search);
-      if (fileId) {
+  // Check for auto-start single download URL or countdown page
+  const config = await StorageManager.getConfig();
+  if (config.autoStartDownload) {
+    const params = new URLSearchParams(location.search);
+    const slowBtn = document.getElementById('slowDownloadButton') || document.querySelector('[data-download-url], input#dl_link');
+    const hasFileParam = params.has('file_id') || params.has('id');
+    const isCountdownPage = Boolean(slowBtn || document.querySelector('.countdown, #slowDownloadButton'));
+
+    if (hasFileParam || isCountdownPage) {
+      let fileId = params.get('file_id') || params.get('id') || ClickInterceptor.extractFileId(currentUrl, slowBtn as HTMLElement | null);
+      const isNMM = ClickInterceptor.isNMMDownload(slowBtn as HTMLElement | null, location.search);
+      const autoStartKey = `${currentRouteKey}#${fileId || ''}`;
+
+      if (autoStartKey !== lastAutoStartedKey) {
+        lastAutoStartedKey = autoStartKey;
+        const gameId = await ClickInterceptor.resolveGameId(slowBtn as HTMLElement | null);
         setTimeout(() => {
           SingleDownloader.startDownloadFlow({
             fileId,
+            gameId,
             isNMM,
             href: location.href,
             isAutoStart: true
@@ -199,8 +212,10 @@ function init() {
   runAfterHydration(() => handleRoute());
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 }

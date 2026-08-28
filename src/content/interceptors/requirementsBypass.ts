@@ -4,7 +4,7 @@ export class RequirementsBypass {
   private static attached = false;
 
   static isRequirementsUrl(href: string): boolean {
-    return /ModRequirementsPopUp|tab=requirements/i.test(href);
+    return /ModRequirementsPopUp|DownloadPopUp|ModDownloadPopUp|RequirementsPopUp|tab=requirements/i.test(href);
   }
 
   static attach() {

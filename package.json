@@ -1,6 +1,6 @@
 {
   "name": "nextended",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Unified Manifest V3 extension for Nexus Mods bulk collections, instant downloads, and archive unlocks",
   "type": "module",
   "scripts": {
