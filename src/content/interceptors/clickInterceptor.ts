@@ -8,14 +8,18 @@ export class ClickInterceptor {
   private static attached = false;
 
   static isNMMDownload(el: HTMLElement | null, href = ''): boolean {
-    if (href && (href.startsWith('nxm://') || href.includes('nmm=1') || href.includes('&nmm=1'))) {
+    // href.includes('nmm=1') subsumes the legacy '&nmm=1' check.
+    if (href && (href.startsWith('nxm://') || href.includes('nmm=1'))) {
       return true;
     }
     if (!el) return false;
     if (el.dataset?.nextendedIsNmm !== undefined) return el.dataset.nextendedIsNmm === '1';
     if (el.id === 'action-vortex' || el.id === 'action-nmm') return true;
-    const text = (el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
-    return /vortex|mod manager|manager download/i.test(text);
+    const rawText = el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '';
+    if (!rawText) return false;
+    const text = rawText.toLowerCase();
+    if (!text.includes('vortex') && !text.includes('manager')) return false;
+    return text.includes('vortex') || text.includes('mod manager') || text.includes('manager download');
   }
 
   static extractFileId(href = '', el: HTMLElement | null = null): string | null {
@@ -292,7 +296,6 @@ export class ClickInterceptor {
         } catch {}
       }
     }
-
     return direct || candidate || '';
   }
 
@@ -303,23 +306,41 @@ export class ClickInterceptor {
     if (el.hasAttribute('data-download-url') || el.closest('[data-download-url]')) {
       return true;
     }
+    const hrefLower = href.toLowerCase();
     if (
       RequirementsBypass.isRequirementsUrl(href) ||
-      ['tab=files&file_id=', 'file_id=', '/api/files/', 'nxm://', 'GenerateDownloadUrl'].some((p) => href.toLowerCase().includes(p))
+      hrefLower.includes('tab=files&file_id=') ||
+      hrefLower.includes('file_id=') ||
+      hrefLower.includes('/api/files/') ||
+      hrefLower.includes('nxm://') ||
+      hrefLower.includes('generatedownloadurl')
     ) {
       return true;
     }
-    const text = (el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim().toLowerCase();
-    if (/slow download|manual download|fast download|vortex|mod manager download|^download$|^manual$/i.test(text)) {
-      return true;
+    const rawLabel = el.textContent || el.getAttribute('aria-label') || el.getAttribute('title') || '';
+    if (!rawLabel) {
+      // Fall through to class/container checks below.
+    } else {
+      const text = rawLabel.trim().toLowerCase();
+      if (
+        text === 'download' ||
+        text === 'manual' ||
+        text.includes('slow download') ||
+        text.includes('manual download') ||
+        text.includes('fast download') ||
+        text.includes('vortex') ||
+        text.includes('mod manager download')
+      ) {
+        return true;
+      }
+      if (el.closest('mod-download-buttons, mod-file-download, MOD-DOWNLOAD-BUTTONS, MOD-FILE-DOWNLOAD, mod-download-modal, MOD-DOWNLOAD-MODAL, .file-expander-header, .mod-download-buttons, .mod-file-download')) {
+        if (text.includes('download') || text.includes('vortex') || text.includes('manual') || text.includes('slow') || text.includes('fast') || el.tagName === 'BUTTON' || el.tagName === 'A') {
+          return true;
+        }
+      }
     }
     if (el.classList.contains('popup-btn-ajax') || el.classList.contains('btn-download') || el.classList.contains('btn-slow') || el.classList.contains('btn-manual')) {
       return true;
-    }
-    if (el.closest('mod-download-buttons, mod-file-download, MOD-DOWNLOAD-BUTTONS, MOD-FILE-DOWNLOAD, mod-download-modal, MOD-DOWNLOAD-MODAL, .file-expander-header, .mod-download-buttons, .mod-file-download')) {
-      if (/download|vortex|manual|slow|fast/i.test(text) || el.tagName === 'BUTTON' || el.tagName === 'A') {
-        return true;
-      }
     }
     return false;
   }
