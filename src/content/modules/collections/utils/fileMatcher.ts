@@ -7,7 +7,7 @@ export class FileMatcher {
   } {
     const fileNames = Array.from(uploadedFiles, (file) => file.name);
     const matchedFlags = new Array<boolean>(fileNames.length).fill(false);
-
+    const joinedNames = `\n${fileNames.join('\n')}\n`;
     // Index local names once. Exact hits resolve via map; substring misses only
     // scan strictly-longer names (equal lengths imply equality, already checked).
     const indicesByName = new Map<string, number[]>();
@@ -27,6 +27,9 @@ export class FileMatcher {
         for (const i of exact) matchedFlags[i] = true;
         return true;
       }
+      // One scan of the joined haystack rejects absent URIs; only probe hits
+      // pay for the per-name confirm pass (boundary-safe flag collection).
+      if (!joinedNames.includes(uri)) return false;
       let lo = 0;
       let hi = order.length;
       while (lo < hi) {
