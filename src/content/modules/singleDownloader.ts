@@ -36,76 +36,113 @@ export class SingleDownloader {
 
   static extractDirectDownloadFromText(text: string): string | null {
     if (!text) return null;
+    const hasAmpEntity = text.includes('&amp;');
+    const hasEscSlash = text.includes('\\/');
 
-    const dataAttr = text.match(/data-download-url=["']([^"']+)["']/i);
-    if (dataAttr && dataAttr[1]) return dataAttr[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('data-download-url=')) {
+      const dataAttr = text.match(/data-download-url=["']([^"']+)["']/i);
+      if (dataAttr && dataAttr[1]) return SingleDownloader.unescapeUrl(dataAttr[1], hasAmpEntity, hasEscSlash);
+    }
 
-    const dlInput1 = text.match(/<input[^>]+id=["']dl_link["'][^>]*value=["']([^"']+)["']/i);
-    if (dlInput1 && dlInput1[1]) return dlInput1[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('dl_link')) {
+      const dlInput1 = text.match(/<input[^>]+id=["']dl_link["'][^>]*value=["']([^"']+)["']/i);
+      if (dlInput1 && dlInput1[1]) return SingleDownloader.unescapeUrl(dlInput1[1], hasAmpEntity, hasEscSlash);
 
-    const dlInput2 = text.match(/<input[^>]+value=["']([^"']+)["'][^>]*id=["']dl_link["']/i);
-    if (dlInput2 && dlInput2[1]) return dlInput2[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+      const dlInput2 = text.match(/<input[^>]+value=["']([^"']+)["'][^>]*id=["']dl_link["']/i);
+      if (dlInput2 && dlInput2[1]) return SingleDownloader.unescapeUrl(dlInput2[1], hasAmpEntity, hasEscSlash);
+    }
 
-    const constDecl = text.match(/(?:const|let|var)\s+downloadUrl\s*=\s*['"]([^'"]+)['"]/i);
-    if (constDecl && constDecl[1]) return constDecl[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('downloadUrl')) {
+      const constDecl = text.match(/(?:const|let|var)\s+downloadUrl\s*=\s*['"]([^'"]+)['"]/i);
+      if (constDecl && constDecl[1]) return SingleDownloader.unescapeUrl(constDecl[1], hasAmpEntity, hasEscSlash);
+    }
 
-    const jsonUrl = text.match(/"(?:url|downloadUrl|DirectDownloadLink|DirectDownloadUrl|URI)"\s*:\s*"(https?:\/\/[^"\\]*(?:\\.[^"\\]*)*)"/i);
-    if (jsonUrl && jsonUrl[1]) return jsonUrl[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('://') && (text.includes('downloadUrl') || text.includes('DirectDownload') || text.includes('URI') || text.includes('"url"'))) {
+      const jsonUrl = text.match(/"(?:url|downloadUrl|DirectDownloadLink|DirectDownloadUrl|URI)"\s*:\s*"(https?:\/\/[^"\\]*(?:\\.[^"\\]*)*)"/i);
+      if (jsonUrl && jsonUrl[1]) return SingleDownloader.unescapeUrl(jsonUrl[1], hasAmpEntity, hasEscSlash);
+    }
 
-    const nxmMatch = text.replace(/&amp;/g, '&').replace(/\\\//g, '/').match(/nxm:\/\/[^\s"'<>]+/i);
-    if (nxmMatch && nxmMatch[0].includes('?')) {
-      const params = new URLSearchParams(nxmMatch[0].slice(nxmMatch[0].indexOf('?') + 1));
-      if (params.has('key') && params.has('expires')) {
-        return nxmMatch[0];
+    if (text.includes('nxm://')) {
+      const nxmMatch = SingleDownloader.unescapeUrl(text, hasAmpEntity, hasEscSlash).match(/nxm:\/\/[^\s"'<>]+/i);
+      if (nxmMatch && nxmMatch[0].includes('?')) {
+        const qIndex = nxmMatch[0].indexOf('?');
+        const params = new URLSearchParams(nxmMatch[0].slice(qIndex + 1));
+        if (params.has('key') && params.has('expires')) {
+          return nxmMatch[0];
+        }
       }
     }
 
-    const cdnMatch = text.match(/https?:\/\/[^"'\s<>]+\.(?:nexus-cdn|nexusmods)\.com\/[^"'\s<>]+\.(?:zip|7z|rar|pdf|exe|dmg|pak|bsa|ba2|esp|esl|esm)[^"'\s<>]*/i);
-    if (cdnMatch && cdnMatch[0]) return cdnMatch[0].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('nexus-cdn.com/') || text.includes('nexusmods.com/')) {
+      const cdnMatch = text.match(/https?:\/\/[^"'\s<>]+\.(?:nexus-cdn|nexusmods)\.com\/[^"'\s<>]+\.(?:zip|7z|rar|pdf|exe|dmg|pak|bsa|ba2|esp|esl|esm)[^"'\s<>]*/i);
+      if (cdnMatch && cdnMatch[0]) return SingleDownloader.unescapeUrl(cdnMatch[0], hasAmpEntity, hasEscSlash);
+    }
 
     return null;
   }
 
+  private static unescapeUrl(url: string, hasAmpEntity: boolean, hasEscSlash: boolean): string {
+    let out = url;
+    if (hasAmpEntity && out.includes('&amp;')) out = out.replace(/&amp;/g, '&');
+    if (hasEscSlash && out.includes('\\/')) out = out.replace(/\\\//g, '/');
+    return out;
+  }
+
   static parseDownloadUrlFromResponse(text: string): string | null {
     if (!text) return null;
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        for (const item of parsed) {
-          const url =
-            item?.url ||
-            item?.URI ||
-            item?.src ||
-            item?.download_url ||
-            item?.downloadUrl ||
-            item?.DirectDownloadLink ||
-            item?.DirectDownloadUrl ||
-            item?.data?.url ||
-            item?.data?.downloadUrl;
-          if (url && typeof url === 'string') return url.replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    const first = text.charCodeAt(text.search(/\S/));
+    if (first === 123 || first === 91) {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          for (const item of parsed) {
+            const itemUrl =
+              item?.url ||
+              item?.URI ||
+              item?.src ||
+              item?.download_url ||
+              item?.downloadUrl ||
+              item?.DirectDownloadLink ||
+              item?.DirectDownloadUrl ||
+              item?.data?.url ||
+              item?.data?.downloadUrl;
+            if (itemUrl && typeof itemUrl === 'string') {
+              return itemUrl.includes('&amp;') || itemUrl.includes('\\/') ? itemUrl.replace(/&amp;/g, '&').replace(/\\\//g, '/') : itemUrl;
+            }
+          }
         }
+        const direct =
+          parsed?.url ||
+          parsed?.URI ||
+          parsed?.src ||
+          parsed?.download_url ||
+          parsed?.downloadUrl ||
+          parsed?.DirectDownloadLink ||
+          parsed?.DirectDownloadUrl ||
+          parsed?.data?.url ||
+          parsed?.data?.downloadUrl ||
+          parsed?.data?.URI;
+        if (direct && typeof direct === 'string') {
+          return direct.includes('&amp;') || direct.includes('\\/') ? direct.replace(/&amp;/g, '&').replace(/\\\//g, '/') : direct;
+        }
+      } catch {}
+    }
+
+    if (text.includes('dl_link')) {
+      const dlInput =
+        text.match(/id=["']dl_link["'][^>]*value=["']([^"']+)["']/i) ||
+        text.match(/value=["']([^"']+)["'][^>]*id=["']dl_link["']/i);
+      if (dlInput && dlInput[1]) {
+        return dlInput[1].includes('&amp;') || dlInput[1].includes('\\/') ? dlInput[1].replace(/&amp;/g, '&').replace(/\\\//g, '/') : dlInput[1];
       }
-      const direct =
-        parsed?.url ||
-        parsed?.URI ||
-        parsed?.src ||
-        parsed?.download_url ||
-        parsed?.downloadUrl ||
-        parsed?.DirectDownloadLink ||
-        parsed?.DirectDownloadUrl ||
-        parsed?.data?.url ||
-        parsed?.data?.downloadUrl ||
-        parsed?.data?.URI;
-      if (direct && typeof direct === 'string') return direct.replace(/&amp;/g, '&').replace(/\\\//g, '/');
-    } catch {}
+    }
 
-    const dlInput =
-      text.match(/id=["']dl_link["'][^>]*value=["']([^"']+)["']/i) ||
-      text.match(/value=["']([^"']+)["'][^>]*id=["']dl_link["']/i);
-    if (dlInput && dlInput[1]) return dlInput[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
-
-    const dataAttr = text.match(/data-download-url=["']([^"']+)["']/i);
-    if (dataAttr && dataAttr[1]) return dataAttr[1].replace(/&amp;/g, '&').replace(/\\\//g, '/');
+    if (text.includes('data-download-url=')) {
+      const dataAttr = text.match(/data-download-url=["']([^"']+)["']/i);
+      if (dataAttr && dataAttr[1]) {
+        return dataAttr[1].includes('&amp;') || dataAttr[1].includes('\\/') ? dataAttr[1].replace(/&amp;/g, '&').replace(/\\\//g, '/') : dataAttr[1];
+      }
+    }
 
     return null;
   }
@@ -116,13 +153,13 @@ export class SingleDownloader {
   }
 
   static parseDownloadLink(text: string): string | null {
-    if (!text) return null;
-    const m = text
-      .replace(/&amp;/g, '&')
-      .replace(/\\\//g, '/')
-      .match(/nxm:\/\/[^\s"'<>]+/i);
+    if (!text || !text.includes('nxm://')) return null;
+    const cleaned = text.includes('&amp;') || text.includes('\\/') ? text.replace(/&amp;/g, '&').replace(/\\\//g, '/') : text;
+    const m = cleaned.match(/nxm:\/\/[^\s"'<>]+/i);
     if (!m || !m[0].includes('?')) return null;
-    const p = new URLSearchParams(m[0].slice(m[0].indexOf('?') + 1));
+    const params = m[0].slice(m[0].indexOf('?') + 1);
+    if (!params.includes('key') || !params.includes('expires')) return null;
+    const p = new URLSearchParams(params);
     return p.has('key') && p.has('expires') ? m[0] : null;
   }
 
