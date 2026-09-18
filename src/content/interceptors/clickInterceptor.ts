@@ -89,11 +89,29 @@ export class ClickInterceptor {
 
     // 3. Check href if provided
     if (href) {
+      // Fast path: plain substring probes resolve the common shapes without
+      // allocating a URL object or running regexes.
+      const qIndex = href.indexOf('?');
+      if (qIndex !== -1) {
+        const query = href.slice(qIndex + 1);
+        const fileIdParam =
+          /(?:^|&)file_id=(\d+)/.exec(query) ||
+          /(?:^|&)fid=(\d+)/.exec(query) ||
+          /(?:^|&)id=(\d+)/.exec(query);
+        if (fileIdParam && fileIdParam[1]) return fileIdParam[1];
+      }
+      const filesIndex = href.indexOf('/files/');
+      if (filesIndex !== -1) {
+        const tail = href.slice(filesIndex + 7);
+        const end = tail.search(/\D/);
+        const digits = end === -1 ? tail : tail.slice(0, end);
+        if (digits) return digits;
+      }
       try {
         if (href.startsWith('nxm://')) {
-          const queryIndex = href.indexOf('?');
-          if (queryIndex !== -1) {
-            const params = new URLSearchParams(href.substring(queryIndex));
+          const nxmQueryIndex = href.indexOf('?');
+          if (nxmQueryIndex !== -1) {
+            const params = new URLSearchParams(href.substring(nxmQueryIndex));
             const id = params.get('id') || params.get('file_id') || params.get('fid');
             if (id && /^\d+$/.test(id)) return id;
           }
