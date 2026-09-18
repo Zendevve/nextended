@@ -44,9 +44,18 @@ export class SingleDownloader {
   static isDirectDownloadUrl(url: string): boolean {
     if (!url) return false;
     if (url.startsWith('nxm://')) return true;
-    if (/\bnexus-cdn\.com\//i.test(url) && /[?&](key|expires)=/i.test(url)) return true;
-    if (/^https?:\/\/[^/]+\.(?:nexus-cdn|nexusmods)\.com\/.+\.(?:zip|7z|rar|pdf|exe|dmg|pak|bsa|ba2|esp|esl|esm)/i.test(url)) return true;
-    return false;
+    const lower = url.toLowerCase();
+    if (!lower.includes('nexus-cdn.com/') && !lower.includes('nexusmods.com/')) return false;
+    if (lower.includes('nexus-cdn.com/') && (url.includes('key=') || url.includes('expires='))) {
+      if (url.includes('?') || url.includes('&')) return true;
+    }
+    if (!lower.startsWith('http://') && !lower.startsWith('https://')) return false;
+    const dot = lower.indexOf('.com/');
+    if (dot === -1) return false;
+    const extIndex = lower.lastIndexOf('.');
+    if (extIndex < dot) return false;
+    const ext = lower.slice(extIndex + 1).split(/[?#\s"'<>]/)[0];
+    return ext === 'zip' || ext === '7z' || ext === 'rar' || ext === 'pdf' || ext === 'exe' || ext === 'dmg' || ext === 'pak' || ext === 'bsa' || ext === 'ba2' || ext === 'esp' || ext === 'esl' || ext === 'esm';
   }
 
   static extractDirectDownloadFromText(text: string): string | null {
