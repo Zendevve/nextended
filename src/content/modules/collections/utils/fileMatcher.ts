@@ -6,34 +6,51 @@ export class FileMatcher {
     unmatchedFileNames: string[];
   } {
     const fileNames = Array.from(uploadedFiles, (file) => file.name);
-    const nameSet = new Set(fileNames);
+    const matchedFlags = new Array<boolean>(fileNames.length).fill(false);
 
-    // Exact name hits are the common case; only misses pay for a substring scan.
+    // Index local names once. Exact hits resolve via map; substring misses only
+    // scan strictly-longer names (equal lengths imply equality, already checked).
+    const indicesByName = new Map<string, number[]>();
+    for (let i = 0; i < fileNames.length; i++) {
+      const list = indicesByName.get(fileNames[i]);
+      if (list) list.push(i);
+      else indicesByName.set(fileNames[i], [i]);
+    }
+    const order = new Array<number>(fileNames.length);
+    for (let i = 0; i < order.length; i++) order[i] = i;
+    order.sort((a, b) => fileNames[a].length - fileNames[b].length);
+
     const matchedMods = modFiles.filter((mod) => {
       const uri = mod.file.uri;
-      if (nameSet.has(uri)) return true;
-      for (const name of fileNames) {
-        if (name.includes(uri)) return true;
+      const exact = indicesByName.get(uri);
+      if (exact) {
+        for (const i of exact) matchedFlags[i] = true;
+        return true;
       }
-      return false;
-    });
-
-    // Unmatched = local names that contain no matched mod URI (set lookup first,
-    // substring scan only for names that are not an exact URI).
-    const matchedUris = new Set(matchedMods.map((mod) => mod.file.uri));
-    const unmatchedFileNames: string[] = [];
-    for (const name of fileNames) {
-      if (matchedUris.has(name)) continue;
-      let matched = false;
-      for (const uri of matchedUris) {
-        if (name.includes(uri)) {
-          matched = true;
-          break;
+      let lo = 0;
+      let hi = order.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (fileNames[order[mid]].length <= uri.length) lo = mid + 1;
+        else hi = mid;
+      }
+      let hit = false;
+      for (let k = lo; k < order.length; k++) {
+        const i = order[k];
+        if (fileNames[i].includes(uri)) {
+          matchedFlags[i] = true;
+          hit = true;
         }
       }
-      if (!matched) unmatchedFileNames.push(name);
-    }
+      return hit;
+    });
 
+    // A file containing any mod URI implies that mod matched, so flags recorded
+    // above fully determine the unmatched set — no second scan pass needed.
+    const unmatchedFileNames: string[] = [];
+    for (let i = 0; i < fileNames.length; i++) {
+      if (!matchedFlags[i]) unmatchedFileNames.push(fileNames[i]);
+    }
     return { matchedMods, unmatchedFileNames };
   }
 }
