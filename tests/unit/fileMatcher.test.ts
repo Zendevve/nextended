@@ -43,4 +43,64 @@ describe('FileMatcher', () => {
     expect(result.matchedMods[0].fileId).toBe(101);
     expect(result.unmatchedFileNames).toEqual(['random_unrelated_file.txt']);
   });
+
+  // The indexed path engages at 64+ uploads; these cases cover the gram-based
+  // containment index that path builds (the small-input path is covered above).
+  describe('with 64+ uploaded files (indexed path)', () => {
+    const modWithUri = (fileId: number, uri: string): CollectionModFile => ({
+      fileId,
+      optional: false,
+      file: {
+        fileId,
+        name: `Mod ${fileId}`,
+        uri,
+        size: 1024,
+        version: '1.0',
+        date: 1,
+        mod: { modId: fileId, name: `Mod ${fileId}`, version: '1.0', adult: false, game: { id: 1, domainName: 'skyrim' } }
+      }
+    });
+
+    const withNoise = (...names: string[]): File[] => [
+      ...Array.from({ length: 80 }, (_, i) => new File([''], `unrelated-noise-${i}.zip`)),
+      ...names.map((n) => new File([''], n))
+    ];
+
+    it('matches a URI contained in a longer local filename', () => {
+      const result = FileMatcher.matchFiles(
+        withNoise('backup__Cool_Mod-202-1-0.zip.bak'),
+        [modWithUri(202, 'Cool_Mod-202-1-0.zip')]
+      );
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([202]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+
+    it('matches a URI shorter than the gram length contained in a longer filename', () => {
+      const result = FileMatcher.matchFiles(withNoise('prefix-a.zip-v2-final'), [modWithUri(303, 'a.zip')]);
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([303]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+
+    it('keeps files lacking any matched URI and files whose URI is absent', () => {
+      const result = FileMatcher.matchFiles(
+        withNoise('backup__Cool_Mod-202-1-0.zip.bak'),
+        [modWithUri(202, 'Cool_Mod-202-1-0.zip'), modWithUri(404, 'Missing_Mod-404-1-0.zip')]
+      );
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([202]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+
+    it('treats every file containing a matched URI as matched when that URI also matches exactly', () => {
+      const result = FileMatcher.matchFiles(
+        withNoise('Cool_Mod-202-1-0.zip', 'archive__Cool_Mod-202-1-0.zip.old'),
+        [modWithUri(202, 'Cool_Mod-202-1-0.zip')]
+      );
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([202]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+  });
 });
