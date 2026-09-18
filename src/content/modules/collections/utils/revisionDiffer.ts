@@ -8,52 +8,37 @@ export interface RevisionDiffResult {
 
 export class RevisionDiffer {
   static diff(currentMods: CollectionModFile[], newMods: CollectionModFile[]): RevisionDiffResult {
-    // Group mods by modId
-    const currentMap = new Map<number, CollectionModFile[]>();
-    for (const mod of currentMods) {
-      const arr = currentMap.get(mod.file.mod.modId) || [];
-      arr.push(mod);
-      currentMap.set(mod.file.mod.modId, arr);
-    }
-
-    const newMap = new Map<number, CollectionModFile[]>();
-    for (const mod of newMods) {
-      const arr = newMap.get(mod.file.mod.modId) || [];
-      arr.push(mod);
-      newMap.set(mod.file.mod.modId, arr);
-    }
-
     const added: CollectionModFile[] = [];
     const updated: CollectionModFile[] = [];
     const removed: CollectionModFile[] = [];
 
-    // Index both sides by fileId and by name (first occurrence wins) so each
-    // file resolves in O(1) instead of scanning its modId group.
+    // Index current by fileId and by name (first occurrence wins) so each new
+    // file resolves in O(1); matched current entries land in the hit-sets and
+    // unhit current entries are removed. No new-side index needed.
     const currentByFileId = new Map<number, CollectionModFile>();
     const currentByName = new Map<string, CollectionModFile>();
     for (const mod of currentMods) {
       if (!currentByFileId.has(mod.fileId)) currentByFileId.set(mod.fileId, mod);
       if (!currentByName.has(mod.file.name)) currentByName.set(mod.file.name, mod);
     }
-    const newByFileId = new Map<number, CollectionModFile>();
-    const newByName = new Map<string, CollectionModFile>();
-    for (const mod of newMods) {
-      if (!newByFileId.has(mod.fileId)) newByFileId.set(mod.fileId, mod);
-      if (!newByName.has(mod.file.name)) newByName.set(mod.file.name, mod);
-    }
-
+    const hitFileIds = new Set<number>();
+    const hitNames = new Set<string>();
     for (const newModFile of newMods) {
-      const match = currentByFileId.get(newModFile.fileId) || currentByName.get(newModFile.file.name);
+      const match =
+        currentByFileId.get(newModFile.fileId) || currentByName.get(newModFile.file.name);
       if (!match) {
         added.push(newModFile);
-      } else if (match.file.version !== newModFile.file.version) {
-        updated.push(newModFile);
+      } else {
+        hitFileIds.add(match.fileId);
+        hitNames.add(match.file.name);
+        if (match.file.version !== newModFile.file.version) {
+          updated.push(newModFile);
+        }
       }
     }
 
     for (const curModFile of currentMods) {
-      const match = newByFileId.get(curModFile.fileId) || newByName.get(curModFile.file.name);
-      if (!match) {
+      if (!hitFileIds.has(curModFile.fileId) && !hitNames.has(curModFile.file.name)) {
         removed.push(curModFile);
       }
     }
