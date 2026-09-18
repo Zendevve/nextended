@@ -50,6 +50,18 @@ describe('SingleDownloader URL Resolution Logic', () => {
     expect(SingleDownloader.isCloudflareChallenge('Normal HTML page')).toBe(false);
   });
 
+  it('detects Cloudflare markers regardless of case', () => {
+    expect(SingleDownloader.isCloudflareChallenge('JUST A MOMENT')).toBe(true);
+    expect(SingleDownloader.isCloudflareChallenge('Attention Required!')).toBe(true);
+    expect(SingleDownloader.isCloudflareChallenge('<html>CF-BROWSER-VERIFICATION</html>')).toBe(true);
+    expect(SingleDownloader.isCloudflareChallenge('<html>Cf-Error-Details</html>')).toBe(true);
+  });
+
+  it('treats challenge-form as a marker only in its Nexus challenge markup', () => {
+    expect(SingleDownloader.isCloudflareChallenge('<div id="challenge-form">verify</div>')).toBe(true);
+    expect(SingleDownloader.isCloudflareChallenge('login page using a challenge-form class')).toBe(false);
+  });
+
   it('detects direct nexus-cdn download URLs with signed tokens', () => {
     const url = 'https://files.nexus-cdn.com/12345/mod.zip?key=abc&expires=1700000000&user_id=1';
     expect(SingleDownloader.isDirectDownloadUrl(url)).toBe(true);

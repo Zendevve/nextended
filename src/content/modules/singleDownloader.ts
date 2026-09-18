@@ -5,6 +5,10 @@ import { ENDPOINTS } from '../../common/endpoints';
 import { GraphQLClient } from './graphQLClient';
 
 export class SingleDownloader {
+  private static readonly CF_MARKER_RE =
+    /cf-turnstile|challenges\.cloudflare\.com|Just a moment|Attention Required!|cf-error-details|id="challenge-form"|cf-browser-verification/i;
+  private static readonly CF_HEADER_RE = /cf-ray|server:\s*cloudflare/i;
+
   static bypassNexusAdsCookie() {
     const now = Math.round(Date.now() / 1000);
     const expirySeconds = 5 * 60; // 5 minutes
@@ -16,29 +20,14 @@ export class SingleDownloader {
 
   static isCloudflareChallenge(text: string, status = 200, headers = ''): boolean {
     if (!text) return false;
-    // Marker pre-check covers exact-case hits; lowercase path covers odd-cased pages.
-    if (
-      text.includes('cf-turnstile') ||
-      text.includes('challenges.cloudflare.com') ||
-      text.includes('challenge-form') ||
-      text.includes('cf-error-details') ||
-      text.includes('cf-browser-verification')
-    ) {
-      return true;
-    }
-    const lower = text.toLowerCase();
-    if (
-      lower.includes('just a moment') ||
-      lower.includes('attention required!') ||
-      lower.includes('cf-turnstile') ||
-      lower.includes('challenges.cloudflare.com') ||
-      lower.includes('cf-error-details') ||
-      lower.includes('challenge-form') ||
-      lower.includes('cf-browser-verification')
-    ) {
-      return true;
-    }
-    return (status === 403 || status === 503) && /cf-ray|server:\s*cloudflare/i.test(headers) && text.trim().startsWith('<');
+    // Single precompiled case-insensitive scan: no per-call lowercase copy, and
+    // the marker set matches the Nexus challenge markup exactly.
+    if (SingleDownloader.CF_MARKER_RE.test(text)) return true;
+    return (
+      (status === 403 || status === 503) &&
+      SingleDownloader.CF_HEADER_RE.test(headers) &&
+      text.trim().startsWith('<')
+    );
   }
 
   static isDirectDownloadUrl(url: string): boolean {
