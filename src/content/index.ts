@@ -17,6 +17,8 @@ export function extractCollectionRouteDetails(pathname: string) {
   // /games/stardewvalley/collections/bbubvs
   // /stardewvalley/collections/bbubvs/revisions/112
   // /stardewvalley/collections/bbubvs/mods
+  // Fast reject: non-collection navigations skip the regex entirely.
+  if (!pathname.includes('/collections/')) return null;
   const regex = /^(?:\/games)?\/([^/]+)\/collections\/([^/?#]+)(?:\/revisions\/(\d+))?/i;
   const match = pathname.match(regex);
   if (match) {
