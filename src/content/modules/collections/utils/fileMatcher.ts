@@ -56,6 +56,10 @@ export class FileMatcher {
       // One scan of the joined haystack rejects absent URIs; only probe hits
       // pay for the per-name confirm pass (boundary-safe flag collection).
       if (!joinedNames.includes(uri)) return false;
+      // Rare-token prefilter: probe a short distinctive slice first so the
+      // per-name confirm loop only runs when the slice hits somewhere.
+      const probeLen = Math.min(12, uri.length);
+      const probe = uri.slice(0, probeLen);
       let lo = 0;
       let hi = order.length;
       while (lo < hi) {
@@ -66,7 +70,9 @@ export class FileMatcher {
       let hit = false;
       for (let k = lo; k < order.length; k++) {
         const i = order[k];
-        if (fileNames[i].includes(uri)) {
+        const name = fileNames[i];
+        if (!name.includes(probe)) continue;
+        if (name.includes(uri)) {
           matchedFlags[i] = true;
           hit = true;
         }
