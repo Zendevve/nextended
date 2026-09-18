@@ -16,10 +16,25 @@ export class SingleDownloader {
 
   static isCloudflareChallenge(text: string, status = 200, headers = ''): boolean {
     if (!text) return false;
+    // Marker pre-check covers exact-case hits; lowercase path covers odd-cased pages.
     if (
-      /cf-turnstile|challenges\.cloudflare\.com|Just a moment|Attention Required!|cf-error-details|id="challenge-form"|cf-browser-verification/i.test(
-        text
-      )
+      text.includes('cf-turnstile') ||
+      text.includes('challenges.cloudflare.com') ||
+      text.includes('challenge-form') ||
+      text.includes('cf-error-details') ||
+      text.includes('cf-browser-verification')
+    ) {
+      return true;
+    }
+    const lower = text.toLowerCase();
+    if (
+      lower.includes('just a moment') ||
+      lower.includes('attention required!') ||
+      lower.includes('cf-turnstile') ||
+      lower.includes('challenges.cloudflare.com') ||
+      lower.includes('cf-error-details') ||
+      lower.includes('challenge-form') ||
+      lower.includes('cf-browser-verification')
     ) {
       return true;
     }
