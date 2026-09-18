@@ -6,6 +6,33 @@ export class FileMatcher {
     unmatchedFileNames: string[];
   } {
     const fileNames = Array.from(uploadedFiles, (file) => file.name);
+    // Small inputs (popup/options-scale lists): plain two-pass scan avoids index
+    // build cost. Large collection scans use the indexed path below.
+    if (fileNames.length < 64) {
+      const nameSet = new Set(fileNames);
+      const matchedMods = modFiles.filter((mod) => {
+        const uri = mod.file.uri;
+        if (nameSet.has(uri)) return true;
+        for (const name of fileNames) {
+          if (name.includes(uri)) return true;
+        }
+        return false;
+      });
+      const matchedUris = new Set(matchedMods.map((mod) => mod.file.uri));
+      const unmatchedFileNames: string[] = [];
+      for (const name of fileNames) {
+        if (matchedUris.has(name)) continue;
+        let matched = false;
+        for (const uri of matchedUris) {
+          if (name.includes(uri)) {
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) unmatchedFileNames.push(name);
+      }
+      return { matchedMods, unmatchedFileNames };
+    }
     const matchedFlags = new Array<boolean>(fileNames.length).fill(false);
     const joinedNames = `\n${fileNames.join('\n')}\n`;
     // Index local names once. Exact hits resolve via map; substring misses only
@@ -19,7 +46,6 @@ export class FileMatcher {
     const order = new Array<number>(fileNames.length);
     for (let i = 0; i < order.length; i++) order[i] = i;
     order.sort((a, b) => fileNames[a].length - fileNames[b].length);
-
     const matchedMods = modFiles.filter((mod) => {
       const uri = mod.file.uri;
       const exact = indicesByName.get(uri);
