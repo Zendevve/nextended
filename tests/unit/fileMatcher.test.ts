@@ -102,5 +102,19 @@ describe('FileMatcher', () => {
       expect(result.matchedMods.map((m) => m.fileId)).toEqual([202]);
       expect(result.unmatchedFileNames).toHaveLength(80);
     });
+
+    it('treats a file named exactly like a matched short URI as matched', () => {
+      const result = FileMatcher.matchFiles(withNoise('a.zip'), [modWithUri(303, 'a.zip')]);
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([303]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+
+    it('treats a file named exactly like a matched gram-length URI as matched', () => {
+      const result = FileMatcher.matchFiles(withNoise('TwelveChar1.zip'), [modWithUri(505, 'TwelveChar1.zip')]);
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([505]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
   });
 });
