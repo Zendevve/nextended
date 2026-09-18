@@ -27,29 +27,34 @@ export class RevisionDiffer {
     const updated: CollectionModFile[] = [];
     const removed: CollectionModFile[] = [];
 
-    for (const [modId, newModFiles] of newMap.entries()) {
-      const currentModFiles = currentMap.get(modId) || [];
-      for (const newModFile of newModFiles) {
-        const match = currentModFiles.find(
-          (m) => m.fileId === newModFile.fileId || m.file.name === newModFile.file.name
-        );
-        if (!match) {
-          added.push(newModFile);
-        } else if (match.file.version !== newModFile.file.version) {
-          updated.push(newModFile);
-        }
+    // Index both sides by fileId and by name (first occurrence wins) so each
+    // file resolves in O(1) instead of scanning its modId group.
+    const currentByFileId = new Map<number, CollectionModFile>();
+    const currentByName = new Map<string, CollectionModFile>();
+    for (const mod of currentMods) {
+      if (!currentByFileId.has(mod.fileId)) currentByFileId.set(mod.fileId, mod);
+      if (!currentByName.has(mod.file.name)) currentByName.set(mod.file.name, mod);
+    }
+    const newByFileId = new Map<number, CollectionModFile>();
+    const newByName = new Map<string, CollectionModFile>();
+    for (const mod of newMods) {
+      if (!newByFileId.has(mod.fileId)) newByFileId.set(mod.fileId, mod);
+      if (!newByName.has(mod.file.name)) newByName.set(mod.file.name, mod);
+    }
+
+    for (const newModFile of newMods) {
+      const match = currentByFileId.get(newModFile.fileId) || currentByName.get(newModFile.file.name);
+      if (!match) {
+        added.push(newModFile);
+      } else if (match.file.version !== newModFile.file.version) {
+        updated.push(newModFile);
       }
     }
 
-    for (const [modId, currentModFiles] of currentMap.entries()) {
-      const newModFiles = newMap.get(modId) || [];
-      for (const curModFile of currentModFiles) {
-        const match = newModFiles.find(
-          (m) => m.fileId === curModFile.fileId || m.file.name === curModFile.file.name
-        );
-        if (!match) {
-          removed.push(curModFile);
-        }
+    for (const curModFile of currentMods) {
+      const match = newByFileId.get(curModFile.fileId) || newByName.get(curModFile.file.name);
+      if (!match) {
+        removed.push(curModFile);
       }
     }
 
