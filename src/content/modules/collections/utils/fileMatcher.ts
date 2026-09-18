@@ -1,5 +1,16 @@
 import { CollectionModFile } from '../../../common/types';
 
+/** FNV-1a over a slice; numeric grams avoid per-gram string allocation. */
+function hashSlice(text: string, start: number, length: number): number {
+  let hash = 0x811c9dc5;
+  const end = start + length;
+  for (let i = start; i < end; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
 export class FileMatcher {
   static matchFiles(uploadedFiles: FileList | File[], modFiles: CollectionModFile[]): {
     matchedMods: CollectionModFile[];
@@ -34,7 +45,19 @@ export class FileMatcher {
       return { matchedMods, unmatchedFileNames };
     }
     const matchedFlags = new Array<boolean>(fileNames.length).fill(false);
-    const joinedNames = `\n${fileNames.join('\n')}\n`;
+    // Containment prefilter: if any name contains a URI, that URI's first GRAM
+    // chars occur inside some name. Indexing every GRAM-gram of every name makes
+    // the reject test one set lookup instead of a scan across all names.
+    const GRAM = 12;
+    const nameGramHashes = new Set<number>();
+    for (let i = 0; i < fileNames.length; i++) {
+      const name = fileNames[i];
+      if (name.length <= GRAM) {
+        nameGramHashes.add(hashSlice(name, 0, name.length));
+        continue;
+      }
+      for (let s = 0; s + GRAM <= name.length; s++) nameGramHashes.add(hashSlice(name, s, GRAM));
+    }
     // Index local names once. Exact hits resolve via map; substring misses only
     // scan strictly-longer names (equal lengths imply equality, already checked).
     const indicesByName = new Map<string, number[]>();
@@ -53,12 +76,10 @@ export class FileMatcher {
         for (const i of exact) matchedFlags[i] = true;
         return true;
       }
-      // One scan of the joined haystack rejects absent URIs; only probe hits
-      // pay for the per-name confirm pass (boundary-safe flag collection).
-      if (!joinedNames.includes(uri)) return false;
-      // Rare-token prefilter: probe a short distinctive slice first so the
-      // per-name confirm loop only runs when the slice hits somewhere.
-      const probeLen = Math.min(12, uri.length);
+      // Gram-set reject: only URIs whose leading gram occurs in some name can
+      // possibly be contained, so misses skip the per-name confirm pass.
+      const probeLen = Math.min(GRAM, uri.length);
+      if (!nameGramHashes.has(hashSlice(uri, 0, probeLen))) return false;
       const probe = uri.slice(0, probeLen);
       let lo = 0;
       let hi = order.length;
