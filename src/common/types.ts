@@ -19,6 +19,19 @@ export interface ExtensionConfig {
   downloadSpeedMb: number;
   pauseBetweenDownloadSec: number;
   downloadMethod: DownloadMethod;
+  externalDownloader: ExternalDownloaderConfig;
+}
+
+export enum ExternalDownloaderMode {
+  CLIPBOARD = 'clipboard',
+  ARIA2 = 'aria2'
+}
+
+export interface ExternalDownloaderConfig {
+  enabled: boolean;
+  mode: ExternalDownloaderMode;
+  rpcUrl: string;
+  secret: string;
 }
 
 export interface CollectionModFile {

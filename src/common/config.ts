@@ -1,4 +1,4 @@
-import { ExtensionConfig, DownloadMethod } from './types';
+import { ExtensionConfig, DownloadMethod, ExternalDownloaderMode } from './types';
 
 export const DEFAULT_CONFIG: ExtensionConfig = {
   autoStartDownload: true,
@@ -15,5 +15,11 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
   requestTimeoutMs: 30000,
   downloadSpeedMb: 1.5,
   pauseBetweenDownloadSec: 5,
-  downloadMethod: DownloadMethod.VORTEX
+  downloadMethod: DownloadMethod.VORTEX,
+  externalDownloader: {
+    enabled: false,
+    mode: ExternalDownloaderMode.CLIPBOARD,
+    rpcUrl: 'http://localhost:6800/jsonrpc',
+    secret: ''
+  }
 };

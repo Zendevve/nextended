@@ -7,7 +7,18 @@
     "storage",
     "downloads",
     "tabs",
-    "cookies"
+    "cookies",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://nexusmods.com/*",
+    "https://*.nexusmods.com/*",
+    "http://nexusmods.com/*",
+    "http://*.nexusmods.com/*",
+    "https://api-router.nexusmods.com/*",
+    "https://*.nexus-cdn.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "host_permissions": [
     "https://nexusmods.com/*",

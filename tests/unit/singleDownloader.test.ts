@@ -415,7 +415,8 @@ describe('SingleDownloader URL Resolution Logic', () => {
 
     expect(sendMsgMock).toHaveBeenCalledWith({
       type: 'TRIGGER_DOWNLOAD',
-      url: directUrl
+      url: directUrl,
+      filename: 'Mod.zip'
     });
   });
 

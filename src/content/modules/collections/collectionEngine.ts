@@ -153,14 +153,29 @@ export class CollectionEngine {
           this.console.log(`[${indexStr}] Sent to Vortex: ${mod.file.name}`);
           location.href = res.url;
         } else {
-          this.console.log(`[${indexStr}] Downloading: ${mod.file.name}`);
-          if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-            chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: res.url, filename: mod.file.name });
-          } else {
-            const a = document.createElement('a');
-            a.href = res.url;
-            a.download = mod.file.name;
-            a.click();
+          let handled = false;
+          if (config.externalDownloader.enabled) {
+            const external = await SingleDownloader.sendExternalDownload(res.url, mod.file.name);
+            if (external?.success) {
+              this.console.log(`[${indexStr}] Sent to ${config.externalDownloader.mode}: ${mod.file.name}`);
+              handled = true;
+            } else if (external) {
+              this.console.log(
+                `[${indexStr}] External downloader failed (${external.error || 'unknown error'}) — using browser: ${mod.file.name}`,
+                LogType.ERROR
+              );
+            }
+          }
+          if (!handled) {
+            this.console.log(`[${indexStr}] Downloading: ${mod.file.name}`);
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+              chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: res.url, filename: mod.file.name });
+            } else {
+              const a = document.createElement('a');
+              a.href = res.url;
+              a.download = mod.file.name;
+              a.click();
+            }
           }
         }
 

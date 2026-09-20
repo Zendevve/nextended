@@ -1,6 +1,6 @@
 import { StorageManager } from '../common/storage';
 import { DEFAULT_CONFIG } from '../common/config';
-import { ExtensionConfig } from '../common/types';
+import { ExtensionConfig, ExternalDownloaderMode } from '../common/types';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const autoStart = document.querySelector('#autoStartDownload') as HTMLInputElement;
@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dlSpeed = document.querySelector('#downloadSpeedMb') as HTMLInputElement;
   const pauseSec = document.querySelector('#pauseBetweenDownloadSec') as HTMLInputElement;
   const handleArch = document.querySelector('#handleArchivedFiles') as HTMLInputElement;
+  const extEnabled = document.querySelector('#externalDownloaderEnabled') as HTMLInputElement;
+  const extMode = document.querySelector('#externalDownloaderMode') as HTMLSelectElement;
+  const extRpcUrl = document.querySelector('#externalDownloaderRpcUrl') as HTMLInputElement;
+  const extSecret = document.querySelector('#externalDownloaderSecret') as HTMLInputElement;
 
   const saveBtn = document.querySelector('#saveBtn') as HTMLButtonElement;
   const resetBtn = document.querySelector('#resetDefaultsBtn') as HTMLButtonElement;
@@ -36,9 +40,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     dlSpeed.value = config.downloadSpeedMb.toString();
     pauseSec.value = config.pauseBetweenDownloadSec.toString();
     handleArch.checked = config.handleArchivedFiles;
+    extEnabled.checked = config.externalDownloader.enabled;
+    extMode.value = config.externalDownloader.mode;
+    extRpcUrl.value = config.externalDownloader.rpcUrl;
+    extSecret.value = config.externalDownloader.secret;
   }
 
   function collectConfig(): Partial<ExtensionConfig> {
+    extRpcUrl.value = extRpcUrl.value.trim();
+    extSecret.value = extSecret.value.trim();
     return {
       autoStartDownload: autoStart.checked,
       autoCloseTab: autoClose.checked,
@@ -47,7 +57,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       vpnMode: vpnMode.checked,
       downloadSpeedMb: Number.parseFloat(dlSpeed.value) || 1.5,
       pauseBetweenDownloadSec: Number.parseInt(pauseSec.value, 10) || 5,
-      handleArchivedFiles: handleArch.checked
+      handleArchivedFiles: handleArch.checked,
+      externalDownloader: {
+        enabled: extEnabled.checked,
+        mode: extMode.value as ExternalDownloaderMode,
+        rpcUrl: extRpcUrl.value || 'http://localhost:6800/jsonrpc',
+        secret: extSecret.value
+      }
     };
   }
 
@@ -73,7 +89,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     vpnMode,
     dlSpeed,
     pauseSec,
-    handleArch
+    handleArch,
+    extEnabled,
+    extMode,
+    extRpcUrl,
+    extSecret
   ].forEach((el) => {
     const event = el.type === 'checkbox' ? 'change' : 'input';
     el.addEventListener(event, debounceSave);

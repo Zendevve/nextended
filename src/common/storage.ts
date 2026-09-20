@@ -1,6 +1,14 @@
 import { ExtensionConfig, DownloadHistoryStore, DownloadRateLimitState } from './types';
 import { DEFAULT_CONFIG } from './config';
 
+function mergeConfig(stored?: Partial<ExtensionConfig> | null): ExtensionConfig {
+  return {
+    ...DEFAULT_CONFIG,
+    ...stored,
+    externalDownloader: { ...DEFAULT_CONFIG.externalDownloader, ...(stored?.externalDownloader || {}) }
+  };
+}
+
 const CONFIG_KEY = 'nextended_config';
 const HISTORY_KEY = 'nextended_history';
 const RATE_LIMIT_KEY = 'nextended_rate_limit';
@@ -9,15 +17,15 @@ export class StorageManager {
   static async getConfig(): Promise<ExtensionConfig> {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       const res = await chrome.storage.local.get(CONFIG_KEY);
-      return { ...DEFAULT_CONFIG, ...(res[CONFIG_KEY] || {}) };
+      return mergeConfig(res[CONFIG_KEY]);
     }
     const local = localStorage.getItem(CONFIG_KEY);
     if (local) {
       try {
-        return { ...DEFAULT_CONFIG, ...JSON.parse(local) };
+        return mergeConfig(JSON.parse(local));
       } catch {}
     }
-    return { ...DEFAULT_CONFIG };
+    return mergeConfig();
   }
 
   static async setConfig(config: Partial<ExtensionConfig>): Promise<ExtensionConfig> {

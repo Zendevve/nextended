@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const autoClose = document.querySelector('#autoCloseTab') as HTMLInputElement;
   const skipReq = document.querySelector('#skipRequirements') as HTMLInputElement;
   const handleArch = document.querySelector('#handleArchivedFiles') as HTMLInputElement;
+  const externalDl = document.querySelector('#externalDownloaderEnabled') as HTMLInputElement;
   const openOptionsBtn = document.querySelector('#openOptionsBtn') as HTMLButtonElement;
 
   const statusIndicator = document.querySelector('#statusIndicator') as HTMLElement;
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoClose.checked = config.autoCloseTab;
   skipReq.checked = config.skipRequirements;
   handleArch.checked = config.handleArchivedFiles;
+  externalDl.checked = config.externalDownloader.enabled;
 
   const save = async (key: string, value: boolean) => {
     await StorageManager.setConfig({ [key]: value } as Record<string, boolean>);
@@ -26,6 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoClose.addEventListener('change', () => save('autoCloseTab', autoClose.checked));
   skipReq.addEventListener('change', () => save('skipRequirements', skipReq.checked));
   handleArch.addEventListener('change', () => save('handleArchivedFiles', handleArch.checked));
+  externalDl.addEventListener('change', async () => {
+    await StorageManager.setConfig({
+      externalDownloader: { ...config.externalDownloader, enabled: externalDl.checked }
+    });
+    showSaved();
+  });
 
   openOptionsBtn.addEventListener('click', () => {
     if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {

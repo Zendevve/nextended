@@ -428,6 +428,35 @@ export class SingleDownloader {
     }, delay);
   }
 
+  static extractFilenameFromUrl(url: string): string | undefined {
+    try {
+      const last = new URL(url).pathname.split('/').pop() || '';
+      const decoded = decodeURIComponent(last);
+      return /\.[A-Za-z0-9]{1,10}$/.test(decoded) ? decoded : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  static sendExternalDownload(
+    url: string,
+    filename?: string
+  ): Promise<{ success: boolean; error?: string } | null> {
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+      return Promise.resolve(null);
+    }
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'EXTERNAL_DOWNLOAD', url, filename }, (response) => {
+        if (chrome.runtime.lastError) {
+          Logger.warn('EXTERNAL_DOWNLOAD message error:', chrome.runtime.lastError.message);
+          resolve({ success: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response || { success: false, error: 'no response from background' });
+      });
+    });
+  }
+
   static async startDownloadFlow(opts: {
     btn?: HTMLElement | null;
     fileId?: string | null;
@@ -485,12 +514,26 @@ export class SingleDownloader {
     if (isNMM || result.url.startsWith('nxm://')) {
       location.href = result.url;
     } else {
-      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-        chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: result.url });
-      } else {
-        const a = document.createElement('a');
-        a.href = result.url;
-        a.click();
+      const filename = this.extractFilenameFromUrl(result.url);
+      let handled = false;
+      if (config.externalDownloader.enabled) {
+        const external = await this.sendExternalDownload(result.url, filename);
+        if (external?.success) {
+          Logger.info(`Handed off to ${config.externalDownloader.mode} downloader:`, filename || result.url);
+          handled = true;
+        } else if (external) {
+          Logger.warn('External downloader failed, falling back to browser download:', external?.error);
+        }
+      }
+      if (!handled) {
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: result.url, filename });
+        } else {
+          const a = document.createElement('a');
+          a.href = result.url;
+          if (filename) a.download = filename;
+          a.click();
+        }
       }
     }
 

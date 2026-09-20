@@ -1,7 +1,17 @@
 import { StorageManager } from '../common/storage';
 import { Logger } from '../common/logger';
+import { ExternalDownloaderMode } from '../common/types';
+
+export interface ExternalDownloadResult {
+  success: boolean;
+  mode?: ExternalDownloaderMode;
+  gid?: string;
+  error?: string;
+}
 
 export class DownloadManager {
+  private static readonly ARIA2_RPC_ID = 'nextended';
+
   static init() {
     if (typeof chrome !== 'undefined' && chrome.downloads && chrome.downloads.onDeterminingFilename) {
       chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
@@ -57,5 +67,68 @@ export class DownloadManager {
         resolve(1);
       }
     });
+  }
+
+  /** Pure payload builder for aria2 JSON-RPC `aria2.addUri` (token auth is aria2's documented secret mechanism). */
+  static buildAria2Request(
+    rpcUrl: string,
+    secret: string,
+    url: string,
+    filename?: string
+  ): { url: string; body: string } {
+    const params: unknown[] = [];
+    if (secret) params.push(`token:${secret}`);
+    params.push([url]);
+    params.push(filename ? { out: filename } : {});
+    return {
+      url: rpcUrl,
+      body: JSON.stringify({ jsonrpc: '2.0', id: this.ARIA2_RPC_ID, method: 'aria2.addUri', params })
+    };
+  }
+
+  static async sendToAria2(url: string, filename?: string): Promise<ExternalDownloadResult> {
+    const { externalDownloader: ext } = await StorageManager.getConfig();
+    const request = this.buildAria2Request(ext.rpcUrl, ext.secret, url, filename);
+    try {
+      const res = await fetch(request.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: request.body
+      });
+      const data = (await res.json()) as { result?: string; error?: { message?: string } };
+      if (data.error) {
+        Logger.error('aria2 RPC error:', data.error.message);
+        return { success: false, mode: ExternalDownloaderMode.ARIA2, error: data.error.message || 'aria2 RPC error' };
+      }
+      Logger.info('Sent to aria2:', filename || url, 'gid:', data.result);
+      return { success: true, mode: ExternalDownloaderMode.ARIA2, gid: data.result };
+    } catch (err) {
+      Logger.error('aria2 RPC request failed (is aria2 running with --enable-rpc?):', err);
+      return { success: false, mode: ExternalDownloaderMode.ARIA2, error: 'aria2 unreachable' };
+    }
+  }
+
+  static async sendToClipboard(url: string, filename?: string): Promise<ExternalDownloadResult> {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        return { success: false, mode: ExternalDownloaderMode.CLIPBOARD, error: 'clipboard unavailable' };
+      }
+      await navigator.clipboard.writeText(url);
+      Logger.info('Copied download URL to clipboard:', filename || url);
+      return { success: true, mode: ExternalDownloaderMode.CLIPBOARD };
+    } catch (err) {
+      Logger.error('Clipboard write failed:', err);
+      return { success: false, mode: ExternalDownloaderMode.CLIPBOARD, error: 'clipboard write failed' };
+    }
+  }
+
+  static async dispatchExternalDownload(url: string, filename?: string): Promise<ExternalDownloadResult> {
+    const { externalDownloader: ext } = await StorageManager.getConfig();
+    if (!ext.enabled) {
+      return { success: false, error: 'external downloader disabled' };
+    }
+    return ext.mode === ExternalDownloaderMode.ARIA2
+      ? this.sendToAria2(url, filename)
+      : this.sendToClipboard(url, filename);
   }
 }

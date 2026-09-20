@@ -35,6 +35,11 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
         sendResponse({ downloadId: id });
       });
       return true; // asynchronous
+    } else if (message.type === 'EXTERNAL_DOWNLOAD') {
+      DownloadManager.dispatchExternalDownload(message.url, message.filename).then((result) => {
+        sendResponse(result);
+      });
+      return true; // asynchronous
     }
   });
 }

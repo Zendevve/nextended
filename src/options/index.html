@@ -82,6 +82,37 @@
         </div>
       </section>
 
+      <section class="card">
+        <h2>External Downloader</h2>
+        <div class="field-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="externalDownloaderEnabled">
+            <div>
+              <strong>Send Downloads to External Downloader</strong>
+              <p>Hands resolved CDN URLs to an external downloader instead of the browser. Vortex/NXM handoffs are unaffected.</p>
+            </div>
+          </label>
+
+          <div class="sub-field">
+            <label for="externalDownloaderMode">Mode:</label>
+            <select id="externalDownloaderMode" class="num-input">
+              <option value="clipboard">Clipboard (paste into IDM / FDM / aria2 etc.)</option>
+              <option value="aria2">aria2 JSON-RPC</option>
+            </select>
+          </div>
+
+          <div class="sub-field">
+            <label for="externalDownloaderRpcUrl">aria2 RPC URL:</label>
+            <input type="text" id="externalDownloaderRpcUrl" placeholder="http://localhost:6800/jsonrpc" class="num-input">
+          </div>
+
+          <div class="sub-field">
+            <label for="externalDownloaderSecret">aria2 RPC secret token:</label>
+            <input type="password" id="externalDownloaderSecret" autocomplete="off" class="num-input">
+          </div>
+        </div>
+      </section>
+
       <div class="footer-actions">
         <button id="resetDefaultsBtn" class="btn btn-secondary">Reset to Defaults</button>
         <button id="saveBtn" class="btn btn-primary">Save Settings</button>
