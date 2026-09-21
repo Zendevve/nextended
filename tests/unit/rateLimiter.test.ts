@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { RateLimiter } from '../../src/content/modules/rateLimiter';
+import { RateLimiter, SAFE_FLOOR } from '../../src/content/modules/rateLimiter';
 import { StorageManager } from '../../src/common/storage';
 
 describe('RateLimiter', () => {
@@ -7,15 +7,27 @@ describe('RateLimiter', () => {
     await StorageManager.setRateLimitState({ count: 0, lastResetTimestamp: Date.now() });
   });
 
-  it('calculates file pauses accurately based on size and speed', () => {
+  it('exposes the Safe Floor as exported data with a positive free-account value', () => {
+    expect(Number.isInteger(SAFE_FLOOR.freeAccountExtraPauseSec)).toBe(true);
+    expect(SAFE_FLOOR.freeAccountExtraPauseSec).toBeGreaterThan(0);
+  });
+
+  it('calculates file pauses accurately based on size and speed at the floor', () => {
     // 10240 KB = 10 MB. At 2 MB/s = 5s + 5s extra = 10s
     const pause = RateLimiter.calculateFilePause(10240, 2.0, 5);
     expect(pause).toBe(10);
   });
 
-  it('returns 0 pause when extraPauseSec is 0', () => {
-    const pause = RateLimiter.calculateFilePause(10240, 2.0, 0);
-    expect(pause).toBe(0);
+  it('raises a configured pause below the Safe Floor to the floor', () => {
+    // Computed transfer time (5s) still applies; the extra pause is clamped up.
+    const floorDerived = 5 + SAFE_FLOOR.freeAccountExtraPauseSec;
+    expect(RateLimiter.calculateFilePause(10240, 2.0, 0)).toBe(floorDerived);
+    expect(RateLimiter.calculateFilePause(10240, 2.0, 2)).toBe(floorDerived);
+  });
+
+  it('passes a configured pause above the Safe Floor through unchanged', () => {
+    const pause = RateLimiter.calculateFilePause(10240, 2.0, 30);
+    expect(pause).toBe(35);
   });
 
   it('tracks downloads and returns cooldown when hitting 200 downloads cap', async () => {
