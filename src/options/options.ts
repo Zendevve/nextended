@@ -1,6 +1,7 @@
 import { StorageManager } from '../common/storage';
 import { DEFAULT_CONFIG } from '../common/config';
 import { ExtensionConfig, ExternalDownloaderMode } from '../common/types';
+import { SAFE_FLOOR } from '../content/modules/rateLimiter';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const autoStart = document.querySelector('#autoStartDownload') as HTMLInputElement;
@@ -10,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const vpnMode = document.querySelector('#vpnMode') as HTMLInputElement;
   const dlSpeed = document.querySelector('#downloadSpeedMb') as HTMLInputElement;
   const pauseSec = document.querySelector('#pauseBetweenDownloadSec') as HTMLInputElement;
+  const pauseFloorWarning = document.querySelector('#pauseFloorWarning') as HTMLElement;
   const handleArch = document.querySelector('#handleArchivedFiles') as HTMLInputElement;
   const extEnabled = document.querySelector('#externalDownloaderEnabled') as HTMLInputElement;
   const extMode = document.querySelector('#externalDownloaderMode') as HTMLSelectElement;
@@ -31,6 +33,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     toastTimer = window.setTimeout(() => toast.classList.add('hidden'), 2500);
   }
 
+  function updatePauseFloorWarning() {
+    const floorSec = SAFE_FLOOR.freeAccountExtraPauseSec;
+    const configuredSec = Number.parseInt(pauseSec.value, 10);
+    if (Number.isNaN(configuredSec) || configuredSec >= floorSec) {
+      pauseFloorWarning.classList.add('hidden');
+      return;
+    }
+    pauseFloorWarning.textContent =
+      `Ban risk: ${configuredSec}s is below the ${floorSec}s Safe Floor for free accounts. ` +
+      `The effective pause is raised to ${floorSec}s.`;
+    pauseFloorWarning.classList.remove('hidden');
+  }
+
   function populate(config: ExtensionConfig) {
     autoStart.checked = config.autoStartDownload;
     autoClose.checked = config.autoCloseTab;
@@ -44,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     extMode.value = config.externalDownloader.mode;
     extRpcUrl.value = config.externalDownloader.rpcUrl;
     extSecret.value = config.externalDownloader.secret;
+    updatePauseFloorWarning();
   }
 
   function collectConfig(): Partial<ExtensionConfig> {
@@ -98,6 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const event = el.type === 'checkbox' ? 'change' : 'input';
     el.addEventListener(event, debounceSave);
   });
+
+  pauseSec.addEventListener('input', updatePauseFloorWarning);
 
   saveBtn.addEventListener('click', async () => {
     if (saveDebounce) {
