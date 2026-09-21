@@ -48,7 +48,7 @@ describe('DownloadManager filename determination', () => {
     localStorage.clear();
     downloadMock = vi.fn();
     const addListenerMock: Mock = vi.fn();
-    const globalObj = globalThis as GlobalWithChrome;
+    const globalObj = globalThis as unknown as GlobalWithChrome;
     globalObj.chrome = {
       runtime: {},
       downloads: {
@@ -64,7 +64,7 @@ describe('DownloadManager filename determination', () => {
   });
 
   afterEach(() => {
-    delete (globalThis as GlobalWithChrome).chrome;
+    delete (globalThis as unknown as GlobalWithChrome).chrome;
   });
 
   /** Simulates Chrome: onDeterminingFilename fires while the download is being created, then the id resolves. */
@@ -79,8 +79,8 @@ describe('DownloadManager filename determination', () => {
     );
 
     const downloadId = await DownloadManager.triggerDownload(url, filename, modId);
-    await (capture as SuggestionCapture).called;
-    return { downloadId, suggest: (capture as SuggestionCapture).suggest };
+    await (capture as unknown as SuggestionCapture).called;
+    return { downloadId, suggest: (capture as unknown as SuggestionCapture).suggest };
   }
 
   async function determineFilename(filename: string, url = CDN_URL) {

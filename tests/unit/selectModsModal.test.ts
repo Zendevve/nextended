@@ -60,8 +60,8 @@ const clickButton = (modal: SelectModsModalComponent, selector: string): void =>
 function captureExportDownload(): { anchors: HTMLAnchorElement[]; blobs: Blob[] } {
   const anchors: HTMLAnchorElement[] = [];
   const blobs: Blob[] = [];
-  vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob) => {
-    blobs.push(blob);
+  vi.spyOn(URL, 'createObjectURL').mockImplementation((blob: Blob | MediaSource) => {
+    blobs.push(blob as Blob);
     return 'blob:mock-url';
   });
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
