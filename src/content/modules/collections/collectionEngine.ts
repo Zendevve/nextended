@@ -129,7 +129,7 @@ export class CollectionEngine {
         this.console.log(`Reached 200 downloads cap. Waiting 5 minutes to prevent account suspension...`, LogType.INFO);
         let remain = rateLimitCheck.waitTimeSec;
         while (remain > 0) {
-          if (this.progressBar.status === ProgressBarStatus.STOPPED) break;
+          if (this.progressBar.isStopped()) break;
           this.console.log(`Cooldown remaining: ${Math.floor(remain / 60)}m ${remain % 60}s...`);
           await this.delay(1000);
           remain--;
@@ -173,7 +173,7 @@ export class CollectionEngine {
       this.progressBar.incrementProgress();
 
       // Pause calculation between downloads
-      if (i < mods.length - 1 && this.progressBar.status !== ProgressBarStatus.STOPPED) {
+      if (i < mods.length - 1 && !this.progressBar.isStopped()) {
         const pauseSec = RateLimiter.calculateFilePause(
           mod.file.size,
           config.downloadSpeedMb,
@@ -182,7 +182,7 @@ export class CollectionEngine {
 
         let pauseRemaining = pauseSec;
         while (pauseRemaining > 0) {
-          if (this.progressBar.skipPause || this.progressBar.skipTo || this.progressBar.status === ProgressBarStatus.STOPPED) {
+          if (this.progressBar.skipPause || this.progressBar.skipTo || this.progressBar.isStopped()) {
             this.progressBar.skipPause = false;
             break;
           }

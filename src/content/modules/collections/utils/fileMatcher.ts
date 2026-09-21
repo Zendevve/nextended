@@ -1,4 +1,4 @@
-import { CollectionModFile } from '../../../common/types';
+import { CollectionModFile } from '../../../../common/types';
 
 /** FNV-1a over a slice; numeric grams avoid per-gram string allocation. */
 function hashSlice(text: string, start: number, length: number): number {

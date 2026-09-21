@@ -1,4 +1,4 @@
-import { CollectionModFile } from '../../../common/types';
+import { CollectionModFile } from '../../../../common/types';
 
 export interface RevisionDiffResult {
   added: CollectionModFile[];

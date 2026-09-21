@@ -14,6 +14,12 @@ export class ProgressBarComponent {
   skipToIndex = 0;
   status: ProgressBarStatus = ProgressBarStatus.DOWNLOADING;
 
+  /** True when the stop control ended the run. (Method, not a field read: the engine's
+   *  own assignments narrow the field's flow type and hide the UI-set STOPPED value.) */
+  isStopped(): boolean {
+    return this.status === ProgressBarStatus.STOPPED;
+  }
+
   private progressBarFill!: HTMLElement;
   private progressBarProgress!: HTMLElement;
   private progressBarTextCenter!: HTMLElement;
