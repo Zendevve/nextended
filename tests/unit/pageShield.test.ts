@@ -1,8 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { Window } from 'happy-dom';
 import {
   initializePageShield,
   createStatisticsStub,
-  ensureStatisticsStub
+  ensureStatisticsStub,
+  readPageShieldGate,
+  mirrorPageShieldGate
 } from '../../src/content/pageShield';
 
 describe('pageShield', () => {
@@ -22,10 +25,12 @@ describe('pageShield', () => {
     delete (window as unknown as Record<string, unknown>).dataLayer;
     delete (window as unknown as Record<string, unknown>).gtag;
     delete (window as unknown as Record<string, unknown>).ga;
+    window.localStorage.removeItem('nextended_page_shield');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('idempotent: subsequent calls do not re-patch', () => {
@@ -299,4 +304,94 @@ describe('pageShield', () => {
     window.dispatchEvent(evt as unknown as Event);
     expect(evt.preventDefault).toHaveBeenCalled();
   });
-});
+
+  describe('config gate (issue #5)', () => {
+    it('installs zero stubs and suppresses nothing when the mirrored flag is disabled', () => {
+      // Fresh window: earlier tests leave real shield listeners attached to the
+      // shared window, which would mask the "suppresses nothing" assertion.
+      const freshWindow = new Window();
+      vi.stubGlobal('window', freshWindow);
+
+      mirrorPageShieldGate(false);
+      initializePageShield();
+
+      const w = freshWindow as unknown as Record<string, unknown>;
+      expect(w.__nextended_shield_active).toBeUndefined();
+      expect(w._mixpanelFirePageview).toBeUndefined();
+      expect(w.mixpanel).toBeUndefined();
+      expect(w.statistics).toBeUndefined();
+      expect(w.ramp).toBeUndefined();
+      expect(w.Nexus).toBeUndefined();
+      expect(w.user).toBeUndefined();
+      expect(w.analytics).toBeUndefined();
+      expect(w._qevents).toBeUndefined();
+      expect(w._quantgc).toBeUndefined();
+      expect(w.quantserve).toBeUndefined();
+      expect(w.pSUPERFLY).toBeUndefined();
+      expect(w.dataLayer).toBeUndefined();
+      expect(w.gtag).toBeUndefined();
+      expect(w.ga).toBeUndefined();
+
+      const errEvtBase = new freshWindow.Event('error', { cancelable: true });
+      const errEvt = errEvtBase as unknown as {
+        message: string;
+        error: Error;
+        filename: string;
+        preventDefault: () => void;
+        stopImmediatePropagation: () => void;
+      };
+      errEvt.message = "Uncaught TypeError: Cannot read properties of undefined (reading 'statistics')";
+      errEvt.error = new TypeError("Cannot read properties of undefined (reading 'statistics')");
+      errEvt.filename = 'https://nexusmods.com/assets/scripts/main.js';
+      errEvt.preventDefault = vi.fn();
+      errEvt.stopImmediatePropagation = vi.fn();
+      freshWindow.dispatchEvent(errEvtBase);
+      expect(errEvt.preventDefault).not.toHaveBeenCalled();
+      expect(errEvt.stopImmediatePropagation).not.toHaveBeenCalled();
+
+      const rejectionEvtBase = new freshWindow.Event('unhandledrejection', { cancelable: true });
+      const rejectionEvt = rejectionEvtBase as unknown as {
+        reason?: unknown;
+        preventDefault: () => void;
+      };
+      rejectionEvt.reason = new TypeError("Failed to execute 'exitFullscreen' on 'Document': Document not active");
+      rejectionEvt.preventDefault = vi.fn();
+      freshWindow.dispatchEvent(rejectionEvtBase);
+      expect(rejectionEvt.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('mirrorPageShieldGate round-trips: disabled stays off, re-enabled arms on next init', () => {
+      mirrorPageShieldGate(false);
+      expect(window.localStorage.getItem('nextended_page_shield')).toBe('disabled');
+      expect(readPageShieldGate()).toBe(false);
+      initializePageShield();
+      expect((window as unknown as Record<string, unknown>).__nextended_shield_active).toBeUndefined();
+
+      mirrorPageShieldGate(true);
+      expect(window.localStorage.getItem('nextended_page_shield')).toBe('enabled');
+      expect(readPageShieldGate()).toBe(true);
+      initializePageShield();
+      expect((window as unknown as Record<string, unknown>).__nextended_shield_active).toBe(true);
+    });
+
+    it('absent flag fails open to default-on for existing users', () => {
+      expect(window.localStorage.getItem('nextended_page_shield')).toBeNull();
+      expect(readPageShieldGate()).toBe(true);
+      initializePageShield();
+      expect((window as unknown as Record<string, unknown>).__nextended_shield_active).toBe(true);
+    });
+
+    it('unrecognized flag values fail open to default-on', () => {
+      window.localStorage.setItem('nextended_page_shield', 'garbage');
+      expect(readPageShieldGate()).toBe(true);
+    });
+
+    it('readPageShieldGate fails open when storage access throws', () => {
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('Storage access denied');
+      });
+      expect(readPageShieldGate()).toBe(true);
+      getItemSpy.mockRestore();
+    });
+  });
+ });

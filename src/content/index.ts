@@ -7,6 +7,7 @@ import { ConflictDetector } from './modules/conflictDetector';
 import { SingleDownloader } from './modules/singleDownloader';
 import { StorageManager } from '../common/storage';
 import { Logger } from '../common/logger';
+import { mirrorPageShieldGate } from './pageShield';
 
 let activeCollectionEngine: CollectionEngine | null = null;
 let lastRoute = '';
@@ -183,6 +184,11 @@ function scheduleRouteCheck(delay = 200) {
 
 function init() {
   Logger.info('Content script initialized');
+  // Mirror the persisted page-shield gate for the MAIN-world shield (issue #5);
+  // read synchronously by pageShield.js at document_start on the next page load.
+  StorageManager.getConfig()
+    .then((config) => mirrorPageShieldGate(config.pageShieldEnabled))
+    .catch(() => undefined);
 
   ClickInterceptor.attach();
   RequirementsBypass.attach();

@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
   vpnMode: false,
   showAlertsOnError: true,
   playErrorSound: true,
+  pageShieldEnabled: true,
   requestTimeoutMs: 30000,
   downloadSpeedMb: 1.5,
   pauseBetweenDownloadSec: 5,

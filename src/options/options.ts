@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const closeDelay = document.querySelector('#closeTabDelayMs') as HTMLInputElement;
   const skipReq = document.querySelector('#skipRequirements') as HTMLInputElement;
   const vpnMode = document.querySelector('#vpnMode') as HTMLInputElement;
+  const pageShieldEnabled = document.querySelector('#pageShieldEnabled') as HTMLInputElement;
   const dlSpeed = document.querySelector('#downloadSpeedMb') as HTMLInputElement;
   const pauseSec = document.querySelector('#pauseBetweenDownloadSec') as HTMLInputElement;
   const pauseFloorWarning = document.querySelector('#pauseFloorWarning') as HTMLElement;
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeDelay.value = config.closeTabDelayMs.toString();
     skipReq.checked = config.skipRequirements;
     vpnMode.checked = config.vpnMode;
+    pageShieldEnabled.checked = config.pageShieldEnabled;
     dlSpeed.value = config.downloadSpeedMb.toString();
     pauseSec.value = config.pauseBetweenDownloadSec.toString();
     handleArch.checked = config.handleArchivedFiles;
@@ -71,6 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeTabDelayMs: Number.parseInt(closeDelay.value, 10) || 2000,
       skipRequirements: skipReq.checked,
       vpnMode: vpnMode.checked,
+      pageShieldEnabled: pageShieldEnabled.checked,
       downloadSpeedMb: Number.parseFloat(dlSpeed.value) || 1.5,
       pauseBetweenDownloadSec: Number.parseInt(pauseSec.value, 10) || 5,
       handleArchivedFiles: handleArch.checked,
@@ -103,6 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeDelay,
     skipReq,
     vpnMode,
+    pageShieldEnabled,
     dlSpeed,
     pauseSec,
     handleArch,

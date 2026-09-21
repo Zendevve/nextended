@@ -150,8 +150,43 @@ function extractErrorMessage(err: unknown): string {
   return String(err);
 }
 
+/**
+ * Cross-world config gate (issue #5).
+ *
+ * This module is injected into the MAIN world at document_start, where
+ * extension APIs (chrome.storage) are unavailable and an async config read
+ * would race the page's own scripts. The isolated-world content script
+ * mirrors the persisted `pageShieldEnabled` setting into this origin-local
+ * storage key on every page load; the shield reads it synchronously before
+ * installing anything. An absent or unreadable flag fails open so the
+ * default-on behavior is preserved for existing users.
+ */
+const PAGE_SHIELD_GATE_KEY = "nextended_page_shield";
+
+export function readPageShieldGate(): boolean {
+  try {
+    return window.localStorage.getItem(PAGE_SHIELD_GATE_KEY) !== "disabled";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Isolated-world side of the bridge: persist the gate flag where the
+ * MAIN-world shield can read it synchronously on the next page load.
+ */
+export function mirrorPageShieldGate(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(PAGE_SHIELD_GATE_KEY, enabled ? "enabled" : "disabled");
+  } catch {
+    // Storage unavailable (blocked site data): keep the fail-open default.
+  }
+}
+
 export function initializePageShield(): void {
   if (typeof window === "undefined") return;
+  // Config gate (issue #5): opted-out installs install nothing — fully native page.
+  if (!readPageShieldGate()) return;
 
   const win = window as unknown as Record<string, unknown>;
   if (win.__nextended_shield_active) return;
@@ -341,6 +376,14 @@ function ensureMixpanelStub(win: Record<string, unknown>): void {
   mp.push = noop;
 }
 
-if (typeof window !== "undefined") {
+// Auto-arm in the MAIN world and in test environments. Skipped when this
+// module is imported by the isolated-world content script purely for
+// mirrorPageShieldGate(): chrome.runtime.id is only exposed to extension
+// contexts, and re-running the shield there would double-patch the shared
+// DOM prototypes without ever being visible to the page.
+const inExtensionContext =
+  typeof chrome !== "undefined" && typeof chrome.runtime?.id === "string";
+
+if (typeof window !== "undefined" && !inExtensionContext) {
   initializePageShield();
 }

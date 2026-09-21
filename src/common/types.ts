@@ -20,6 +20,7 @@ export interface ExtensionConfig {
   pauseBetweenDownloadSec: number;
   downloadMethod: DownloadMethod;
   externalDownloader: ExternalDownloaderConfig;
+  pageShieldEnabled: boolean;
 }
 
 export enum ExternalDownloaderMode {
