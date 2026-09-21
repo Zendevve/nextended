@@ -65,9 +65,9 @@ export class ArchiveInjector {
       dts.forEach((dt) => {
         const dataId = dt.getAttribute('data-id');
         const next = dt.nextElementSibling;
-        if (dataId && next && !next.querySelector('.allow-archive-downloads-wrapper')) {
+        if (dataId && next && !next.querySelector('.nextended-archive-actions')) {
           const wrapper = document.createElement('div');
-          wrapper.className = 'allow-archive-downloads-wrapper tabbed-block';
+          wrapper.className = 'nextended-archive-actions tabbed-block';
           wrapper.innerHTML = `
             <ul class="accordion-downloads clearfix">
               <li>

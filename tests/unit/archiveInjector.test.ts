@@ -31,4 +31,26 @@ describe('ArchiveInjector', () => {
     expect(box.innerHTML).toContain('Manual download');
     expect(box.innerHTML).toContain('file_id=999');
   });
+
+  it('injects wrapper with nextended-namespaced class into classic accordion items', async () => {
+    Object.defineProperty(window, 'location', {
+      value: new URL('https://www.nexusmods.com/skyrim/mods/123?tab=files&category=archived'),
+      writable: true
+    });
+
+    const fileList = document.createElement('dl');
+    fileList.className = 'accordionitems';
+    const dt = document.createElement('dt');
+    dt.setAttribute('data-id', '555');
+    const dd = document.createElement('dd');
+    fileList.append(dt, dd);
+    document.body.appendChild(fileList);
+
+    await ArchiveInjector.inject();
+
+    const wrapper = dd.querySelector('.nextended-archive-actions');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.innerHTML).toContain('id=555');
+    expect(wrapper!.innerHTML).toContain('nmm=1');
+  });
 });
