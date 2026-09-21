@@ -181,3 +181,26 @@ h2 {
 .save-toast.hidden {
   display: none;
 }
+
+.radio-row {
+  display: flex;
+  gap: 16px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: #da8e35;
+}
+
+.field-note {
+  margin: 6px 0 0 28px;
+  font-size: 11px;
+  color: #888;
+}

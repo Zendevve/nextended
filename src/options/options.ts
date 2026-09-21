@@ -1,6 +1,6 @@
 import { StorageManager } from '../common/storage';
 import { DEFAULT_CONFIG } from '../common/config';
-import { ExtensionConfig, ExternalDownloaderMode } from '../common/types';
+import { DownloadMethod, ExtensionConfig, ExternalDownloaderMode } from '../common/types';
 import { SAFE_FLOOR } from '../content/modules/rateLimiter';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -9,6 +9,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const closeDelay = document.querySelector('#closeTabDelayMs') as HTMLInputElement;
   const skipReq = document.querySelector('#skipRequirements') as HTMLInputElement;
   const vpnMode = document.querySelector('#vpnMode') as HTMLInputElement;
+  const forceModManager = document.querySelector('#forceModManagerDownload') as HTMLInputElement;
+  const overrideNames = document.querySelector('#overrideFileNames') as HTMLInputElement;
+  const showAlerts = document.querySelector('#showAlertsOnError') as HTMLInputElement;
+  const requestTimeout = document.querySelector('#requestTimeoutMs') as HTMLInputElement;
+  const radioVortex = document.querySelector('#radioVortex') as HTMLInputElement;
+  const radioBrowser = document.querySelector('#radioBrowser') as HTMLInputElement;
   const pageShieldEnabled = document.querySelector('#pageShieldEnabled') as HTMLInputElement;
   const dlSpeed = document.querySelector('#downloadSpeedMb') as HTMLInputElement;
   const pauseSec = document.querySelector('#pauseBetweenDownloadSec') as HTMLInputElement;
@@ -53,6 +59,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeDelay.value = config.closeTabDelayMs.toString();
     skipReq.checked = config.skipRequirements;
     vpnMode.checked = config.vpnMode;
+    forceModManager.checked = config.forceModManagerDownload;
+    overrideNames.checked = config.overrideFileNames;
+    showAlerts.checked = config.showAlertsOnError;
+    requestTimeout.value = config.requestTimeoutMs.toString();
+    if (config.downloadMethod === DownloadMethod.VORTEX) {
+      radioVortex.checked = true;
+    } else {
+      radioBrowser.checked = true;
+    }
     pageShieldEnabled.checked = config.pageShieldEnabled;
     dlSpeed.value = config.downloadSpeedMb.toString();
     pauseSec.value = config.pauseBetweenDownloadSec.toString();
@@ -73,6 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeTabDelayMs: Number.parseInt(closeDelay.value, 10) || 2000,
       skipRequirements: skipReq.checked,
       vpnMode: vpnMode.checked,
+      forceModManagerDownload: forceModManager.checked,
+      overrideFileNames: overrideNames.checked,
+      showAlertsOnError: showAlerts.checked,
+      requestTimeoutMs: Number.parseInt(requestTimeout.value, 10) || 30000,
+      downloadMethod: radioVortex.checked ? DownloadMethod.VORTEX : DownloadMethod.BROWSER,
       pageShieldEnabled: pageShieldEnabled.checked,
       downloadSpeedMb: Number.parseFloat(dlSpeed.value) || 1.5,
       pauseBetweenDownloadSec: Number.parseInt(pauseSec.value, 10) || 5,
@@ -106,6 +126,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeDelay,
     skipReq,
     vpnMode,
+    forceModManager,
+    overrideNames,
+    showAlerts,
+    requestTimeout,
+    radioVortex,
+    radioBrowser,
     pageShieldEnabled,
     dlSpeed,
     pauseSec,
@@ -115,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     extRpcUrl,
     extSecret
   ].forEach((el) => {
-    const event = el.type === 'checkbox' ? 'change' : 'input';
+    const event = el.type === 'checkbox' || el.type === 'radio' ? 'change' : 'input';
     el.addEventListener(event, debounceSave);
   });
 

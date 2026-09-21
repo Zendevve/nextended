@@ -10,11 +10,9 @@ export interface ExtensionConfig {
   skipRequirements: boolean;
   forceModManagerDownload: boolean;
   handleArchivedFiles: boolean;
-  downloadButtonColor: boolean;
   overrideFileNames: boolean;
   vpnMode: boolean;
   showAlertsOnError: boolean;
-  playErrorSound: boolean;
   requestTimeoutMs: number;
   downloadSpeedMb: number;
   pauseBetweenDownloadSec: number;

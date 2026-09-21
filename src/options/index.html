@@ -56,12 +56,50 @@
               <p>Redirects the tab directly to the target URL if Cloudflare challenge is encountered.</p>
             </div>
           </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="forceModManagerDownload">
+            <div>
+              <strong>Mod Manager Button on Manual-Only Files</strong>
+              <p>Injects a Mod manager download button into mod page file entries that only offer manual download.</p>
+            </div>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="overrideFileNames">
+            <div>
+              <strong>Tag Filenames with Mod ID</strong>
+              <p>Appends the mod id before the extension on Nexus CDN downloads (e.g. SkyUI-12345.7z) so repeated downloads stay distinct.</p>
+            </div>
+          </label>
+
+          <label class="checkbox-label">
+            <input type="checkbox" id="showAlertsOnError">
+            <div>
+              <strong>Show Error Alerts</strong>
+              <p>Shows a browser alert when a download fails instead of failing silently.</p>
+            </div>
+          </label>
         </div>
       </section>
 
       <section class="card">
         <h2>Collections & Batch Downloader</h2>
         <div class="field-group">
+          <div class="sub-field">
+            <span>Download Method:</span>
+            <div class="radio-row">
+              <label class="radio-label">
+                <input type="radio" name="nextendedDownloadMethod" value="0" id="radioVortex">
+                <span>Send to Vortex (NXM)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="nextendedDownloadMethod" value="1" id="radioBrowser">
+                <span>Download via Browser</span>
+              </label>
+            </div>
+          </div>
+
           <div class="sub-field">
             <label for="downloadSpeedMb">Calculated Download Speed (MB/s):</label>
             <input type="number" id="downloadSpeedMb" min="0.1" step="0.1" class="num-input">
@@ -80,6 +118,19 @@
               <p>Injects Mod Manager and Manual download buttons onto archived mod lists.</p>
             </div>
           </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Network</h2>
+        <div class="field-group">
+          <div>
+            <div class="sub-field">
+              <label for="requestTimeoutMs">Request timeout (ms):</label>
+              <input type="number" id="requestTimeoutMs" min="1000" step="500" class="num-input">
+            </div>
+            <p class="field-note">How long GraphQL and widget fetches may run before they are aborted. Default 30000.</p>
+          </div>
         </div>
       </section>
 
