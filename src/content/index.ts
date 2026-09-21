@@ -1,6 +1,7 @@
 import { ClickInterceptor } from './interceptors/clickInterceptor';
 import { RequirementsBypass } from './interceptors/requirementsBypass';
 import { ArchiveInjector } from './modules/archiveInjector';
+import { ModManagerButtonInjector } from './modules/modManagerButtonInjector';
 import { CollectionEngine } from './modules/collections/collectionEngine';
 import { SingleDownloader } from './modules/singleDownloader';
 import { StorageManager } from '../common/storage';
@@ -168,6 +169,7 @@ async function handleRoute() {
 
   // Check archive injection
   await ArchiveInjector.inject();
+  await ModManagerButtonInjector.inject();
 }
 
 function scheduleRouteCheck(delay = 200) {
