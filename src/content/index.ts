@@ -3,6 +3,7 @@ import { RequirementsBypass } from './interceptors/requirementsBypass';
 import { ArchiveInjector } from './modules/archiveInjector';
 import { ModManagerButtonInjector } from './modules/modManagerButtonInjector';
 import { CollectionEngine } from './modules/collections/collectionEngine';
+import { ConflictDetector } from './modules/conflictDetector';
 import { SingleDownloader } from './modules/singleDownloader';
 import { StorageManager } from '../common/storage';
 import { Logger } from '../common/logger';
@@ -170,6 +171,7 @@ async function handleRoute() {
   // Check archive injection
   await ArchiveInjector.inject();
   await ModManagerButtonInjector.inject();
+  await ConflictDetector.scan();
 }
 
 function scheduleRouteCheck(delay = 200) {

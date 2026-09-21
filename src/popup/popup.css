@@ -119,3 +119,33 @@ h1 {
   background: #da8e35;
   color: #fff;
 }
+
+.hidden {
+  display: none;
+}
+
+.conflict-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #3a2a14;
+  border: 1px solid #da8e35;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #f5e9dc;
+}
+
+.conflict-indicator {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #da8e35;
+  color: #242424;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,4 +1,5 @@
 import { StorageManager } from '../common/storage';
+import { CONFLICT_SCRIPT_LABELS } from '../common/types';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const config = await StorageManager.getConfig();
@@ -18,6 +19,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   skipReq.checked = config.skipRequirements;
   handleArch.checked = config.handleArchivedFiles;
   externalDl.checked = config.externalDownloader.enabled;
+
+  // Conflict badge: warn while a replaced userscript is detected and unacknowledged (issue #13)
+  const conflictCard = document.querySelector('#conflictCard') as HTMLElement;
+  const conflictText = document.querySelector('#conflictText') as HTMLElement;
+  const conflictState = await StorageManager.getConflictState();
+  if (conflictState.unacknowledged.length > 0) {
+    const names = conflictState.unacknowledged.map((id) => CONFLICT_SCRIPT_LABELS[id]).join(', ');
+    conflictText.textContent = `Replaced userscript still installed: ${names} — uninstall it, nextended replaces it.`;
+    conflictCard.classList.remove('hidden');
+  }
 
   const save = async (key: string, value: boolean) => {
     await StorageManager.setConfig({ [key]: value } as Record<string, boolean>);
