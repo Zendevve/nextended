@@ -1,6 +1,7 @@
 import { CollectionModFile, DownloadMethod } from '../../../../common/types';
 import { StorageManager } from '../../../../common/storage';
 import { SelectModsModalComponent } from './selectModsModal';
+import { FileMatcher } from '../utils/fileMatcher';
 import { UpdateRevisionModalComponent } from './updateRevisionModal';
 
 export class CollectionToolbarComponent {
@@ -160,21 +161,27 @@ export class CollectionToolbarComponent {
       input.addEventListener('change', async () => {
         if (!input.files || input.files.length === 0) return;
         const uploadedFiles = Array.from(input.files);
-        const matched = this.mods.all.filter((m) =>
-          uploadedFiles.some((f) => f.name.includes(m.file.uri))
-        );
+        const { matchedMods, unmatchedFileNames } = FileMatcher.matchFiles(uploadedFiles, this.mods.all);
 
         const history = await StorageManager.getHistory();
         history[this.domainName] ??= {};
         history[this.domainName][this.collectionSlug] ??= { all: [], mandatory: [], optional: [] };
 
-        const matchedIds = matched.map((m) => m.fileId);
+        const matchedIds = matchedMods.map((m) => m.fileId);
         history[this.domainName][this.collectionSlug].all = [
           ...new Set([...history[this.domainName][this.collectionSlug].all, ...matchedIds])
         ];
 
         await StorageManager.setHistory(history);
-        alert(`[nextended] Successfully matched and marked ${matched.length} mods as downloaded.`);
+
+        const lines = [`[nextended] Successfully matched and marked ${matchedMods.length} mods as downloaded.`];
+        if (matchedMods.length > 0) {
+          lines.push(`Matched (${matchedMods.length}): ${matchedMods.map((m) => m.file.name).join(', ')}`);
+        }
+        if (unmatchedFileNames.length > 0) {
+          lines.push(`Unmatched files (${unmatchedFileNames.length}): ${unmatchedFileNames.join(', ')}`);
+        }
+        alert(lines.join('\n'));
       });
       input.click();
     });
