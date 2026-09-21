@@ -44,6 +44,34 @@ describe('FileMatcher', () => {
     expect(result.unmatchedFileNames).toEqual(['random_unrelated_file.txt']);
   });
 
+  // Near-miss downloads (different revision, or a timestamped Nexus variant of
+  // the same file id) must still seed history via the stable core fallback.
+  describe('near-miss version/date variants (small path)', () => {
+    it('matches a different version of the same file id', () => {
+      const result = FileMatcher.matchFiles([new File([''], 'Cool_Mod-101-1-2.zip')], mockMods);
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([101]);
+      expect(result.unmatchedFileNames).toEqual([]);
+    });
+
+    it('matches an upload-timestamped variant of the same file', () => {
+      const result = FileMatcher.matchFiles(
+        [new File([''], 'Extra_Textures-102-2-0-1699999999.zip')],
+        mockMods
+      );
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([102]);
+      expect(result.unmatchedFileNames).toEqual([]);
+    });
+
+    it('does not match a different file id of the same mod name', () => {
+      const result = FileMatcher.matchFiles([new File([''], 'Cool_Mod-999-1-0.zip')], mockMods);
+
+      expect(result.matchedMods).toEqual([]);
+      expect(result.unmatchedFileNames).toEqual(['Cool_Mod-999-1-0.zip']);
+    });
+  });
+
   // The indexed path engages at 64+ uploads; these cases cover the gram-based
   // containment index that path builds (the small-input path is covered above).
   describe('with 64+ uploaded files (indexed path)', () => {
@@ -114,6 +142,13 @@ describe('FileMatcher', () => {
       const result = FileMatcher.matchFiles(withNoise('TwelveChar1.zip'), [modWithUri(505, 'TwelveChar1.zip')]);
 
       expect(result.matchedMods.map((m) => m.fileId)).toEqual([505]);
+      expect(result.unmatchedFileNames).toHaveLength(80);
+    });
+
+    it('matches a version variant through the core fallback on the indexed path', () => {
+      const result = FileMatcher.matchFiles(withNoise('Cool_Mod-202-1-5.zip'), [modWithUri(202, 'Cool_Mod-202-1-0.zip')]);
+
+      expect(result.matchedMods.map((m) => m.fileId)).toEqual([202]);
       expect(result.unmatchedFileNames).toHaveLength(80);
     });
   });
