@@ -2,6 +2,7 @@ import { StorageManager } from '../../common/storage';
 import { Logger } from '../../common/logger';
 import { DownloadResolutionResult } from '../../common/types';
 import { ENDPOINTS } from '../../common/endpoints';
+import { RequestTimeout } from '../../common/requestTimeout';
 import { GraphQLClient } from './graphQLClient';
 
 export class SingleDownloader {
@@ -189,6 +190,7 @@ export class SingleDownloader {
     let gameName = rawGameName || null;
 
     this.bypassNexusAdsCookie();
+    const timeoutMs = await RequestTimeout.configuredMs();
 
     // 1. Resolve domain slug and numeric game ID
     let domainSlug = gameName || '';
@@ -251,10 +253,11 @@ export class SingleDownloader {
 
     // 4. If href is a relative or absolute ModRequirementsPopUp URL, fetch and extract
     if (href && /ModRequirementsPopUp/i.test(href)) {
+      const guard = RequestTimeout.arm(timeoutMs);
       try {
         const fullPopUpUrl = new URL(href, 'https://www.nexusmods.com').href;
         const targetUrl = isNMM && !fullPopUpUrl.includes('nmm=1') ? `${fullPopUpUrl}${fullPopUpUrl.includes('?') ? '&' : '?'}nmm=1` : fullPopUpUrl;
-        const res = await fetch(targetUrl, { credentials: 'include' });
+        const res = await fetch(targetUrl, { credentials: 'include', signal: guard.signal });
         const text = await res.text();
 
         if (this.isCloudflareChallenge(text, res.status)) {
@@ -265,11 +268,14 @@ export class SingleDownloader {
         if (direct) return { url: direct, rawText: text };
       } catch (err) {
         Logger.error('ModRequirementsPopUp direct href fetch error:', err);
+      } finally {
+        guard.clear();
       }
     }
 
     // 5. Primary API: GenerateDownloadUrl POST endpoint
     if (fileId) {
+      const guard = RequestTimeout.arm(timeoutMs);
       try {
         const params = new URLSearchParams();
         params.set('fid', fileId);
@@ -304,7 +310,8 @@ export class SingleDownloader {
             Referer: refererUrl
           },
           body: params.toString(),
-          credentials: 'include'
+          credentials: 'include',
+          signal: guard.signal
         });
 
         const text = await res.text();
@@ -319,18 +326,21 @@ export class SingleDownloader {
         if (directFromApi) return { url: directFromApi, rawText: text };
       } catch (err) {
         Logger.error('GenerateDownloadUrl fetch error:', err);
+      } finally {
+        guard.clear();
       }
 
       // 6. Fallback: Query all Nexus popup widget endpoints
       const widgets = ['DownloadPopUp', 'ModRequirementsPopUp', 'ModDownloadPopUp', 'RequirementsPopUp'];
       for (const widget of widgets) {
+        const guard = RequestTimeout.arm(timeoutMs);
         try {
           const effectiveGid = numericGameId || gameId || '';
           const popUpUrl = `https://www.nexusmods.com/Core/Libs/Common/Widgets/${widget}?id=${encodeURIComponent(
             fileId
           )}&game_id=${encodeURIComponent(effectiveGid)}${isNMM ? '&nmm=1' : ''}`;
 
-          const popUpRes = await fetch(popUpUrl, { credentials: 'include' });
+          const popUpRes = await fetch(popUpUrl, { credentials: 'include', signal: guard.signal });
           const popUpText = await popUpRes.text();
 
           if (this.isCloudflareChallenge(popUpText, popUpRes.status)) {
@@ -344,15 +354,18 @@ export class SingleDownloader {
           if (directFromPopup) return { url: directFromPopup, rawText: popUpText };
         } catch (err) {
           Logger.error(`${widget} fallback fetch error:`, err);
+        } finally {
+          guard.clear();
         }
       }
     }
     // 7. Fallback: Fetch & scrape href HTML page
     if (href && !href.startsWith('nxm://')) {
+      const guard = RequestTimeout.arm(timeoutMs);
       try {
         const fullHref = new URL(href, 'https://www.nexusmods.com').href;
         const targetUrl = isNMM && !fullHref.includes('nmm=1') ? `${fullHref}${fullHref.includes('?') ? '&' : '?'}nmm=1` : fullHref;
-        const res = await fetch(targetUrl, { credentials: 'include' });
+        const res = await fetch(targetUrl, { credentials: 'include', signal: guard.signal });
         const text = await res.text();
 
         if (this.isCloudflareChallenge(text, res.status)) {
@@ -381,6 +394,8 @@ export class SingleDownloader {
         if (parsedLink) return { url: parsedLink, rawText: text };
       } catch (err) {
         Logger.error('HTML scrape fallback error:', err);
+      } finally {
+        guard.clear();
       }
     }
 

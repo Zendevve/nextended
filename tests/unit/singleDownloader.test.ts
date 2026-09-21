@@ -771,3 +771,77 @@ describe('SingleDownloader Vortex handoff watchdog', () => {
     expect(document.getElementById(NOTICE_ID)).toBeNull();
   });
 });
+
+describe('SingleDownloader request timeout enforcement (issue #12)', () => {
+  const hangUntilAborted = (_url: string, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () =>
+        reject(new DOMException('The operation was aborted.', 'AbortError'))
+      );
+    });
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+    document.body.innerHTML = '';
+    document.head.innerHTML = '';
+    window.history.pushState({}, '', '/');
+    await StorageManager.setConfig({ requestTimeoutMs: 4000 });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('aborts a stalled widget fetch at the configured timeout and surfaces a failure verdict', async () => {
+    vi.useFakeTimers();
+    const loggerError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === ENDPOINTS.GENERATE_DOWNLOAD_URL) {
+        return Promise.resolve({ status: 200, text: async () => '{"error": "requirements"}' } as Response);
+      }
+      if (url.includes('Widgets/DownloadPopUp')) {
+        return hangUntilAborted(url, init);
+      }
+      return Promise.resolve({ status: 404, text: async () => '' } as Response);
+    });
+
+    const pending = SingleDownloader.resolveDownloadUrl({ fileId: '51105', gameId: '1303' });
+    await vi.advanceTimersByTimeAsync(24000);
+    const result = await pending;
+
+    expect(result.url).toBeNull();
+    expect(result.error).toBe('Could not resolve download link');
+    expect(loggerError).toHaveBeenCalledWith('DownloadPopUp fallback fetch error:', expect.any(DOMException));
+  });
+
+  it('aborts a stalled mod page fetch at the configured timeout and surfaces a failure verdict', async () => {
+    vi.useFakeTimers();
+    const loggerError = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (url === ENDPOINTS.GENERATE_DOWNLOAD_URL) {
+        return Promise.resolve({ status: 500, text: async () => 'Internal Server Error' } as Response);
+      }
+      if (url.includes('Widgets/')) {
+        return Promise.resolve({ status: 404, text: async () => '' } as Response);
+      }
+      return hangUntilAborted(url, init);
+    });
+
+    const pending = SingleDownloader.resolveDownloadUrl({
+      fileId: '51105',
+      gameId: '1303',
+      href: 'https://www.nexusmods.com/stardewvalley/mods/1105?tab=files&file_id=51105'
+    });
+    await vi.advanceTimersByTimeAsync(40000);
+    const result = await pending;
+
+    expect(result.url).toBeNull();
+    expect(result.error).toBe('Could not resolve download link');
+    expect(loggerError).toHaveBeenCalledWith('HTML scrape fallback error:', expect.any(DOMException));
+  });
+});

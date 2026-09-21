@@ -1,6 +1,7 @@
 import { ENDPOINTS } from '../../common/endpoints';
 import { CollectionModFile, CollectionRevisionMetadata, CollectionRevisionData } from '../../common/types';
 import { Logger } from '../../common/logger';
+import { RequestTimeout } from '../../common/requestTimeout';
 
 export class GraphQLClient {
   private static gameIdCache = new Map<string, string>();
@@ -10,11 +11,14 @@ export class GraphQLClient {
     const cached = this.gameIdCache.get(domainName);
     if (cached) return cached;
 
+    const timeoutMs = await RequestTimeout.configuredMs();
+    const guard = RequestTimeout.arm(timeoutMs);
     try {
       const response = await fetch(ENDPOINTS.GRAPHQL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
+        signal: guard.signal,
         body: JSON.stringify({
           query: `query GameByDomain ($domainName: String!) {
             game (domainName: $domainName) {
@@ -39,6 +43,8 @@ export class GraphQLClient {
     } catch (err) {
       Logger.error('GraphQL fetchGameId error:', err);
       return null;
+    } finally {
+      guard.clear();
     }
   }
 
@@ -51,11 +57,14 @@ export class GraphQLClient {
   }
   static async fetchPrimaryModFileId(domainName: string, modId: number): Promise<string | null> {
     if (!domainName || !modId) return null;
+    const timeoutMs = await RequestTimeout.configuredMs();
+    const guard = RequestTimeout.arm(timeoutMs);
     try {
       const response = await fetch(ENDPOINTS.GRAPHQL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
+        signal: guard.signal,
         body: JSON.stringify({
           query: `query ModPrimaryFile ($gameDomain: String!, $modId: Int!) {
             mod (gameDomain: $gameDomain, modId: $modId) {
@@ -81,11 +90,15 @@ export class GraphQLClient {
     } catch (err) {
       Logger.error('GraphQL fetchPrimaryModFileId error:', err);
       return null;
+    } finally {
+      guard.clear();
     }
   }
 
 
   static async fetchCollectionMods(slug: string, revision: number | null = null): Promise<CollectionRevisionData | null> {
+    const timeoutMs = await RequestTimeout.configuredMs();
+    const guard = RequestTimeout.arm(timeoutMs);
     try {
       const response = await fetch(ENDPOINTS.GRAPHQL, {
         method: 'POST',
@@ -93,6 +106,7 @@ export class GraphQLClient {
           'content-type': 'application/json'
         },
         credentials: 'include',
+        signal: guard.signal,
         body: JSON.stringify({
           query: `query CollectionRevisionMods ($revision: Int, $slug: String!, $viewAdultContent: Boolean) {
             collectionRevision (revision: $revision, slug: $slug, viewAdultContent: $viewAdultContent) {
@@ -141,10 +155,14 @@ export class GraphQLClient {
     } catch (err) {
       Logger.error('GraphQL fetchCollectionMods error:', err);
       return null;
+    } finally {
+      guard.clear();
     }
   }
 
   static async fetchCollectionRevisions(domainName: string, slug: string): Promise<CollectionRevisionMetadata[] | null> {
+    const timeoutMs = await RequestTimeout.configuredMs();
+    const guard = RequestTimeout.arm(timeoutMs);
     try {
       const response = await fetch(ENDPOINTS.GRAPHQL, {
         method: 'POST',
@@ -152,6 +170,7 @@ export class GraphQLClient {
           'content-type': 'application/json'
         },
         credentials: 'include',
+        signal: guard.signal,
         body: JSON.stringify({
           query: `query CollectionRevisions ($domainName: String, $slug: String!) {
             collection (domainName: $domainName, slug: $slug) {
@@ -178,6 +197,8 @@ export class GraphQLClient {
     } catch (err) {
       Logger.error('GraphQL fetchCollectionRevisions error:', err);
       return null;
+    } finally {
+      guard.clear();
     }
   }
 }
