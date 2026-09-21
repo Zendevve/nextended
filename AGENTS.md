@@ -140,3 +140,17 @@ Manual load: build, then `chrome://extensions/` → Developer mode → Load unpa
   `registerDownload()` → `{requiresCooldown: true, waitTimeSec: 300}`.
 - No coverage thresholds or e2e harness configured; verify extension changes with
   `npm test`, `npm run build`, and manual Load-unpacked smoke test on Nexus Mods pages.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as GitHub issues in `Zendevve/nextended` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-label vocabulary, unchanged: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
