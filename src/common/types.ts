@@ -100,3 +100,12 @@ export interface DownloadRateLimitState {
   count: number;
   lastResetTimestamp: number;
 }
+
+/** Content-script request for the background worker to start a browser download. */
+export interface TriggerDownloadMessage {
+  type: 'TRIGGER_DOWNLOAD';
+  url: string;
+  filename?: string;
+  /** Nexus mod id, used to tag overridden filenames as `name-modid.ext`; omitted when unknown. */
+  modId?: string | number;
+}

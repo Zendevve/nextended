@@ -12,6 +12,9 @@ export interface ExternalDownloadResult {
 export class DownloadManager {
   private static readonly ARIA2_RPC_ID = 'nextended';
 
+  /** Mod ids awaiting their download's filename determination, keyed by download URL. */
+  private static readonly pendingModIds = new Map<string, string | number>();
+
   static init() {
     if (typeof chrome !== 'undefined' && chrome.downloads && chrome.downloads.onDeterminingFilename) {
       chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
@@ -26,6 +29,9 @@ export class DownloadManager {
     suggest: (suggestion?: chrome.downloads.DownloadFilenameSuggestion) => void
   ) {
     try {
+      const modId = this.pendingModIds.get(item.url);
+      if (modId !== undefined) this.pendingModIds.delete(item.url);
+
       const config = await StorageManager.getConfig();
       if (!config.overrideFileNames || !item.url.includes('nexus-cdn.com')) {
         suggest();
@@ -34,14 +40,37 @@ export class DownloadManager {
 
       // Check if file is already tagged or sanitize
       const originalFilename = item.filename || 'nexus_download';
-      suggest({ filename: originalFilename, conflictAction: 'uniquify' });
+      const filename = modId !== undefined ? this.buildOverrideFilename(originalFilename, modId) : originalFilename;
+      suggest({ filename, conflictAction: 'uniquify' });
     } catch (err) {
       Logger.error('Error during filename suggestion:', err);
       suggest();
     }
   }
 
-  static triggerDownload(url: string, filename?: string): Promise<number | null> {
+  /**
+   * Builds the override filename `name-<modId>.ext`: appends the mod id before the
+   * extension, preserving it. The name is left untouched when the id already appears
+   * as a bounded token (delimited by non-alphanumerics or the base name's edges).
+   */
+  static buildOverrideFilename(filename: string, modId: string | number): string {
+    const id = String(modId).trim();
+    if (!id) return filename;
+
+    const dot = filename.lastIndexOf('.');
+    const base = dot > 0 ? filename.slice(0, dot) : filename;
+    const extension = dot > 0 ? filename.slice(dot) : '';
+
+    const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const boundedToken = new RegExp(`(?:^|[^A-Za-z0-9])${escapedId}(?![A-Za-z0-9])`);
+    if (boundedToken.test(base)) return filename;
+
+    return `${base}-${id}${extension}`;
+  }
+
+  static triggerDownload(url: string, filename?: string, modId?: string | number): Promise<number | null> {
+    const normalizedId = modId !== undefined && modId !== null ? String(modId).trim() : '';
+    if (normalizedId) this.pendingModIds.set(url, normalizedId);
     return new Promise((resolve) => {
       if (typeof chrome !== 'undefined' && chrome.downloads) {
         chrome.downloads.download(
@@ -53,6 +82,7 @@ export class DownloadManager {
           (downloadId) => {
             if (chrome.runtime.lastError) {
               Logger.error('chrome.downloads.download error:', chrome.runtime.lastError.message);
+              this.pendingModIds.delete(url); // failed download never reaches filename determination
               resolve(null);
             } else {
               resolve(downloadId || null);

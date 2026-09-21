@@ -527,7 +527,13 @@ export class SingleDownloader {
       }
       if (!handled) {
         if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-          chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: result.url, filename });
+          const modMatch = typeof location !== 'undefined' ? location.pathname.match(/\/mods\/(\d+)/) : null;
+          chrome.runtime.sendMessage({
+            type: 'TRIGGER_DOWNLOAD',
+            url: result.url,
+            filename,
+            modId: modMatch ? modMatch[1] : undefined
+          });
         } else {
           const a = document.createElement('a');
           a.href = result.url;

@@ -31,7 +31,7 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
       }
       sendResponse({ success: true });
     } else if (message.type === 'TRIGGER_DOWNLOAD') {
-      DownloadManager.triggerDownload(message.url, message.filename).then((id) => {
+      DownloadManager.triggerDownload(message.url, message.filename, message.modId).then((id) => {
         sendResponse({ downloadId: id });
       });
       return true; // asynchronous
