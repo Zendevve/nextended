@@ -15,7 +15,7 @@ export const DEFAULT_CONFIG: ExtensionConfig = {
   requestTimeoutMs: 30000,
   downloadSpeedMb: 1.5,
   pauseBetweenDownloadSec: 5,
-  downloadMethod: DownloadMethod.VORTEX,
+  downloadMethod: DownloadMethod.BROWSER,
   externalDownloader: {
     enabled: false,
     mode: ExternalDownloaderMode.CLIPBOARD,

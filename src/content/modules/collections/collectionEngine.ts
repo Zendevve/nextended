@@ -1,4 +1,4 @@
-import { CollectionModFile, DownloadMethod } from '../../../common/types';
+import { CollectionModFile, DownloadMethod, ExtensionConfig } from '../../../common/types';
 import { StorageManager } from '../../../common/storage';
 import { SingleDownloader } from '../singleDownloader';
 import { RateLimiter } from '../rateLimiter';
@@ -152,31 +152,13 @@ export class CollectionEngine {
         if (isNMM || res.url.startsWith('nxm://')) {
           this.console.log(`[${indexStr}] Sent to Vortex: ${mod.file.name}`);
           location.href = res.url;
+          if (res.url.startsWith('nxm://')) {
+            SingleDownloader.armNxMHandoffWatchdog(res.url, () => {
+              void this.fallbackToBrowserDownload(mod, config);
+            });
+          }
         } else {
-          let handled = false;
-          if (config.externalDownloader.enabled) {
-            const external = await SingleDownloader.sendExternalDownload(res.url, mod.file.name);
-            if (external?.success) {
-              this.console.log(`[${indexStr}] Sent to ${config.externalDownloader.mode}: ${mod.file.name}`);
-              handled = true;
-            } else if (external) {
-              this.console.log(
-                `[${indexStr}] External downloader failed (${external.error || 'unknown error'}) — using browser: ${mod.file.name}`,
-                LogType.ERROR
-              );
-            }
-          }
-          if (!handled) {
-            this.console.log(`[${indexStr}] Downloading: ${mod.file.name}`);
-            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-              chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url: res.url, filename: mod.file.name });
-            } else {
-              const a = document.createElement('a');
-              a.href = res.url;
-              a.download = mod.file.name;
-              a.click();
-            }
-          }
+          await this.deliverViaBrowser(res.url, mod.file.name, config, `[${indexStr}]`);
         }
 
         // Update history
@@ -224,5 +206,56 @@ export class CollectionEngine {
       this.progressBar.element.style.display = 'none';
       this.toolbar.element.style.display = '';
     }, 4000);
+  }
+
+  /**
+   * Browser Download delivery for a resolved URL: external downloader when
+   * enabled, otherwise TRIGGER_DOWNLOAD (anchor-click fallback).
+   */
+  private async deliverViaBrowser(url: string, filename: string, config: ExtensionConfig, logPrefix: string) {
+    let handled = false;
+    if (config.externalDownloader.enabled) {
+      const external = await SingleDownloader.sendExternalDownload(url, filename);
+      if (external?.success) {
+        this.console.log(`${logPrefix} Sent to ${config.externalDownloader.mode}: ${filename}`);
+        handled = true;
+      } else if (external) {
+        this.console.log(
+          `${logPrefix} External downloader failed (${external.error || 'unknown error'}) — using browser: ${filename}`,
+          LogType.ERROR
+        );
+      }
+    }
+    if (!handled) {
+      this.console.log(`${logPrefix} Downloading: ${filename}`);
+      if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'TRIGGER_DOWNLOAD', url, filename });
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+      }
+    }
+  }
+
+  /**
+   * Watchdog fallback (issue #4): the nxm:// handoff for this mod never
+   * engaged, so re-resolve the same file without the mod-manager flag and
+   * deliver it through the Browser Download path.
+   */
+  private async fallbackToBrowserDownload(mod: CollectionModFile, config: ExtensionConfig) {
+    this.console.log(`Browser fallback for: ${mod.file.name} (nxm handler did not engage)`, LogType.INFO);
+    const res = await SingleDownloader.resolveDownloadUrl({
+      fileId: mod.fileId.toString(),
+      gameId: mod.file.mod.game.id.toString(),
+      isNMM: false,
+      href: mod.file.url
+    });
+    if (!res.url || res.error) {
+      this.console.log(`Browser fallback failed for: ${mod.file.name}`, LogType.ERROR);
+      return;
+    }
+    await this.deliverViaBrowser(res.url, mod.file.name, config, '[fallback]');
   }
 }

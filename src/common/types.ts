@@ -109,3 +109,26 @@ export interface TriggerDownloadMessage {
   /** Nexus mod id, used to tag overridden filenames as `name-modid.ext`; omitted when unknown. */
   modId?: string | number;
 }
+
+/** Foreign userscript Conflict Markers nextended knows how to detect (issue #13). */
+export type ConflictScriptId = 'ndc-toolbar' | 'nnwpp-attrs' | 'legacy-archive-wrapper';
+
+/** Display names for the replaced userscripts, shared by the content banner and popup badge. */
+export const CONFLICT_SCRIPT_LABELS: Record<ConflictScriptId, string> = {
+  'ndc-toolbar': 'NDC collection toolbar',
+  'nnwpp-attrs': 'NNWPP userscript',
+  'legacy-archive-wrapper': 'legacy archive unlock script'
+};
+
+/** Acknowledged conflicts: dismissal persists which scripts the user has already been warned about. */
+export interface ConflictAckStore {
+  ackedAt: number;
+  scripts: ConflictScriptId[];
+}
+
+/** Current Conflict Marker detection state, persisted for the popup badge. */
+export interface ConflictDetectionState {
+  detected: ConflictScriptId[];
+  unacknowledged: ConflictScriptId[];
+  updatedAt: number;
+}

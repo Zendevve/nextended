@@ -4,6 +4,8 @@ import { GraphQLClient } from '../../src/content/modules/graphQLClient';
 import { ENDPOINTS } from '../../src/common/endpoints';
 import { StorageManager } from '../../src/common/storage';
 import { Logger } from '../../src/common/logger';
+import { DEFAULT_CONFIG } from '../../src/common/config';
+import { DownloadMethod } from '../../src/common/types';
 
 interface GlobalWithChrome {
   chrome?: {
@@ -448,6 +450,7 @@ describe('SingleDownloader URL Resolution Logic', () => {
       writable: true,
       configurable: true
     });
+    SingleDownloader.disarmNxMHandoffWatchdog();
   });
 
   it('resolves primary fileId via GraphQL when fileId is omitted on a mod description page', async () => {
@@ -608,5 +611,163 @@ describe('SingleDownloader VPN-mode redirect', () => {
     expect(assignSpy).not.toHaveBeenCalled();
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Could not resolve download link'));
+  });
+});
+
+describe('Default download method (issue #4)', () => {
+  it('resolves to Browser Download for fresh installs', async () => {
+    expect(DEFAULT_CONFIG.downloadMethod).toBe(DownloadMethod.BROWSER);
+
+    localStorage.clear();
+    const config = await StorageManager.getConfig();
+    expect(config.downloadMethod).toBe(DownloadMethod.BROWSER);
+  });
+});
+
+describe('SingleDownloader Vortex handoff watchdog', () => {
+  const NOTICE_ID = 'nextended-nxm-handoff-notice';
+  const nxmUrl = 'nxm://skyrim/mods/1000/files/49397?key=nxmkey&expires=999';
+
+  let originalLocation: Location;
+  let locationMock: Location;
+  let assignSpy: Mock;
+  let sendMsgMock: Mock;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    vi.useFakeTimers();
+    localStorage.clear();
+    SingleDownloader.disarmNxMHandoffWatchdog();
+    document.body.innerHTML = '';
+
+    originalLocation = window.location;
+    assignSpy = vi.fn();
+    locationMock = { ...originalLocation, pathname: '/', href: '', assign: assignSpy };
+    Object.defineProperty(window, 'location', {
+      value: locationMock,
+      writable: true,
+      configurable: true
+    });
+
+    sendMsgMock = vi.fn();
+    (globalThis as GlobalWithChrome).chrome = { runtime: { sendMessage: sendMsgMock } };
+  });
+
+  afterEach(() => {
+    SingleDownloader.disarmNxMHandoffWatchdog();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete (globalThis as GlobalWithChrome).chrome;
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true
+    });
+    document.body.innerHTML = '';
+    localStorage.clear();
+  });
+
+  it('shows a dismissible fallback message when the nxm handoff never engages', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true });
+
+    expect(locationMock.href).toBe(nxmUrl);
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+
+    vi.advanceTimersByTime(8000);
+
+    const notice = document.getElementById(NOTICE_ID);
+    expect(notice).not.toBeNull();
+    expect(notice?.textContent).toContain('nxm://');
+    expect(notice?.textContent).toContain('unconfigured');
+    expect(notice?.textContent).toContain('Download via browser instead');
+    expect(notice?.querySelector('[data-action="dismiss"]')).not.toBeNull();
+  });
+
+  it('suppresses the message when the tab blurs during the watchdog window', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true });
+
+    window.dispatchEvent(new Event('blur'));
+
+    vi.advanceTimersByTime(16000);
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+  });
+
+  it('suppresses the message when the document visibility changes during the watchdog window', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true });
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    vi.advanceTimersByTime(16000);
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+  });
+
+  it('falls back to a browser download of the same file from the notice action', async () => {
+    const cdnUrl = 'https://files.nexus-cdn.com/110/49397/WatchdogMod.7z?key=fallbackkey&expires=999';
+    const resolveSpy = vi.spyOn(SingleDownloader, 'resolveDownloadUrl')
+      .mockResolvedValueOnce({ url: nxmUrl })
+      .mockResolvedValueOnce({ url: cdnUrl });
+
+    const btn = document.createElement('button');
+    await SingleDownloader.startDownloadFlow({ btn, fileId: '49397', gameId: '110', isNMM: true });
+    vi.advanceTimersByTime(8000);
+
+    const notice = document.getElementById(NOTICE_ID);
+    expect(notice).not.toBeNull();
+
+    (notice?.querySelector('[data-action="browser-fallback"]') as HTMLButtonElement).click();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+    expect(resolveSpy).toHaveBeenCalledTimes(2);
+    expect(resolveSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fileId: '49397', gameId: '110', isNMM: false })
+    );
+    expect(sendMsgMock).toHaveBeenCalledWith({
+      type: 'TRIGGER_DOWNLOAD',
+      url: cdnUrl,
+      filename: 'WatchdogMod.7z'
+    });
+  });
+
+  it('dismiss removes the notice without triggering a fallback download', async () => {
+    const resolveSpy = vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true });
+    vi.advanceTimersByTime(8000);
+
+    const notice = document.getElementById(NOTICE_ID);
+    expect(notice).not.toBeNull();
+    (notice?.querySelector('[data-action="dismiss"]') as HTMLButtonElement).click();
+
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+    expect(sendMsgMock).not.toHaveBeenCalled();
+  });
+
+  it('a subsequent handoff clears a shown notice instead of stacking a second one', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true });
+    vi.advanceTimersByTime(8000);
+    expect(document.querySelectorAll(`#${NOTICE_ID}`).length).toBe(1);
+
+    await SingleDownloader.startDownloadFlow({ fileId: '49398', gameId: '110', isNMM: true });
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
+
+    vi.advanceTimersByTime(8000);
+    expect(document.querySelectorAll(`#${NOTICE_ID}`).length).toBe(1);
+  });
+
+  it('cancels the previous pending watchdog when a newer handoff arms', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({ url: nxmUrl });
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110', isNMM: true }); // watchdog A
+    await SingleDownloader.startDownloadFlow({ fileId: '49398', gameId: '110', isNMM: true }); // watchdog B replaces A
+
+    window.dispatchEvent(new Event('blur')); // engages the surviving watchdog (B) only
+    vi.advanceTimersByTime(16000);
+
+    expect(document.getElementById(NOTICE_ID)).toBeNull();
   });
 });

@@ -1,4 +1,10 @@
-import { ExtensionConfig, DownloadHistoryStore, DownloadRateLimitState } from './types';
+import {
+  ExtensionConfig,
+  DownloadHistoryStore,
+  DownloadRateLimitState,
+  ConflictAckStore,
+  ConflictDetectionState
+} from './types';
 import { DEFAULT_CONFIG } from './config';
 
 function mergeConfig(stored?: Partial<ExtensionConfig> | null): ExtensionConfig {
@@ -12,6 +18,8 @@ function mergeConfig(stored?: Partial<ExtensionConfig> | null): ExtensionConfig 
 const CONFIG_KEY = 'nextended_config';
 const HISTORY_KEY = 'nextended_history';
 const RATE_LIMIT_KEY = 'nextended_rate_limit';
+const CONFLICT_ACK_KEY = 'nextended_conflict_ack';
+const CONFLICT_STATE_KEY = 'nextended_conflict_state';
 
 export class StorageManager {
   static async getConfig(): Promise<ExtensionConfig> {
@@ -81,6 +89,52 @@ export class StorageManager {
       await chrome.storage.local.set({ [RATE_LIMIT_KEY]: state });
     } else {
       localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(state));
+    }
+  }
+
+  static async getConflictAck(): Promise<ConflictAckStore> {
+    const defaultState: ConflictAckStore = { ackedAt: 0, scripts: [] };
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      const res = await chrome.storage.local.get(CONFLICT_ACK_KEY);
+      return res[CONFLICT_ACK_KEY] || defaultState;
+    }
+    const local = localStorage.getItem(CONFLICT_ACK_KEY);
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch {}
+    }
+    return defaultState;
+  }
+
+  static async setConflictAck(ack: ConflictAckStore): Promise<void> {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      await chrome.storage.local.set({ [CONFLICT_ACK_KEY]: ack });
+    } else {
+      localStorage.setItem(CONFLICT_ACK_KEY, JSON.stringify(ack));
+    }
+  }
+
+  static async getConflictState(): Promise<ConflictDetectionState> {
+    const defaultState: ConflictDetectionState = { detected: [], unacknowledged: [], updatedAt: 0 };
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      const res = await chrome.storage.local.get(CONFLICT_STATE_KEY);
+      return res[CONFLICT_STATE_KEY] || defaultState;
+    }
+    const local = localStorage.getItem(CONFLICT_STATE_KEY);
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch {}
+    }
+    return defaultState;
+  }
+
+  static async setConflictState(state: ConflictDetectionState): Promise<void> {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      await chrome.storage.local.set({ [CONFLICT_STATE_KEY]: state });
+    } else {
+      localStorage.setItem(CONFLICT_STATE_KEY, JSON.stringify(state));
     }
   }
 }

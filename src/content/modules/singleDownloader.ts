@@ -457,6 +457,104 @@ export class SingleDownloader {
     });
   }
 
+  // -------------------------------------------------------------------------
+  // Vortex Handoff watchdog (issue #4, ADR-0004)
+  // After handing an nxm:// link to the OS via location.href, watch for signs
+  // that the external handler engaged (window blur / document hidden). If the
+  // tab shows no sign of engagement within NXM_HANDOFF_WATCHDOG_MS, surface a
+  // dismissible in-page notice offering to re-run the same file through the
+  // Browser Download path. One pending watchdog at a time: a newer handoff
+  // replaces the previous watch (and its notice) so overlays never stack.
+  // -------------------------------------------------------------------------
+
+  private static readonly NXM_HANDOFF_WATCHDOG_MS = 8000;
+  private static readonly NXM_HANDOFF_NOTICE_ID = 'nextended-nxm-handoff-notice';
+
+  private static nxmWatchdogTimer: number | null = null;
+  private static nxmWatchdogEngagedListener: (() => void) | null = null;
+
+  static armNxMHandoffWatchdog(nxmUrl: string, downloadViaBrowser: () => void): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    // Re-arm semantics: cancel any pending watch (and its notice) first.
+    this.disarmNxMHandoffWatchdog();
+
+    // Already hidden when arming — the handler likely stole focus before us.
+    if (document.visibilityState === 'hidden') return;
+
+    const onEngaged = () => {
+      Logger.debug('nxm handoff watchdog: tab blurred or hidden — external handler engaged, canceling notice.');
+      this.disarmNxMHandoffWatchdog();
+    };
+    window.addEventListener('blur', onEngaged);
+    document.addEventListener('visibilitychange', onEngaged);
+    this.nxmWatchdogEngagedListener = onEngaged;
+
+    Logger.debug('Armed nxm handoff watchdog.', { url: nxmUrl, timeoutMs: this.NXM_HANDOFF_WATCHDOG_MS });
+
+    this.nxmWatchdogTimer = window.setTimeout(() => {
+      this.nxmWatchdogTimer = null;
+      this.detachNxMEngagedListener();
+      if (document.visibilityState === 'hidden') return;
+      Logger.info('nxm handoff watchdog: no handler engagement detected — offering browser download fallback.');
+      this.showNxMHandoffNotice(downloadViaBrowser);
+    }, this.NXM_HANDOFF_WATCHDOG_MS);
+  }
+
+  static disarmNxMHandoffWatchdog(): void {
+    if (this.nxmWatchdogTimer !== null) {
+      clearTimeout(this.nxmWatchdogTimer);
+      this.nxmWatchdogTimer = null;
+    }
+    this.detachNxMEngagedListener();
+    if (typeof document !== 'undefined') this.removeNxMHandoffNotice();
+  }
+
+  private static detachNxMEngagedListener(): void {
+    const listener = this.nxmWatchdogEngagedListener;
+    if (!listener) return;
+    if (typeof window !== 'undefined') window.removeEventListener('blur', listener);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', listener);
+    this.nxmWatchdogEngagedListener = null;
+  }
+
+  private static removeNxMHandoffNotice(): void {
+    document.getElementById(this.NXM_HANDOFF_NOTICE_ID)?.remove();
+  }
+
+  private static showNxMHandoffNotice(downloadViaBrowser: () => void): void {
+    if (typeof document === 'undefined') return;
+    this.removeNxMHandoffNotice();
+
+    const overlay = document.createElement('div');
+    overlay.id = this.NXM_HANDOFF_NOTICE_ID;
+    overlay.style.cssText = `position:fixed;bottom:16px;right:16px;max-width:360px;box-sizing:border-box;` +
+      `background-color:#242424;border:1px solid #444444;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.6);` +
+      `padding:14px;color:#eeeeee;z-index:999999;` +
+      `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;` +
+      `font-size:13px;line-height:1.5;`;
+    overlay.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="flex:1 1 auto;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:#da8e35;">Vortex handoff appears stuck</div>
+          <p style="margin:6px 0 0;">An nxm:// mod link was opened, but this tab never lost focus — no external mod manager picked it up. The nxm:// handler may be unconfigured.</p>
+        </div>
+        <button type="button" data-action="dismiss" style="flex:0 0 auto;background:transparent;border:none;color:#999999;font-size:12px;cursor:pointer;padding:2px 4px;">Dismiss</button>
+      </div>
+      <button type="button" data-action="browser-fallback" style="display:block;width:100%;margin-top:12px;background-color:#da8e35;color:#ffffff;border:none;border-radius:4px;padding:8px 12px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;cursor:pointer;">Download via browser instead</button>
+    `;
+
+    overlay.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => overlay.remove());
+    overlay.querySelector('[data-action="browser-fallback"]')?.addEventListener('click', () => {
+      overlay.remove();
+      Logger.info('nxm handoff fallback: re-running the same file through the browser download path.');
+      downloadViaBrowser();
+    });
+
+    document.body.appendChild(overlay);
+  }
+
+
   static async startDownloadFlow(opts: {
     btn?: HTMLElement | null;
     fileId?: string | null;
@@ -523,6 +621,11 @@ export class SingleDownloader {
 
     if (isNMM || result.url.startsWith('nxm://')) {
       location.href = result.url;
+      if (result.url.startsWith('nxm://')) {
+        this.armNxMHandoffWatchdog(result.url, () => {
+          void this.startDownloadFlow({ ...opts, isNMM: false });
+        });
+      }
     } else {
       const filename = this.extractFilenameFromUrl(result.url);
       let handled = false;
