@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { SingleDownloader } from '../../src/content/modules/singleDownloader';
 import { GraphQLClient } from '../../src/content/modules/graphQLClient';
 import { ENDPOINTS } from '../../src/common/endpoints';
+import { StorageManager } from '../../src/common/storage';
+import { Logger } from '../../src/common/logger';
 
 interface GlobalWithChrome {
   chrome?: {
@@ -524,5 +526,87 @@ describe('SingleDownloader URL Resolution Logic', () => {
       writable: true,
       configurable: true
     });
+  });
+});
+
+describe('SingleDownloader VPN-mode redirect', () => {
+  let assignSpy: Mock;
+  let alertSpy: Mock;
+  let originalLocation: Location;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    await StorageManager.setConfig({ vpnMode: false });
+
+    originalLocation = window.location;
+    assignSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, pathname: '/', assign: assignSpy },
+      writable: true,
+      configurable: true
+    });
+
+    alertSpy = vi.fn();
+    vi.stubGlobal('alert', alertSpy);
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true
+    });
+    await StorageManager.setConfig({ vpnMode: false });
+  });
+
+  it('redirects to the blocked URL when a Cloudflare verdict arrives and vpnMode is on', async () => {
+    const blockedUrl = 'https://www.nexusmods.com/Core/Libs/Common/Widgets/ModRequirementsPopUp?id=51105&game_id=1303';
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({
+      url: null,
+      error: 'cloudflare-challenge',
+      blockedUrl
+    });
+    await StorageManager.setConfig({ vpnMode: true });
+
+    const loggerInfo = vi.spyOn(Logger, 'info');
+
+    await SingleDownloader.startDownloadFlow({ fileId: '51105', gameId: '1303' });
+
+    expect(assignSpy).toHaveBeenCalledTimes(1);
+    expect(assignSpy).toHaveBeenCalledWith(blockedUrl);
+    expect(loggerInfo).toHaveBeenCalledTimes(1);
+    expect(loggerInfo).toHaveBeenCalledWith(expect.stringContaining('VPN mode'), blockedUrl);
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the existing alert error path when vpnMode is off', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({
+      url: null,
+      error: 'cloudflare-challenge',
+      blockedUrl: 'https://www.nexusmods.com/skyrim/mods/1000?tab=files'
+    });
+    await StorageManager.setConfig({ vpnMode: false });
+
+    await SingleDownloader.startDownloadFlow({ fileId: '49397', gameId: '110' });
+
+    expect(assignSpy).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Cloudflare security challenge'));
+  });
+
+  it('does not redirect non-blocked failures (e.g. login-missing) even when vpnMode is on', async () => {
+    vi.spyOn(SingleDownloader, 'resolveDownloadUrl').mockResolvedValue({
+      url: null,
+      error: 'Could not resolve download link'
+    });
+    await StorageManager.setConfig({ vpnMode: true });
+
+    await SingleDownloader.startDownloadFlow({});
+
+    expect(assignSpy).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Could not resolve download link'));
   });
 });

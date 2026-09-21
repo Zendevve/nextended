@@ -476,6 +476,16 @@ export class SingleDownloader {
 
     if (result.error || !result.url) {
       if (result.error === 'cloudflare-challenge') {
+        // VPN & Cloudflare fallback mode: navigate to the blocked URL so the user
+        // can solve the challenge naturally instead of seeing an error.
+        if (config.vpnMode && result.blockedUrl && typeof location !== 'undefined') {
+          Logger.info('VPN mode active: redirecting to blocked URL to resolve Cloudflare challenge:', result.blockedUrl);
+          if (btn) this.setButtonState(btn, 'downloading');
+          location.assign(result.blockedUrl);
+          if (btn) this.restoreButtonState(btn);
+          return;
+        }
+
         const challengeMsg = 'Nexus is displaying a Cloudflare security challenge. Please resolve it in your browser.';
         if (btn) this.setButtonState(btn, 'error', challengeMsg);
         if (config.showAlertsOnError) alert(`[nextended] Download Error: ${challengeMsg}`);
