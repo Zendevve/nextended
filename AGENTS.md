@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`nextended` (v1.0.2) is a Manifest V3 browser extension: a power suite for Nexus Mods.
+`nextended` (v1.1.0) is a Manifest V3 browser extension: a power suite for Nexus Mods.
 Features: instant single-mod downloads (timer/requirements bypass), collections bulk
 downloader (GraphQL fetch, mandatory/optional/custom selection, revision diffing, local
 file matcher, pause/resume/stop), rate-limit/cooldown protection, archived-file unlock
@@ -58,7 +58,7 @@ injector, popup quick toggles + full options page.
 - `src/content/styles/content.css`: shipped as `dist/content.css`.
 - `src/popup/{index.html,popup.ts,popup.css}`: quick toggles + status indicator.
 - `src/options/{index.html,options.ts,options.css}`: full settings, debounced auto-save.
-- `tests/unit/`: 8 `*.test.ts` suites (see Testing & QA).
+- `tests/unit/`: 14 `*.test.ts` suites (see Testing & QA).
 - `icons/`: `icon-{16,48,128}.png`; `dist/` is the unpacked-extension build output.
 
 ## Development Commands
@@ -132,9 +132,10 @@ Manual load: build, then `chrome://extensions/` → Developer mode → Load unpa
 
 - Framework: Vitest 3 (`globals: true`, `environment: 'happy-dom'`,
   `include: ['tests/**/*.test.ts']` in `vite.config.ts`).
-- Suites (`tests/unit/`): `archiveInjector`, `clickInterceptor`, `fileMatcher`,
-  `graphQLClient`, `pageShield`, `rateLimiter`, `revisionDiffer`, `singleDownloader`
-  (~82 passing per `CHANGELOG.md` 1.0.2).
+- Suites (`tests/unit/`): `archiveInjector`, `clickInterceptor`, `conflictDetector`,
+  `downloadManager`, `externalDownloader`, `fileMatcher`, `graphQLClient`,
+  `modManagerButtonInjector`, `options`, `pageShield`, `rateLimiter`, `revisionDiffer`,
+  `selectModsModal`, `singleDownloader` (172 passing per `CHANGELOG.md` 1.1.0).
 - Pattern: import unit under test, seed `StorageManager` state in `beforeEach`, assert pure
   helpers directly. Example (`rateLimiter.test.ts`): seed `{count: 199, ...}`, expect
   `registerDownload()` → `{requiresCooldown: true, waitTimeSec: 300}`.

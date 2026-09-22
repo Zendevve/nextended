@@ -50,6 +50,11 @@ _Avoid_: manual download (ambiguous with "clicking things by hand")
 Delegating a download to an external mod manager via the `nxm://` protocol. Opt-in,
 with failure detection.
 
+**External Downloader Handoff**:
+Passing a resolved download link to a tool outside the browser — clipboard copy or an
+RPC-driven downloader — instead of the browser's own downloader. Distinct from Vortex
+Handoff, which delegates to a mod manager via the `nxm://` protocol.
+
 ### Policies
 
 **Do-No-Harm Contract**:

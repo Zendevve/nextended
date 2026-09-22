@@ -2,6 +2,44 @@
 
 All notable changes to the Nextended project will be documented in this file.
 
+## [1.1.0] - 2026-09-21
+
+"Parity & Contract" — gap-closing release against the three replaced userscripts.
+Decisions are backed by ADR-0001…0005; the audit and plan live in
+`docs/milestone-v1.1.0.md`.
+
+### Changed
+
+- Browser Download is the default download method for Single Downloads and Bulk Runs alike; Vortex Handoff (`nxm://`) is opt-in, with protocol-handler failure detection and browser fallback (ADR-0004).
+- Safe Floor enforced on Bulk Run pacing: values below the floor are clamped, values above it carry a ban-risk warning (ADR-0003).
+- Page shield is opt-out via config with a fail-open gate (ADR-0002, clause 3).
+- `vpnMode` wired: Cloudflare-blocked downloads redirect to the blocked URL so the challenge can be solved naturally.
+- Options page reconciled with the live config keys; dead keys removed.
+- Archive-injector wrapper class renamed to a nextended namespace, removing a verbatim selector inherited from the CC BY-NC-SA script (ADR-0001).
+
+### Added
+
+- External downloader handoff: download links copied to the clipboard by default, aria2 JSON-RPC handoff opt-in.
+- Userscript Conflict Marker detection: dismissible on-page banner and popup badge with a persisted acknowledgment.
+- Selection JSON export/import in the collection select-mods modal.
+- Mod-manager button injection on manual-only files, behind the existing `forceModManagerDownload` toggle.
+
+### Fixed
+
+- Duplicate `host_permissions` key in `manifest.json` silently dropped entries, including the localhost aria2-RPC scope.
+- `overrideFileNames` now appends the mod id to overridden filenames instead of only uniquifying them.
+- FileMatcher: URIs shorter than 12 characters were rejected by the gram prefilter, and the exact-hit early return left containing files unflagged; match flags now derive from a reverse gram index, restoring upstream semantics (verified with 600 randomized differential cases).
+- FileMatcher wired into collection history import with near-miss matching, replacing naive `name.includes(uri)` checks.
+- `requestTimeoutMs` enforced on all GraphQL and widget fetches via abort signals.
+
+### Performance
+
+- Content-script hot paths rebuilt (marker fast-paths, FNV-1a 12-gram file matching, single-pass revision diffing): the collection-import path measured ~36ms down to ~10ms in the bench harness, with behavior checksum-stable throughout.
+
+### Tests
+
+- 172 tests across 14 suites, up from 82 across 8.
+
 ## [1.0.2] - 2026-08-28
 
 ### Fixed
