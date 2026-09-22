@@ -149,3 +149,16 @@ h1 {
   align-items: center;
   justify-content: center;
 }
+
+.support-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #888;
+  text-decoration: none;
+}
+
+.support-link:hover {
+  color: #da8e35;
+}

@@ -71,6 +71,10 @@ Defaults worth knowing:
 - [docs/adr/](docs/adr/) — accepted architecture decisions
 - [docs/milestone-v1.1.0.md](docs/milestone-v1.1.0.md) — the v1.1.0 parity audit and plan
 
+## Support
+
+If nextended saves you time, you can [buy the maintainer a coffee](https://www.buymeacoffee.com/zendevve).
+
 ## License
 
 Proprietary, all rights reserved. Source-available for personal, non-commercial use:
